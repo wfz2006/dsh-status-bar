@@ -15,9 +15,8 @@ export function TaskCapsule({ task, activate }: { task: Task; activate: () => vo
   const metricsTitle = metrics ? metrics.turns + ' 轮 · ' + metrics.steps + ' 步' + (metrics.tokensPerSecond !== undefined ? ' · ' + metrics.tokensPerSecond + ' tok/s' : '') : '';
   return <button className="task-capsule" aria-label={task.attentionCount ? '展开待处理请求' : '展开速览'} aria-description="可拖动；右键打开菜单。数据来源与调试状态见设置。" title={title + ' · ' + task.label + (metricsTitle ? ' · ' + metricsTitle : '') + (task.attentionCount ? ' · ' + task.attentionCount + ' 项待处理' : '')} onClick={activate}>
     <StatusOrb task={task} /><span className="capsule-title">{title}</span>
-    {(task.status === 'running' || task.status === 'starting') && <span className="working-dots" aria-hidden="true"><i /><i /><i /></span>}
     {task.attentionCount > 0 && <span className="pending-count" aria-label={task.attentionCount + ' 项待处理请求'}>{task.attentionCount} 待处理</span>}
-    {metrics && <span className="capsule-metrics" title={metricsTitle}>{metrics.turns}轮 · {metrics.steps}步</span>}
+    {metrics && <span className="capsule-metrics" title={metricsTitle}><b>{metrics.turns}</b>轮 · <b>{metrics.steps}</b>步</span>}
     {task.total > 0 && <span className="step-count" aria-label={task.completed + '/' + task.total + ' Todo 步骤完成'}>{task.completed}/{task.total}</span>}
     {task.status === 'completed' && <span className="capsule-state">已完成</span>}
   </button>;
@@ -31,8 +30,8 @@ export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; ex
       <Progress task={task} />
       <div className="current-step"><StatusOrb task={task} /><span>{failure ? task.label + '，当前内容可能已过时' : task.current.map(t => t.content).join('、') || task.label}</span></div>
       {metrics && <div className="peek-stats">
-        <span>{metrics.turns} 轮 · {metrics.steps} 步{metrics.tokensPerSecond !== undefined ? ' · ' + metrics.tokensPerSecond + ' tok/s' : ''}</span>
-        <span>{formatTokens(metrics.totalTokens ?? 0)} tok{metrics.cacheHitPercent !== undefined ? ' · 缓存 ' + metrics.cacheHitPercent + '%' : ''}{metrics.contextPercent !== undefined ? ' · 上下文 ' + metrics.contextPercent + '%' : ''}</span>
+        <span><b>{metrics.turns}</b> 轮 · <b>{metrics.steps}</b> 步{metrics.tokensPerSecond !== undefined ? ' · ' + metrics.tokensPerSecond + ' tok/s' : ''}</span>
+        <span><b>{formatTokens(metrics.totalTokens ?? 0)}</b> tok{metrics.cacheHitPercent !== undefined ? ' · 缓存 ' + metrics.cacheHitPercent + '%' : ''}{metrics.contextPercent !== undefined ? ' · 上下文 ' + metrics.contextPercent + '%' : ''}</span>
       </div>}
     </button>
     {failure ? <button className="attention-link" onClick={reconnect}><span className="control-label">重新连接</span> <span aria-hidden="true">↗</span></button> : task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}

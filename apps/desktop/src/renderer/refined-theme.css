@@ -1,30 +1,33 @@
 /* Approved direction: one clear surface, neutral content, one action accent. */
 .glass[data-theme] {
-  --fg:#000; --muted:#20242a; --line:rgba(24,29,40,.12);
-  --accent:#5271e8; --action-ink:#2449a8; --warning:#805b13;
-  --success:#146849; --danger:#9d314c; --code-ink:var(--fg);
-  --surface-edge:rgba(24,29,40,.13); --surface-hover:rgba(255,255,255,.12);
-  --surface-glint:rgba(255,255,255,.25); --neutral-fill:rgba(255,255,255,.035);
+  --fg:#12151b; --ink-2:#454c59; --ink-3:#6b7482; --muted:#454c59; --line:rgba(20,24,32,.10);
+  --accent:#4a63d8; --action-ink:#2d47b8; --warning:#8a5a06; --success:#16744e; --danger:#a52f47; --code-ink:var(--fg);
+  --accent-soft:rgba(74,99,216,.10); --success-soft:rgba(22,116,78,.12); --warning-soft:rgba(138,90,6,.10); --danger-soft:rgba(165,47,71,.10);
+  --surface-edge:rgba(20,24,32,.13); --surface-hover:rgba(255,255,255,.16);
+  --surface-glint:rgba(255,255,255,.30); --neutral-fill:rgba(255,255,255,.05);
 }
 @media(prefers-color-scheme:dark) {
   .glass[data-theme=auto]:not([data-backdrop-tone=light]) {
-    --fg:#f4f5f7; --muted:#d2d5dc; --line:rgba(235,239,247,.12); --accent:#5271e8;
-    --action-ink:#afbeff; --warning:#e8c180; --success:#a6d5be; --danger:#f0b0bd;
-    --surface-edge:rgba(235,239,247,.16); --surface-hover:rgba(255,255,255,.06);
-    --surface-glint:rgba(255,255,255,.15); --neutral-fill:rgba(255,255,255,.025);
+    --fg:#f4f6fa; --ink-2:#c3c9d4; --ink-3:#9aa3b2; --muted:#c3c9d4; --line:rgba(235,240,248,.11); --accent:#8ea2ff;
+    --action-ink:#b8c4ff; --warning:#f0c98a; --success:#8ad8b0; --danger:#ffa6b6;
+    --accent-soft:rgba(142,162,255,.14); --success-soft:rgba(138,216,176,.12); --warning-soft:rgba(240,201,138,.12); --danger-soft:rgba(255,166,182,.12);
+    --surface-edge:rgba(235,240,248,.16); --surface-hover:rgba(255,255,255,.07);
+    --surface-glint:rgba(255,255,255,.16); --neutral-fill:rgba(255,255,255,.03);
   }
 }
 .glass[data-theme=dark],.glass[data-theme=auto][data-backdrop-tone=dark] {
-  --fg:#f4f5f7; --muted:#d2d5dc; --line:rgba(235,239,247,.12); --accent:#5271e8;
-  --action-ink:#afbeff; --warning:#e8c180; --success:#a6d5be; --danger:#f0b0bd;
-  --surface-edge:rgba(235,239,247,.16); --surface-hover:rgba(255,255,255,.06);
-  --surface-glint:rgba(255,255,255,.15); --neutral-fill:rgba(255,255,255,.025);
+  --fg:#f4f6fa; --ink-2:#c3c9d4; --ink-3:#9aa3b2; --muted:#c3c9d4; --line:rgba(235,240,248,.11); --accent:#8ea2ff;
+  --action-ink:#b8c4ff; --warning:#f0c98a; --success:#8ad8b0; --danger:#ffa6b6;
+  --accent-soft:rgba(142,162,255,.14); --success-soft:rgba(138,216,176,.12); --warning-soft:rgba(240,201,138,.12); --danger-soft:rgba(255,166,182,.12);
+  --surface-edge:rgba(235,240,248,.16); --surface-hover:rgba(255,255,255,.07);
+  --surface-glint:rgba(255,255,255,.16); --neutral-fill:rgba(255,255,255,.03);
 }
 .glass[data-theme=light],.glass[data-theme=auto][data-backdrop-tone=light] {
-  --fg:#000; --muted:#20242a; --line:rgba(24,29,40,.12); --accent:#5271e8;
-  --action-ink:#2449a8; --warning:#805b13; --success:#146849; --danger:#9d314c;
-  --surface-edge:rgba(24,29,40,.13); --surface-hover:rgba(255,255,255,.12);
-  --surface-glint:rgba(255,255,255,.25); --neutral-fill:rgba(255,255,255,.035);
+  --fg:#12151b; --ink-2:#454c59; --ink-3:#6b7482; --muted:#454c59; --line:rgba(20,24,32,.10);
+  --accent:#4a63d8; --action-ink:#2d47b8; --warning:#8a5a06; --success:#16744e; --danger:#a52f47;
+  --accent-soft:rgba(74,99,216,.10); --success-soft:rgba(22,116,78,.12); --warning-soft:rgba(138,90,6,.10); --danger-soft:rgba(165,47,71,.10);
+  --surface-edge:rgba(20,24,32,.13); --surface-hover:rgba(255,255,255,.16);
+  --surface-glint:rgba(255,255,255,.30); --neutral-fill:rgba(255,255,255,.05);
 }
 .glass[data-theme] { --code-ink:var(--fg); }
 .glass[data-theme][data-strength=readable] { --neutral-fill:rgba(255,255,255,.18); }
@@ -149,3 +152,54 @@
 .glass[data-theme] .task-capsule { font-size:14px; }
 .glass[data-theme] .capsule-title { font-weight:500; }
 .glass[data-theme] button:not(:disabled):hover:not(:active)>.control-label { transform:none; }
+
+/* Hierarchy pass: three ink levels, semantic status colour, mono data. */
+.glass[data-theme] h1 { color:var(--fg); }
+.glass[data-theme] .capsule-title { color:var(--fg); }
+.glass[data-state=running] .capsule-title { background:linear-gradient(92deg,var(--fg) 60%,color-mix(in srgb,var(--fg) 78%,var(--accent)) 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+.glass[data-state=completed] .capsule-title { color:color-mix(in srgb,var(--fg) 74%,var(--success)); }
+.glass[data-theme] .task-meta { color:var(--ink-3); }
+.glass[data-theme] .task-meta>span:first-of-type { color:var(--ink-2); }
+.glass[data-state=running] .task-meta>span:first-of-type { color:var(--accent); }
+.glass[data-state=waiting_approval] .task-meta>span:first-of-type,.glass[data-state=waiting_answer] .task-meta>span:first-of-type { color:var(--warning); }
+.glass[data-theme] .status-orb { color:var(--ink-3); }
+.glass[data-theme] .status-orb.running { background:var(--accent); }
+.glass[data-theme] .status-orb.completed { color:var(--success); }
+.glass[data-theme] .status-orb:is(.error,.disconnected) { color:var(--danger); }
+.glass[data-state=waiting_approval] .status-orb,.glass[data-state=waiting_answer] .status-orb { color:var(--warning); }
+.glass[data-theme] .step-count { color:var(--ink-3); font-family:var(--font-mono); letter-spacing:.02em; }
+.glass[data-theme] .task-capsule .step-count { color:var(--ink-2); font-size:10.5px; letter-spacing:.02em; }
+.glass[data-theme] .task-meta .step-count { color:var(--ink-2); background:var(--neutral-fill); border:1px solid var(--line); border-radius:999px; padding:1px 7px; }
+.glass[data-theme] .task-metrics { color:var(--ink-3); letter-spacing:.02em; gap:2px 2px; }
+.glass[data-theme] .task-metrics span+span { position:relative; padding-left:12px; }
+.glass[data-theme] .task-metrics span+span::before { content:""; position:absolute; left:2px; top:calc(50% - 1.5px); width:3px; height:3px; border-radius:50%; background:color-mix(in srgb,var(--ink-3) 50%,transparent); }
+.glass[data-theme] .task-metrics b { color:var(--action-ink); font-family:var(--font-mono); font-size:11.5px; font-weight:600; }
+.glass[data-theme] .capsule-metrics { color:var(--ink-3); font-family:var(--font-mono); font-size:10.5px; letter-spacing:.01em; }
+.glass[data-theme] .capsule-metrics b { color:var(--action-ink); font-weight:600; }
+.glass[data-theme] .peek-stats span:first-child { color:var(--ink-2); font-weight:500; }
+.glass[data-theme] .peek-stats span:last-child { color:var(--ink-3); }
+.glass[data-theme] .peek-stats b { color:var(--action-ink); font-family:var(--font-mono); font-weight:600; }
+.glass[data-theme] .current-step { color:var(--fg); }
+.glass[data-theme] .task-progress>span { background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 52%,var(--success))); }
+.glass[data-theme] .task-tab { color:var(--ink-3); font-size:10.5px; font-weight:600; letter-spacing:.1em; }
+.glass[data-theme] .task-tab[aria-selected=true] { color:var(--action-ink); background:var(--accent-soft); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 18%,transparent); }
+.glass[data-theme] .task-expanded .activity-list article { border-color:var(--line); }
+.glass[data-theme] .activity-heading strong { color:var(--action-ink); background:var(--accent-soft); border:1px solid color-mix(in srgb,var(--accent) 22%,transparent); border-radius:6px; padding:1px 6px; font-size:10px; letter-spacing:.06em; }
+.glass[data-theme] .activity-status { display:inline-flex; align-items:center; gap:5px; font-size:10px; letter-spacing:.08em; color:var(--ink-3); }
+.glass[data-theme] .activity-status::before { content:""; width:5px; height:5px; border-radius:50%; background:currentColor; box-shadow:0 0 0 2px color-mix(in srgb,currentColor 16%,transparent); }
+.glass[data-theme] article[data-tool-status=running] .activity-status { color:var(--accent); }
+.glass[data-theme] article[data-tool-status=success] .activity-status { color:var(--success); }
+.glass[data-theme] article[data-tool-status=error] .activity-status { color:var(--danger); }
+.glass[data-theme] article[data-tool-status=pending] .activity-status,.glass[data-theme] article[data-tool-status=cancelled] .activity-status { color:var(--ink-3); }
+.glass[data-theme] .task-expanded .process-list p { color:var(--ink-2); }
+.glass[data-theme] .task-expanded .process-list .activity-result { color:var(--success); }
+.glass[data-theme] .settings-panel label { color:var(--ink-2); font-weight:500; }
+.glass[data-theme] .settings-panel select { color:var(--fg); font-weight:500; }
+.glass[data-theme] .settings-panel .muted { color:var(--ink-3); }
+.glass[data-theme] .settings-group legend { display:flex; align-items:center; gap:10px; width:100%; color:var(--ink-3); }
+.glass[data-theme] .settings-group legend::before { content:""; width:3px; height:3px; flex:0 0 3px; border-radius:50%; background:var(--accent); opacity:.75; }
+.glass[data-theme] .settings-group legend::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent); }
+.glass[data-theme] .request-heading strong { color:var(--action-ink); background:var(--accent-soft); border-color:transparent; letter-spacing:.05em; }
+.glass[data-theme] .command-preview { border-left-color:var(--accent); background:color-mix(in srgb,var(--accent) 5%,transparent); color:var(--ink-2); }
+.glass[data-theme] .safety-note { color:var(--ink-3); }
+.glass[data-theme] .empty-state { color:var(--ink-3); }

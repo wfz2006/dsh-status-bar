@@ -151,16 +151,26 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 
 ## 工作过程视图与胶囊动效（2026-10-18）
 
-大窗（400×360）新增「过程 / 步骤」两个页签。过程页复用 `session.activities` 的工具活动时间线，逐条显示工具名、执行状态（等待执行/执行中/已完成/执行失败/已取消）与摘要、结果摘要；数据与「最近活动」面板同源，DSH 会话来自 `tool/call`、`tool/result` 与 follow 审计事件，Mock 会话来自 `session.tool.activity` 帧。工作胶囊在 `agentStatus=running/starting` 时标题做呼吸动画（透明度 .8↔1、上下 0.5px），标题尾部三点错峰跳动；`data-animation=reduced` 放慢到 6s，`off` 与系统 `prefers-reduced-motion` 直接停用。
+大窗（400×360）新增「过程 / 步骤」两个页签。过程页复用 `session.activities` 的工具活动时间线，逐条显示工具名、执行状态（等待执行/执行中/已完成/执行失败/已取消）与摘要、结果摘要；数据与「最近活动」面板同源，DSH 会话来自 `tool/call`、`tool/result` 与 follow 审计事件，Mock 会话来自 `session.tool.activity` 帧。工作胶囊在 `agentStatus=running/starting` 时标题做呼吸动画（透明度 .8↔1、上下 0.5px）；`data-animation=reduced` 放慢到 6s，`off` 与系统 `prefers-reduced-motion` 直接停用（尾随三点后因与标题省略号重叠，已在 M5-13 移除）。
 
 隔离 Electron 实测（`GLASS_SMOKE=1`）：
 
 | 检查 | 结果 |
 |---|---|
-| 胶囊呼吸 | `data-state=running`、`.working-dots` 存在、`.capsule-title` 计算样式 `animationName=capsule-breathe`、点 `dot-breathe` |
+| 胶囊呼吸 | `data-state=running`、`.capsule-title` 计算样式 `animationName=capsule-breathe` |
 | 过程页 | 切大窗后高度 360、两个页签、默认「过程」选中，过程页 1 条 `read_file` /「执行中」/「查看协议与状态模型 · Mock 事件」 |
 | 步骤页 | 点「步骤」后 `aria-selected=true`，Todo 2 条 |
 | 窗口 | `getBounds()` 400×360（忽略鼠标事件、位置固定在 120,120 后测量） |
 
 截图：`ui-capsule-working.png`、`ui-expanded-process.png`、`ui-expanded-steps.png`（仓库外 `evidence-real/`）。限制：过程页只覆盖工具活动，不含模型流式文字；真实会话中非运行态不再 follow，历史活动来自重连时 follow 快照与 `session/list` 的有限投影。
+
+## 排版与配色层级（2026-10-18）
+
+`typography.css` 建立四种角色：显示字体 Georgia + Noto Serif SC/宋体 600（标题、胶囊标题），正文 Segoe UI Variable Text/Segoe UI，说明字 11–12px，数据与工具名用 Cascadia Mono/Consolas。`refined-theme.css` 新增三级墨色 `--fg / --ink-2 / --ink-3` 与语义色 `--accent / --success / --warning / --danger`（各带 soft 底色），light 与 dark 分别取值；标题用 fg，运行态胶囊标题用 fg→accent 渐变，完成态标题偏 success。
+
+层级规则：指标数字统一等宽 + accent（胶囊「N 轮 · N 步」、速览两行、详情指标条）；每组指标按「标签 ink-3 + 数值 ink-2/accent」分层；工具名用 accent-soft 芯片，活动状态用色点（执行中 accent、成功 success、失败 danger）；页签选中用 accent-soft 底与 accent 边；设置分组标题加 accent 引导点与发丝线；胶囊步数用等宽 ink-3。此前工作胶囊尾随三点因与标题省略号视觉重叠而删除，呼吸动画保留（`capsule-breathe`）。
+
+隔离 Electron 截图复核（`GLASS_SMOKE=1`，忽略鼠标事件并固定 120,120）：胶囊 302×52、速览、详情 400×360、设置面板、深色主题五张；页签与窗口尺寸断言沿用 process-check 脚本。检查结果：lint 0、typecheck 0、13 文件 95 测试全过、`pnpm --filter @glass/desktop build` 成功。
+
+限制：显示字体依赖本机 Georgia/宋体/等宽字体可用性，缺失时回退系统字体；深色截图是透明窗口内容落在浅灰背景上的取样效果，真实深色壁纸下对比更高；approval 视图存在既有截图重影（与字体无关，待查）。
 

@@ -1,24 +1,24 @@
 /* Editorial display, quiet UI captions, and precise code: roles share metrics
    and use installed real faces, without simulated strokes or text effects. */
 :root {
-  --font-display:"Georgia","Noto Serif SC","华文中宋",serif;
-  --font-body:"Segoe UI Variable Text","Noto Sans SC","Microsoft YaHei UI",sans-serif;
-  --font-caption:"Segoe UI Variable Small","Noto Sans SC","Microsoft YaHei UI",sans-serif;
+  --font-display:"Georgia","Noto Serif SC","SimSun",serif;
+  --font-body:"Segoe UI Variable Text","Microsoft YaHei UI","Noto Sans SC",sans-serif;
+  --font-caption:"Segoe UI Variable Small","Microsoft YaHei UI","Noto Sans SC",sans-serif;
   --font-mono:"Cascadia Mono","Consolas","Noto Sans SC",monospace;
   font-family:var(--font-body);
 }
 .glass[data-theme] :is(h1,.capsule-title) {
-  font-family:var(--font-display); font-weight:500; letter-spacing:.01em;
+  font-family:var(--font-display); font-weight:600; letter-spacing:0;
 }
-.glass[data-theme] h1 { font-size:17px; line-height:26px; }
-.glass[data-theme] .capsule-title { font-size:15px; line-height:24px; }
+.glass[data-theme] h1 { font-size:17px; line-height:1.45; }
+.glass[data-theme] .capsule-title { font-size:14.5px; line-height:22px; }
 .glass[data-theme] :is(.step-count,.task-meta,.request-session,.safety-note,.muted,.source-notice,.settings-group legend,.request-heading strong,.request-details>summary,.debug-settings>summary) {
   font-family:var(--font-caption);
 }
 .glass[data-theme] :is(.step-count,.task-meta,.request-session) {
-  font-size:12px; font-weight:400; letter-spacing:.015em; font-variant-numeric:tabular-nums;
+  font-size:11px; font-weight:500; letter-spacing:.07em; font-variant-numeric:tabular-nums;
 }
-.glass[data-theme] .settings-group legend { font-size:12px; font-weight:500; letter-spacing:.06em; }
+.glass[data-theme] .settings-group legend { font-size:10.5px; font-weight:600; letter-spacing:.16em; }
 .glass[data-theme] :is(.command-preview,.command-full,.activity-list strong,.tint-choice output,.appearance-slider output) {
   font-family:var(--font-mono); font-weight:400; font-variant-numeric:tabular-nums;
 }

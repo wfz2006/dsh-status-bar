@@ -274,13 +274,8 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .task-expanded .process-list .activity-result{color:var(--accent);}
 .task-expanded .process-list article[data-tool-status=running] .activity-status{color:var(--accent);}
 .task-expanded .process-list article[data-tool-status=error] .activity-status{color:#c2544a;}
-.working-dots{display:inline-flex;align-items:center;gap:2px;margin-left:3px;flex:0 0 auto;}
-.working-dots i{width:3px;height:3px;border-radius:50%;background:var(--accent);opacity:.3;animation:dot-breathe 1.5s ease-in-out infinite;}
-.working-dots i:nth-child(2){animation-delay:.16s;}
-.working-dots i:nth-child(3){animation-delay:.32s;}
-@keyframes dot-breathe{0%,100%{opacity:.24;transform:translateY(1px);}50%{opacity:.95;transform:translateY(-1px);}}
 .glass[data-state=running] .capsule-title,.glass[data-state=starting] .capsule-title{animation:capsule-breathe 3.4s ease-in-out infinite;}
 @keyframes capsule-breathe{0%,100%{opacity:.8;transform:translateY(.5px);}50%{opacity:1;transform:translateY(-.5px);}}
 .glass[data-animation=reduced] .capsule-title{animation-duration:6s;}
-.glass[data-animation=off] :is(.capsule-title,.working-dots i){animation:none;}
-@media (prefers-reduced-motion:reduce){:is(.capsule-title,.working-dots i){animation:none!important;}}
+.glass[data-animation=off] .capsule-title{animation:none;}
+@media (prefers-reduced-motion:reduce){.capsule-title{animation:none!important;}}
