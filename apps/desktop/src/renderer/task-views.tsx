@@ -10,6 +10,26 @@ export function StatusOrb({ task }: { task: Task }) {
 function Progress({ task }: { task: Task }) {
   return task.total ? <div className="task-progress" role="progressbar" aria-label="Todo 完成步骤" aria-valuemin={0} aria-valuemax={task.total} aria-valuenow={task.completed}><span style={{ width: task.completed / task.total * 100 + '%' }} /></div> : null;
 }
+function ContextRing({ percent }: { percent: number }) {
+  const value = Math.max(0, Math.min(100, percent));
+  const circumference = 2 * Math.PI * 7;
+  return <span className="context-ring" role="img" aria-label={'上下文占用 ' + value + '%'} title={'上下文 ' + value + '%'}>
+    <svg viewBox="0 0 20 20" aria-hidden="true"><circle className="ring-track" cx="10" cy="10" r="7" /><circle className="ring-value" cx="10" cy="10" r="7" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - value / 100)} /></svg>
+    <b>{value}%</b>
+  </span>;
+}
+function SessionPicker({ sessions, selected, select }: { sessions: { sessionId: string; title: string }[]; selected: string; select: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const current = sessions.find(session => session.sessionId === selected);
+  return <div className="session-picker" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false); }}>
+    <button type="button" className="picker-trigger" aria-haspopup="listbox" aria-expanded={open} title={current?.title} onClick={() => setOpen(value => !value)}>
+      <span className="picker-label">{current?.title ?? '选择会话'}</span><Icon name="chevron" />
+    </button>
+    {open && <ul className="picker-menu" role="listbox" aria-label="选择会话">
+      {sessions.map(session => <li key={session.sessionId}><button type="button" role="option" aria-selected={session.sessionId === selected} className="picker-option" onClick={() => { select(session.sessionId); setOpen(false); }}>{session.title}</button></li>)}
+    </ul>}
+  </div>;
+}
 export function TaskCapsule({ task, activate }: { task: Task; activate: () => void }) {
   const title = task.status === 'disconnected' ? task.label + ' · ' + task.title : task.title;
   const metrics = taskMetrics(task.session);
@@ -36,9 +56,12 @@ export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; ex
       <div className="task-heading"><h1 title={task.title}>{task.title}</h1>{task.total > 0 && <span className="step-count">{task.completed}/{task.total}</span>}</div>
       <Progress task={task} />
       <div className="current-step"><StatusOrb task={task} /><span>{failure ? task.label + '，当前内容可能已过时' : task.current.map(t => t.content).join('、') || task.label}</span></div>
-      {metrics && <div className="peek-stats">
-        <span><b>{metrics.turns}</b> 轮 · <b>{metrics.steps}</b> 步{metrics.tokensPerSecond !== undefined ? ' · ' + metrics.tokensPerSecond + ' tok/s' : ''}</span>
-        <span><b>{formatTokens(metrics.totalTokens ?? 0)}</b> tok{metrics.cacheHitPercent !== undefined ? ' · 缓存 ' + metrics.cacheHitPercent + '%' : ''}{metrics.contextPercent !== undefined ? ' · 上下文 ' + metrics.contextPercent + '%' : ''}</span>
+      {metrics && <div className="peek-usage">
+        <div className="peek-stats">
+          <span><b>{metrics.turns}</b> 轮 · <b>{metrics.steps}</b> 步{metrics.tokensPerSecond !== undefined ? ' · ' + metrics.tokensPerSecond + ' tok/s' : ''}</span>
+          <span><b>{formatTokens(metrics.totalTokens ?? 0)}</b> tok{metrics.cacheHitPercent !== undefined ? ' · 缓存 ' + metrics.cacheHitPercent + '%' : ''}</span>
+        </div>
+        {metrics.contextPercent !== undefined && <ContextRing percent={metrics.contextPercent} />}
       </div>}
     </button>
     {failure ? <button className="attention-link" onClick={reconnect}><span className="control-label">重新连接</span> <span aria-hidden="true">↗</span></button> : task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}
@@ -98,9 +121,8 @@ export function TaskExpanded({ task, projection, selected, select, approval, rec
   const metrics = taskMetrics(task.session);
   const todos = [...task.todos].sort((a, b) => rank[a.status] - rank[b.status]);
   return <section className="task-expanded">
-    <div className="task-heading"><h1 title={task.title}>{task.title}</h1>
-      {Object.keys(projection.sessions).length > 1 && <select className="session-picker" aria-label="选择会话" value={selected} onChange={e => select(e.target.value)}>{Object.values(projection.sessions).map(s => <option value={s.sessionId} key={s.sessionId}>{s.title}</option>)}</select>}
-    </div>
+    <div className="task-heading"><h1 title={task.title}>{task.title}</h1></div>
+    {Object.keys(projection.sessions).length > 1 && <div className="task-picker-row"><SessionPicker sessions={Object.values(projection.sessions).map(session => ({ sessionId: session.sessionId, title: session.title }))} selected={selected} select={select} /></div>}
     <div className="task-meta"><StatusOrb task={task} /><span>{task.label}{projection.stale ? ' · 状态可能过时' : ''}</span>{task.total > 0 && <span className="step-count">{task.completed}/{task.total} 步骤</span>}</div>
     {metrics && <div className="task-metrics">
       <span><b>{metrics.turns}</b> 轮 · <b>{metrics.steps}</b> 步</span>

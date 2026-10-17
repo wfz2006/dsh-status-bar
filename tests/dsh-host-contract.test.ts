@@ -68,6 +68,7 @@ class FakeHost {
   waterfall(event: { eventId: string; agentId: string; event: string; request: Args }) { return this.send('gateway', { type: 'waterfall', ...event }); }
   gateway(value: Args) { return this.send('gateway', value); }
   audit(sessionId: string, event: Args) { return this.send(`audit:${sessionId}`, { type: 'event', event }); }
+  snapshot(sessionId: string, projections: Args) { return this.send(`audit:${sessionId}`, { type: 'snapshot', projections: { values: projections }, records: [] }); }
 
   private attach(socket: WebSocket) {
     socket.on('message', raw => {
@@ -244,6 +245,19 @@ describe('dsh host contract', () => {
       turns: 5, steps: 137, tokensPerSecond: 254, cacheHitPercent: 95.6, contextPercent: 9.9,
       tokens: { input: 404103, cacheRead: 8790912, cacheWrite: 0, output: 159154, total: 9354169 },
     });
+  });
+
+  it('keeps derived stats when a later snapshot carries only one projection key', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true, stats: {
+      sessionStats: { turns: 5, steps: 137, decodeMs: 625876, decodeTokens: 159154 },
+      tokenUsage: { uncachedInputTokens: 404103, outputTokens: 159154, cacheReadTokens: 8790912, cacheWriteTokens: 0 },
+      contextPressure: { projectedTokens: 103981, contextWindow: 1048576 },
+    } }] });
+    await h.adapter.connect(h.host.link());
+    await expect.poll(() => h.state().sessions['s1']?.stats?.turns, { timeout: 3000 }).toBe(5);
+    h.host.snapshot('s1', { todos: [{ content: '后续步骤', status: 'pending' }] });
+    await expect.poll(() => h.state().sessions['s1']?.todos.length, { timeout: 3000 }).toBe(1);
+    expect(h.state().sessions['s1']?.stats).toMatchObject({ turns: 5, steps: 137, tokensPerSecond: 254 });
   });
 
   it('only actionables complete approvals and submits through the live delivery identity', async () => {

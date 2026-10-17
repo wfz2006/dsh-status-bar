@@ -43,6 +43,8 @@ export function createDshAdapter(options: Options) {
   let runtimeId = randomUUID(); let epoch = randomUUID(); let clientId = ''; let connected = false; let generation = 0;
   let transport: HostTransport | undefined; let poll: ReturnType<typeof setInterval> | undefined;
   const sessions = new Map<string, Session>(); const approvals = new Map<string, Approval>(); const questions = new Map<string, Question>();
+  /** Projections arrive one key at a time; keep the merged view so stats never flicker back to partial zeros. */
+  const projectionValues = new Map<string, RecordValue>();
   const revisions = new Map<string, number>(); const deliveries = new Map<string, Delivery>(); const followed = new Set<string>();
   const terminal = new Map<string, Session['phase']>(); const archived = new Set<string>();
   const toolArguments = new Map<string, { name: string; preview: string; complete: boolean }>();
@@ -82,8 +84,11 @@ export function createDshAdapter(options: Options) {
     if (previous && previous.sourceSeq === note.sourceSeq && previous.text === normalized) return;
     session.notes = [{ ...note, text: normalized.slice(0, 2000) }, ...(session.notes ?? []).filter(n => n.id !== note.id)].slice(0, 60);
   }
-  function applyProjections(id: string, values: unknown) {    const session = ensureSession(id); if (!session) return;
-    const p = record(values);
+  function applyProjections(id: string, values: unknown) {
+    const session = ensureSession(id); if (!session) return;
+    const merged = { ...(projectionValues.get(id) ?? {}), ...record(values) };
+    projectionValues.set(id, merged);
+    const p = merged;
     if ('title' in p) session.title = bounded(p.title, '未命名会话');
     const stats = sessionStats(record(p.sessionStats), record(p.tokenUsage), record(p.contextPressure));
     if (stats) session.stats = stats;
@@ -186,7 +191,7 @@ export function createDshAdapter(options: Options) {
     if (g.type === 'emit') {
       const args = Array.isArray(g.args) ? g.args : []; const id = bounded(args[0], '', 200);
       if (g.event === 'api-session/added') { const row = record(args[0]); const sid = bounded(row.sessionId, '', 200); if (ensureSession(sid, row)) { applyProjections(sid, record(row.projections).values); follow(sid); } }
-      if (g.event === 'api-session/removed' && sessions.has(id)) { const sourceSeq = revision(id); sessions.delete(id); terminal.delete(id); for (const d of [...deliveries.values()]) if (d.identity.sessionId === id) finalizeDelivery(d, 'unavailable'); if (connected) options.publish(frame('session.removed', { sessionId: id, sourceSeq })); }
+      if (g.event === 'api-session/removed' && sessions.has(id)) { const sourceSeq = revision(id); sessions.delete(id); projectionValues.delete(id); terminal.delete(id); for (const d of [...deliveries.values()]) if (d.identity.sessionId === id) finalizeDelivery(d, 'unavailable'); if (connected) options.publish(frame('session.removed', { sessionId: id, sourceSeq })); }
       if (g.event === 'api-session/status' && ensureSession(id)) { sessions.get(id)!.agentStatus = args[1] === true ? 'running' : 'idle'; if (args[1] === true) { terminal.delete(id); follow(id); } emitSession(id); }
       if (g.event === 'api-session/error' && sessions.has(id)) { terminal.set(id, 'error'); sessions.get(id)!.agentStatus = 'idle'; emitSession(id); }
       return;

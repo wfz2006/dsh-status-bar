@@ -17,7 +17,7 @@ export function normalizeSettings(value: unknown): GlassSettings {
     animation: choice('animation', ['full', 'reduced', 'off'], 'full'), pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], 'system') };
 }
 export function viewSize(mode: GlassViewMode) {
-  return { capsule: { width: 300, height: 52 }, peek: { width: 340, height: 168 }, expanded: { width: 400, height: 360 }, approval: { width: 400, height: 340 } }[mode];
+  return { capsule: { width: 288, height: 50 }, peek: { width: 340, height: 168 }, expanded: { width: 400, height: 360 }, approval: { width: 400, height: 340 } }[mode];
 }
 export function viewForSize(width: number, height: number, current: GlassViewMode): GlassViewMode {
   if (height < 96) return 'capsule';
@@ -63,6 +63,8 @@ export function formatTokens(value: number): string {
 export function taskMetrics(session: Session | undefined) {
   const stats = session?.stats;
   if (!stats) return undefined;
+  const totalTokens = stats.tokens?.total ?? 0;
+  if (stats.turns === 0 && stats.steps === 0 && totalTokens === 0) return undefined;
   return { turns: stats.turns, steps: stats.steps, tokensPerSecond: stats.tokensPerSecond, cacheHitPercent: stats.cacheHitPercent,
     contextPercent: stats.contextPercent, totalTokens: stats.tokens?.total, inputTokens: stats.tokens?.input,
     cacheTokens: stats.tokens?.cacheRead, outputTokens: stats.tokens?.output };

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Tray, nativeImage, screen, globalShortcut, shell, clipboard } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, globalShortcut, shell, clipboard } from 'electron';
 import { existsSync, readFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -27,7 +27,6 @@ if (customDataDirectory && isAbsolute(customDataDirectory)) {
 }
 const originalDSH = 'D:/DSH/DeepSeek Harness.exe';
 let win: BrowserWindow;
-let tray: Tray | undefined;
 let ui: ReturnType<typeof createWindowController> | undefined;
 let optics:ReturnType<typeof createDesktopOptics> | undefined;
 let positioner:ReturnType<typeof createWindowPositioner>|undefined;
@@ -48,14 +47,13 @@ const responses = new Set<string>();
 
 function sourceName() { return source.mode === 'mock' ? '数据源：Mock 演示 · 非真实会话' : `数据源：DeepSeek Harness · ${source.connection === 'connected' ? '已连接' : source.connection === 'connecting' ? '连接中' : '未连接'}`; }
 function publishSource() {
-  // Quit tears the tray down while transport close events are still draining; never publish
+  // Quit tears the window down while transport close events are still draining; never publish
   // into destroyed UI from those late callbacks.
   if (quitting) return;
   if (win && !win.isDestroyed()) {
     win.webContents.send('glass:source-update', source);
     win.setTitle('DSH Glass · ' + (source.mode === 'mock' ? 'Mock 开发预览' : 'DeepSeek Harness'));
   }
-  if (tray && !tray.isDestroyed()) tray.setToolTip('DSH Glass · ' + sourceName());
   ui?.publish();
 }
 function resetSource(mode: SourceState['mode']) {
@@ -187,7 +185,7 @@ else {
     app.setAppUserModelId('local.dsh-glass.preview');
     win = new BrowserWindow({ ...position(), minWidth: 180, minHeight: 50, maxWidth: 900, maxHeight: 1000,
       frame: false, thickFrame: false, hasShadow: false, roundedCorners: false, transparent: true,
-      resizable: true, show: false, backgroundColor: '#00000000', title: 'DSH Glass · Mock 开发预览',
+      resizable: true, show: false, skipTaskbar: true, backgroundColor: '#00000000', title: 'DSH Glass · 悬浮伴侣',
       webPreferences: { preload: join(here, '../preload/index.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true },
     });
     positioner=createWindowPositioner(win,join(here,'../../native/RegionCapture.exe'));
@@ -197,7 +195,7 @@ else {
       reconnect: () => { if (source.mode === 'mock') mockAction('reconnect'); else ui?.request('settings'); },
       mock: action => { if (source.mode === 'mock') mockAction(action); else void useMock().then(() => mockAction(action)); }, quit: () => app.quit(),
       canOpenDSH: existsSync(originalDSH), openDSH: () => { void shell.openPath(originalDSH); },
-      menuChanged: menu => { if (tray && !tray.isDestroyed()) tray.setContextMenu(menu); },
+      menuChanged: () => {},
     });
     optics=createDesktopOptics(win,join(here,'../../native/RegionCapture.exe'));
     const opticsBinary = join(here, '../../native/RegionCapture.exe');
@@ -283,9 +281,6 @@ else {
     if (smoke) await useMock();
     else { update({ kind: 'transport.closed' }); publishSource(); }
     watchdog = setInterval(() => { if (socket && Date.now() - lastReceived > 9000) { update({ kind: 'transport.closed' }); socket.terminate(); } }, 1000);
-    tray = new Tray(nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGElEQVQ4T2Nk+P+/HgMlgImBQjBqAAMAAGmDH/FHQwHAAAAAAElFTkSuQmCC'));
-    tray.setToolTip('DSH Glass · ' + sourceName()); tray.setContextMenu(ui.menu());
-    tray.on('double-click', () => win.show());
     globalShortcut.register('CommandOrControl+Shift+G', () => win.isVisible() ? win.hide() : win.show());
     screen.on('display-removed', () => win.setBounds(clampBounds(win.getBounds(), screen.getPrimaryDisplay().workArea)));
     screen.on('display-metrics-changed', () => win.setBounds(clampBounds(win.getBounds(), screen.getDisplayMatching(win.getBounds()).workArea)));
@@ -300,5 +295,5 @@ app.on('before-quit', () => {
   quitting = true; reconnectEnabled = false; clearTimeout(retry); clearInterval(watchdog); ui?.stop();
   optics?.stop();
   positioner?.stop();
-  sourceGeneration++; dsh?.stop(); adapter?.stop(); socket?.terminate(); void bridge?.close(); globalShortcut.unregisterAll(); tray?.destroy();
+  sourceGeneration++; dsh?.stop(); adapter?.stop(); socket?.terminate(); void bridge?.close(); globalShortcut.unregisterAll();
 });

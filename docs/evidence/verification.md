@@ -186,3 +186,19 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 
 限制：实时转录依赖被 follow 的 running 会话（`session/follow` 的 assistant/message 流；归档会话只有缓存投影，通常没有 notes）；思考文本可能很长，列表预览截断、详情最多显示 6 行；截图仍受既有 approval 重影影响的视图未纳入本轮证据。
 
+
+## 紧凑胶囊与七项体验修正（2026-10-18）
+
+| 项目 | 改动 | 验证 |
+| --- | --- | --- |
+| 胶囊紧凑 | viewSize 300×52→288×50；`.task-capsule` padding 18→13px、gap 12→8px | 隔离 Electron 断言 bounds 290×50（含 2px 阴影）、computed padding 13px/gap 8px，截图 `shot-seven-capsule.png` |
+| 不在任务栏/托盘 | BrowserWindow `skipTaskbar: true`；删除 Tray/nativeImage 及 tooltip；菜单「隐藏到托盘」改「隐藏窗口」 | 代码路径 + 启动无托盘图标；菜单退出仍可用 |
+| 完成态 | 去掉整块绿色渐变；5% success 底 + 1px 内描边 + 细成功小签「已完成」 | 断言 `data-state=completed`、chip 文本、`backgroundImage=none`，截图 `shot-seven-completed.png` |
+| 过程紧凑 | summary padding 8→5px、icon 22→20px、正文 12→11.5px、隐藏横向滚动 | 断言两条 summary paddingTop=5px、row 高 30px |
+| 统计闪烁 | 适配器新增 `projectionValues` 按会话合并投影 key，再计算 stats；单 key 快照不再覆盖为 0 | Fake Host 单 key snapshot 后 stats 仍为 5 轮/137 步/254 tok/s（13 文件 98 测试） |
+| 上下文圆环 | 速览新增 20px SVG 圆环（aria-label「上下文占用 N%」） | 断言圆环存在、label 7.2%，截图 `shot-seven-peek.png` |
+| 选择器 | 自绘 `SessionPicker`（药丸触发器 + listbox 弹层，onBlur 关闭），替换原生 select | 断言无原生 select、弹层 2 项、圆角 12px，截图 `shot-seven-picker.png` |
+
+检查：`pnpm lint` 0、`pnpm typecheck` 0、13 文件 98 测试全过、`pnpm --filter @glass/desktop build` 成功（renderer index-CBk6rsPg.js 845.51 kB）。隔离脚本 `ui-seven-check.mjs` 七项断言 PASS；截图在仓库外 `evidence-real/shot-seven-*.png`。
+
+限制：任务栏/托盘效果无法在无头断言中读取系统状态，按代码路径与启动表现确认；多屏/DPI 实机矩阵仍未覆盖。

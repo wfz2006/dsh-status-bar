@@ -123,7 +123,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
       ] },
       { type: 'separator' },
       { label: '显示窗口', id: 'show', click: () => win.show() },
-      { label: '隐藏到托盘', id: 'hide', click: () => win.hide() },
+      { label: '隐藏窗口', id: 'hide', click: () => win.hide() },
       { label: '退出', id: 'quit', click: hooks.quit },
     ];
     return Menu.buildFromTemplate(items);
