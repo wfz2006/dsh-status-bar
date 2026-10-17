@@ -10,6 +10,8 @@
 
 同日按 UI Improvement Pack 做一轮集中整改：去除正常任务子卡片、默认薄透、审批固定操作栏、内容先退场再收起。真实桌面截图/录屏、材质矩阵、性能记录及尚待用户评价的Gate A见 [验收包](reports/electron-redesign/decision.md)；未擅自迁移技术栈。
 
+最新材质按用户指定的 `edge-liquid-glass-newtab` 移植：同源SDF透镜/RGB滤镜、渐变与方向内高光，保留原MIT声明。31项单测、原生截图与像素能力边界见 [材质移植记录](reports/edge-material-port/README.md)；网页内折射已验证，跨应用桌面折射未证实。
+
 ## 推荐阅读顺序
 
 1. [AGENTS.md](AGENTS.md)：Codex 必须遵守的工程规则。

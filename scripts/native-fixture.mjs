@@ -40,8 +40,9 @@ export async function fixture(extraEnv = {}, extraArgs = []) {
     await mkdir(resolve(path,'..'),{recursive:true});
     await app.evaluate(({BrowserWindow},id)=>{const w=BrowserWindow.fromId(id);w.show();w.setAlwaysOnTop(true,'screen-saver');w.focus();w.moveTop();},mainId);
     await expect.poll(()=>app.evaluate(({BrowserWindow},id)=>BrowserWindow.fromId(id).isFocused(),mainId)).toBe(true);
-    const bounds=await rect(); const temp=join(tmpdir(),'dsh-audit-'+Date.now()+'.png');
-    execFileSync('powershell',['-NoProfile','-ExecutionPolicy','Bypass','-File',join(process.env.USERPROFILE,'.codex','skills','screenshot','scripts','take_screenshot.ps1'),'-Path',temp,'-Region',[bounds.x,bounds.y,bounds.width,bounds.height].join(',')],{windowsHide:true,stdio:'pipe'});
+    const handle=await app.evaluate(({BrowserWindow},id)=>BrowserWindow.fromId(id).getNativeWindowHandle().readBigUInt64LE().toString(),mainId);
+    const temp=join(tmpdir(),'dsh-audit-'+Date.now()+'.png');
+    execFileSync('powershell',['-NoProfile','-ExecutionPolicy','Bypass','-File',resolve('scripts/capture-owned-window.ps1'),'-Path',temp,'-Handle',handle],{windowsHide:true,stdio:'pipe'});
     if(!await app.evaluate(({BrowserWindow},id)=>BrowserWindow.fromId(id).isFocused(),mainId))throw new Error('Capture interrupted by another app; sample rejected');
     await copyFile(temp,path);
   }

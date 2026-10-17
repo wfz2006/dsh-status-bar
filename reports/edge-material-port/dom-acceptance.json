@@ -1,0 +1,33 @@
+{
+  "errors": [],
+  "geometry": [
+    {
+      "mode": "capsule",
+      "width": "301",
+      "height": "56"
+    },
+    {
+      "mode": "peek",
+      "width": "341",
+      "height": "168"
+    },
+    {
+      "mode": "expanded",
+      "width": "401",
+      "height": "280"
+    },
+    {
+      "mode": "approval",
+      "width": "401",
+      "height": "340"
+    }
+  ],
+  "pixelTests": [
+    {
+      "source": "owned synthetic DOM only",
+      "changedPixels": 63742,
+      "refractionVerified": true
+    }
+  ],
+  "nativeStatus": "not yet verified"
+}

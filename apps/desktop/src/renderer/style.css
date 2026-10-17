@@ -122,3 +122,8 @@ button { transition:background-color 160ms ease; }button:active:not(.task-capsul
 .glass[data-morph=collapsing]>section { animation:content-retire 80ms ease both; }
 @keyframes content-retire { from { opacity:1; }to { opacity:0; translate:0 -3px; } }
 .pending-count { color:var(--warning); font-size:10px; white-space:nowrap; flex:0 0 auto; text-shadow:0 1px 2px var(--text-edge); }
+/* User-selected Edge material replaces the earlier optical skin. */
+.glass:not([data-material=solid]) { background:transparent; }
+.glass>.task-capsule,.glass>section,.glass>.inline-error,.glass>.drag-strip { position:relative; z-index:1; }
+.capsule-title,.task-heading h1,.current-step>span:last-child,.todo>span:last-child,.task-meta,.step-count,.request-session,.command-preview,.command-full,.request-heading,.request-details,.safety-note { -webkit-text-stroke:0; }
+.task-capsule,.task-peek,.task-expanded,.approval-view { text-shadow:0 1px 3px var(--text-edge); }

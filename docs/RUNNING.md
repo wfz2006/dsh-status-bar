@@ -44,7 +44,9 @@ node scripts/layout-matrix.mjs
 pnpm test:native-redesign
 ```
 
-29 项单元测试覆盖协议、桥、投影、Mock 快照与展示模型。Electron 回归实际操作胶囊拖动、四形态、缩放、设置、会话切换、并发队列、重连、完成/断线、减少动画、隐藏/恢复和安全配置。偏好验收使用两次实际启动，确认手动尺寸及设置跨重启保留且不被审批覆盖。
+31 项单元测试覆盖协议、桥、投影、Mock、展示模型及同源透镜位移。Electron 回归实际操作胶囊拖动、四形态、缩放、设置、会话切换、并发队列、重连、完成/断线、减少动画、隐藏/恢复和安全配置。偏好验收使用两次实际启动，确认手动尺寸及设置跨重启保留且不被审批覆盖。
+
+用户最新指定Edge新标签页材质；同源引擎/材质现为默认光学层。`node scripts/material-port-acceptance.mjs` 在受控前台采集原生对照，`--dom-only` 只验证应用自有背景。最新证据为 `reports/edge-material-port/`，不可将DOM背景折射等同于窗后桌面折射。未添加屏幕采样服务。
 
 最新一次集中整改证据在 `reports/electron-redesign/`：同条件原生材质矩阵、12张四形态截图、20次变形与长命令滚动录屏、资源采样和Gate A决策。`docs/evidence/redesign/` 保留功能回归与早期原生样本，不能把旧材质截图当作本轮默认外观。窗口事件数/rAF间隔/录制30Hz均不代表呈现帧率。Playwright启动器在Node24下仍有DEP0190提示。
 

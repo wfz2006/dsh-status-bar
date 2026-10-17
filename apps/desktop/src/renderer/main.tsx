@@ -7,6 +7,7 @@ import { ResizeHandles } from './gestures';
 import { TaskCapsule, TaskPeek, TaskExpanded } from './task-views';
 import { ApprovalCard } from './approval-card';
 import { GlassSettingsPanel } from './settings';
+import { GlassMaterial } from './glass-material';
 import './style.css';
 
 declare global { interface Window { glass: GlassAPI } }
@@ -46,7 +47,7 @@ function App() {
       if (e.key === 'Escape') { e.preventDefault(); void action(windowState.panel ? 'back' : 'collapse'); }
       if (e.key === 'ContextMenu' || e.key === 'F10' && e.shiftKey) { e.preventDefault(); void action('menu'); }
     }}>
-    <div className="glass-optics" aria-hidden="true"><i className="glass-highlight" /></div>
+    <GlassMaterial strength={windowState.settings.strength} moving={!!windowState.morphing} solid={windowState.material === 'solid'} />
     {(mode !== 'capsule' || windowState.panel) && <div className="drag-strip" aria-hidden="true" title="拖动窗口" />}
     {error && mode !== 'capsule' && <p className="inline-error" role="alert">{error}</p>}
     {windowState.panel === 'settings' ? <GlassSettingsPanel value={windowState.settings} projection={projection} back={invoke('back')}

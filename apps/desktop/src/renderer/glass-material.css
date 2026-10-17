@@ -1,0 +1,16 @@
+/* Adapted from edge-liquid-glass-newtab css/newtab.css (MIT, wfz2006).
+   Tokens and directional reflection match its final operation glass profile.
+   No wallpaper, screenshot, texture or desktop-sampling background is added. */
+.glass-material { position:absolute; inset:0; z-index:0; pointer-events:none; border-radius:inherit; overflow:hidden; }
+.glass-material>svg { position:absolute; overflow:hidden; }
+.lg-material-surface { position:absolute; inset:0; border-radius:inherit; isolation:isolate; overflow:hidden; border:0; background:linear-gradient(145deg,rgba(238,248,255,.065),rgba(255,255,255,.018) 55%,rgba(145,201,255,.035)); }
+.lg-material-surface::before { content:""; position:absolute; inset:0; z-index:1; border-radius:inherit; pointer-events:none; background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.018) 44%,rgba(176,220,255,.07)); opacity:.78; }
+.lg-material-surface::after { content:""; position:absolute; inset:0; z-index:2; border-radius:inherit; pointer-events:none; background:var(--lg-operation-tint,rgba(7,16,31,.07)); }
+.glass[data-strength=clear] { --lg-operation-tint:rgba(7,16,31,.025); }
+.glass[data-strength=balanced] { --lg-operation-tint:rgba(7,16,31,.07); }
+.glass[data-strength=readable] { --lg-operation-tint:rgba(7,16,31,.12); }
+.glass-rim { position:absolute; inset:0; z-index:3; border-radius:inherit; box-shadow:inset 0 1px 1px rgba(255,255,255,.55),inset 0 -1px 1px rgba(8,18,40,.22),inset 1px 0 1px rgba(235,248,255,.18),inset -1px 0 1px rgba(235,248,255,.12),inset 0 0 22px rgba(220,240,255,.045); }
+.glass-rim::before { content:""; position:absolute; inset:0; border-radius:inherit; border:1px solid rgba(225,244,255,.22); }
+.glass-rim::after { content:""; position:absolute; inset:0; border-radius:inherit; opacity:0; transition:opacity 180ms ease; box-shadow:inset 0 1px 1px rgba(255,255,255,.72),inset 1px 0 1px rgba(235,248,255,.26); }
+.glass:hover .glass-rim::after { opacity:1; }
+.glass[data-material=solid] .glass-material { background:transparent; }

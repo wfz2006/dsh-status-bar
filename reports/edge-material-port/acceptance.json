@@ -1,0 +1,37 @@
+{
+  "errors": [],
+  "geometry": [
+    {
+      "mode": "capsule",
+      "width": "301",
+      "height": "56"
+    },
+    {
+      "mode": "peek",
+      "width": "341",
+      "height": "168"
+    },
+    {
+      "mode": "expanded",
+      "width": "401",
+      "height": "280"
+    },
+    {
+      "mode": "approval",
+      "width": "401",
+      "height": "340"
+    }
+  ],
+  "pixelTests": [
+    {
+      "source": "owned synthetic DOM only",
+      "changedPixels": 63742,
+      "refractionVerified": true
+    },
+    {
+      "source": "native desktop composition with owned test-window backdrop",
+      "changedPixels": 4929,
+      "note": "A changed count alone is not proof of desktop refraction; focus/hover and compositor differences must be inspected. Zero means this SVG filter did not bend external window pixels."
+    }
+  ]
+}

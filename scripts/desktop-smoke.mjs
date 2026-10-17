@@ -78,8 +78,8 @@ export async function runAcceptance({ native = false } = {}) {
     await page.getByLabel('默认形态').selectOption('peek');
     await page.getByLabel('动画', { exact: true }).selectOption('off');
     await page.getByLabel('置顶行为').selectOption('always');
-    assert.equal(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isAlwaysOnTop()), true);
-    assert.equal((await ui()).settings.defaultView, 'peek');
+    await expect.poll(()=>app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isAlwaysOnTop())).toBe(true);
+    await expect.poll(async()=>(await ui()).settings.defaultView).toBe('peek');
     await screenshot('settings');
     await page.getByLabel('默认形态').selectOption('capsule');
     await page.getByLabel('置顶行为').selectOption('normal');
