@@ -1,6 +1,6 @@
 # ADR 004：通过官方认证 Host 接入 DSH
 
-日期：2026-10-18。目标安装版本：DeepSeek Harness 0.2.0-rc.2。
+日期：2026-10-18。目标安装版本：DeepSeek Harness 0.2.0-rc.2；`app.asar` 内 `dsh-desktop-host` CLI 实测 0.2.1-rc.2（认证/RPC/`remote.mux` 路径未变，2026-10-18 实装联调复测）。
 
 ## 决策与证据
 

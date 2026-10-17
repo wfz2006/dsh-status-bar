@@ -1,6 +1,6 @@
 # 运行 DSH Glass 液态玻璃预览
 
-项目：`D:\codexwork\dsh\dsh-glass-spec`。默认 **Mock 演示**；另提供实验性的 DSH 认证接入（设置面板粘贴官方启动器输出的认证链接，`dsh://host=…&token=…`）。官方 Desktop 的当前任务与真实审批仍未验收，协议侧应答能力仅在合同测试中验证。
+项目：`D:\codexwork\dsh\dsh-glass-spec`。默认 **Mock 演示**；另提供实验性的 DSH 认证接入（设置面板粘贴官方启动器输出的认证链接）。官方 Desktop 的当前任务与真实审批仍未验收；认证、会话/Todo 观察链已在真实官方 Host（隔离 DSH_HOME）上实装联调，协议侧应答能力由 Fake Host 合同测试覆盖。
 
 ```powershell
 cd D:/codexwork/dsh/dsh-glass-spec
@@ -13,7 +13,7 @@ pnpm start
 
 ### DSH 认证接入（实验）
 
-设置 → 官方认证地址 → 粘贴启动器输出的认证链接并连接；凭据只留 Main 内存，断线即失效，需重新粘贴。该链路目前仅由本机 Fake Host 合同测试（`pnpm test`）验证，不代表官方 Desktop 已联通。
+设置 → 官方认证地址 → 粘贴启动器输出的认证链接并连接；凭据只留 Main 内存，断线即失效，需重新粘贴。Fake Host 合同测试（`pnpm test`）与真实官方 Host 实装联调（`pnpm test:live`）均覆盖该链路；实装联调要求本机已安装 DSH，使用仓库内隔离 `DSH_HOME`（`.local-dsh-probe/`）与只读探测插件，不读取、不修改用户原 Profile，日志/证据一律不落 token。该路径不代表官方 Desktop 当前任务已联通，真实审批仍未验收。
 
 ## 操作与四种形态
 

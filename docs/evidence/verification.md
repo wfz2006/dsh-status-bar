@@ -33,3 +33,19 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 | `pnpm build` | PASS |
 
 合同测试在本机 Fake Host（HTTP 303 认证 + `/api/<method>` JSON-RPC + `/api/remote.mux` WS）上复现握手、快照、网关事件、审批与提问投递、`$events/result` 回写与断线失效；不连接官方 Desktop，不能替代真实 owner/answerer 验收。首轮修复：welcome 能力位曾写成「连接时是否已有投递」，恒为 false 导致审批卡片永久禁用；现改为连接级能力，逐投递授权仍由适配器与 `request-gate` 强制。
+
+## 真实官方 Host 实装联调（2026-10-18）
+
+`pnpm test:live` = `scripts/live-dsh-integration.mjs`：启动随 Desktop 捆绑的官方 Host（`app.asar` 内 `dsh-desktop-host` CLI，`--profile web --patch packages/adapters/dsh/probe/cordis.patch.yml --no-open --port 0`，隔离 `DSH_HOME=.local-dsh-probe`），再用 Playwright 启动真实 Electron 应用，在设置面板粘贴认证链接完成连接。
+
+| 检查 | 结果 |
+|---|---|
+| Host 版本 / 认证 | `0.2.1-rc.2`；GET 根链接 → 303 + 同源 `Location: /` + `Set-Cookie`，`POST /api/session/list` → `server-response result.ok=true`（1 项） |
+| 应用连接 | 设置面板提交后 `mode=dsh`、`connection=connected`、`endpoint=http://127.0.0.1:<port>`、`error=null` |
+| 能力位 | `observeSessions/observeTodos/observeTools/respondApproval/respondQuestion` 全 true（真实链路复验连接级能力修复） |
+| 会话观察 | 真实 API 返回 1 个会话；标题「未命名会话」、phase/agentStatus `finished/idle`、Todo `Probe A:completed` + `Probe C:in_progress`（与 Host 侧 fixture 一致） |
+| 凭据边界 | renderer `getState()` 序列化中不含 token；证据文件不含 token |
+| 断开 / 错误 token | 断开后 `connection=disconnected` 且 sessions=0；错误 token 被 Host 拒绝，界面显示本地化错误且保持 disconnected |
+| 截图 | [connected.png](live-dsh/connected.png)（设置面板「DSH 已连接 / 会话已同步」）；机器可读结果 [result.json](live-dsh/result.json) |
+
+未覆盖：真实模型任务、真实审批投递/决议（fixture 只写 turn/todo，无 `$events` 审批事件）、官方 Desktop 当前任务、多会话并发；本机 DSH 安装版本为 `0.2.1-rc.2`（`dsh.cmd` 包装器仍报 `0.2.0-rc.2`，文件属性未复核）。

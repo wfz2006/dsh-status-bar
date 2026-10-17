@@ -3,7 +3,7 @@
 说明：以下均为**待执行任务**，勾选需附证据（测试、截图、日志或提交链接），不能仅凭实现意图标记完成。状态 `BLOCKED` 须写明原因。
 
 ## M0 — 环境与可行性探测（P0）
-- [x] M0-01 收集 OS、Electron/Node/pnpm、DSH CLI/Desktop 版本及安装方式。证据：docs/integration-matrix.md；官方 bundled CLI `--version`=0.2.0-rc.2。
+- [x] M0-01 收集 OS、Electron/Node/pnpm、DSH CLI/Desktop 版本及安装方式。证据：docs/integration-matrix.md；bundled `dsh.cmd --version`=0.2.0-rc.2，app.asar 内 `dsh-desktop-host` CLI `--version`=0.2.1-rc.2（2026-10-18 实装联调复测，两处版本号不一致，安装包文件属性未复核）。
 - [x] M0-02 阅读目标 DSH 版本官方源码：`session/event`、`approval/request`、`user-questions/request`、`todo/write`。证据：安装包 JS 摘录/哈希及公开源码快照，见 docs/local-source-signatures.md；安装包不含声明文件。
 - [x] M0-03 验证 Web Profile 以正常插件形式启动，输出真实 Session 事件。证据：docs/evidence/dsh-web-probe.txt，隔离 Profile 人工夹具写入 Todo 3→2，非模型任务；插件热卸载待补测。
 - [ ] M0-04 验证 Desktop Profile 是否可以安全安装启用 Bridge 插件（无修改已签名资源）。BLOCKED：尚未通过 Desktop 官方插件 UI 在隔离环境验证；本轮未修改安装/Profile。
@@ -67,7 +67,7 @@
 - [ ] M3-04 关联 `tool/call` 与结果，输出脱敏摘要；未验证的内容标记缺失。
 - [ ] M3-05 获取真实状态和重连快照；模型思考中与未知状态不伪装成准确进度。
 - [ ] M3-06 不启动 DSH 主窗口时的稳定性/生命周期测试。
-- [x] M3-07 认证跨进程适配器：`hostLink → 认证 HTTP RPC + remote.mux WS` 已实现；本机 Fake Host 合同测试 10 项覆盖握手、快照、网关事件、审批/提问流与断线（`tests/dsh-host-contract.test.ts`，2026-10-17）。官方 Desktop 端到端未验收，如实仍按 BLOCKED 处理。
+- [x] M3-07 认证跨进程适配器：`hostLink → 认证 HTTP RPC + remote.mux WS` 已实现；本机 Fake Host 合同测试 10 项覆盖握手、快照、网关事件、审批/提问流与断线（`tests/dsh-host-contract.test.ts`，2026-10-17）。2026-10-18 在真实官方 Host（隔离 DSH_HOME + 只读探测插件）上实装联调 PASS，见 `scripts/live-dsh-integration.mjs` 与 `docs/evidence/live-dsh/`；官方 Desktop 端到端未验收，如实仍按 BLOCKED 处理。
 
 ## M4 — 人工交互闭环（P0/P1，**取决于 M0-05 是否通过**）
 - [ ] M4-01 验证审批 answerer 所有权与请求生命周期，形成 ADR。
@@ -78,6 +78,7 @@
 - [ ] M4-06 多 Session 多请求路由隔离测试。
 - [x] M4-07 应答通道：`approval.respond`/`question.respond` 经官方 `$events/result` 回写，仅在官方事件确认后收口；Main `request-gate` 校验身份/能力/参数完整性（Fake Host 合同测试覆盖）。
 - [ ] M4-08 官方 Desktop 上验证 answerer 所有权与真实决议（M4-01 未完成前对外保持 BLOCKED）。
+- [x] M4-09 真实官方 Host 实装联调（认证 + 会话/Todo 观察 + 断线清空 + 错误 token 拒绝）：`pnpm test:live`，隔离 DSH_HOME + 只读探测插件，2026-10-18 PASS；不替代官方 Desktop 与真实审批验收。证据：`scripts/live-dsh-integration.mjs`、`docs/evidence/live-dsh/`。
 
 ## M5 — 质量、打包与发布（P1）
 - [ ] M5-01 Windows 11 22H2+、DPI 100/125/150/200% 检查。

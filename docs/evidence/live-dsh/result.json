@@ -1,0 +1,72 @@
+{
+  "steps": [
+    {
+      "name": "host-up",
+      "origin": "http://127.0.0.1:40479",
+      "dshVersion": "0.2.1-rc.2"
+    },
+    {
+      "name": "fixture-created",
+      "marker": true
+    },
+    {
+      "name": "auth-contract",
+      "status": 303,
+      "locationPath": "/",
+      "cookieCount": 1,
+      "rpcStatus": 200,
+      "rpcType": "server-response",
+      "rpcOk": true,
+      "itemCount": 1
+    },
+    {
+      "name": "app-start",
+      "mode": "mock",
+      "connection": "connected",
+      "sessions": 2
+    },
+    {
+      "name": "connected",
+      "mode": "dsh",
+      "connection": "connected",
+      "endpoint": "http://127.0.0.1:40479",
+      "error": null,
+      "capabilities": {
+        "observeSessions": true,
+        "observeTodos": true,
+        "observeTools": true,
+        "respondApproval": true,
+        "respondQuestion": true
+      },
+      "sessions": 1,
+      "phases": [
+        "finished/idle"
+      ],
+      "titles": [
+        "未命名会话"
+      ],
+      "todos": [
+        "Probe A:completed",
+        "Probe C:in_progress"
+      ],
+      "tokenLeakedIntoRenderer": false
+    },
+    {
+      "name": "screenshot",
+      "path": "docs/evidence/live-dsh/connected.png"
+    },
+    {
+      "name": "disconnected",
+      "sessions": 0,
+      "connection": "disconnected"
+    },
+    {
+      "name": "wrong-token-rejected",
+      "connection": "disconnected",
+      "error": "未能连接 DSH，请检查官方连接链接和本机服务。"
+    }
+  ],
+  "dshVersion": "0.2.1-rc.2",
+  "hostOrigin": "http://127.0.0.1:40479",
+  "outcome": "PASS"
+}

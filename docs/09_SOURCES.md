@@ -50,15 +50,16 @@ OS + Build：Windows 11 家庭版 中文版 x64 / 26300
 Node：PATH=24.15.0 (D:/node)；DSH bundled=24.18.1
 pnpm：PATH=12.4.1；DSH bundled metadata=11.7.0
 Glass Electron：44.8.0，实际启动与自动化测试通过
-DSH CLI 版本：0.2.0-rc.2，随 Desktop 捆绑，不在当前 PATH
-DSH Desktop 版本：0.2.0-rc.2，D:/DSH
+DSH CLI 版本：bundled `dsh.cmd`=0.2.0-rc.2；app.asar 内 `dsh-desktop-host/lib/cli.js` --version=0.2.1-rc.2（2026-10-18 实测），不在当前 PATH
+DSH Desktop 版本：0.2.1-rc.2（CLI 实测；安装包文件版本未复核），D:/DSH
 DSH Git SHA / tag：安装包 commit 未知；参考公开 master=1517a4dbca0a2789ff1d41ba439600f8547d23fa
-运行模式：官方 Desktop 已安装；本轮使用 bundled CLI 隔离 Web Profile 测试
+运行模式：官方 Desktop 已安装；本轮使用 bundled CLI 隔离 Web Profile 测试，并以 app.asar 内 host CLI 做真实 Host 实装联调
 Profile：项目 .local-dsh-probe/profiles/web（独立 DSH_HOME，不改用户原 Profile）
 核心源码签名校验：PASS，安装包 JS 行为+哈希；未提供 .d.ts，本机 Session 回调实测
-真实 todo 事件：PASS，官方 Runtime 的人工夹具 3→2；非模型任务，Glass 尚未接入该流
+真实 todo 事件：PASS，官方 Runtime 的人工夹具 3→2，并已在 Glass 内实装同步（`pnpm test:live`）；非模型任务
+真实 Host 认证/观察链：PASS（2026-10-18，隔离 DSH_HOME）：303+Cookie → `session/list` → `remote.mux`，见 docs/evidence/live-dsh/result.json
 Desktop 插件装载：BLOCKED / 未实测
-Approval ownership：BLOCKED / 未注册回答者
+Approval ownership：BLOCKED / 未注册回答者；真实 Host 上无审批投递
 Structured question ownership：BLOCKED / 未注册回答者
 备注/复现步骤：见 integration-matrix.md、local-source-signatures.md、evidence/dsh-web-probe.txt
 ```
