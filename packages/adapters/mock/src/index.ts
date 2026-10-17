@@ -29,7 +29,7 @@ export function mockDeltas(): Frame[] {
 }
 export function mockFrames(): Frame[] { return [mockWelcome(), mockSnapshot(), ...mockDeltas()]; }
 
-export type MockScenario = 'normal' | 'out-of-order' | 'disconnect' | 'approval-queue' | 'edge-cases' | 'completed';
+export type MockScenario = 'normal' | 'out-of-order' | 'disconnect' | 'approval-queue' | 'edge-cases' | 'completed' | 'long-approval';
 export function createMockAdapter(publish: (f: Frame) => void, disconnect: () => void, scenario: MockScenario = 'normal') {
   let timers: ReturnType<typeof setTimeout>[] = [];
   let snapshot = mockSnapshot();
@@ -37,6 +37,11 @@ export function createMockAdapter(publish: (f: Frame) => void, disconnect: () =>
   function start() {
     stop(); snapshot = mockSnapshot();
     const frames = scenario === 'edge-cases' ? [] : mockDeltas();
+    if (scenario === 'long-approval') {
+      const index = frames.findIndex(f => f.kind === 'approval.requested');
+      const approval = frames[index];
+      if (approval?.kind === 'approval.requested') frames[index] = { ...approval, payload: { ...approval.payload, commandPreview: Array.from({ length: 30 }, (_, i) => 'echo "Mock line ' + (i + 1) + ' · C:/Mock Workspace/very-long-path/verification-only"').join('\n') + '\n# END OF MOCK PREVIEW', reason: '这是长命令只读夹具，不会执行。'.repeat(8) } };
+    }
     if (scenario === 'completed') {
       frames.splice(3);
       frames.push({ ...base, messageId: 'finished-6', kind: 'session.updated', payload: { sessionId: 'demo-main', sourceSeq: 6, fields: { agentStatus: 'idle', phase: 'finished' } } });

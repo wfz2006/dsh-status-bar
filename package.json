@@ -10,6 +10,8 @@
     "test": "vitest run",
     "test:desktop": "node scripts/desktop-smoke.mjs",
     "test:preferences": "node scripts/preferences-acceptance.mjs",
+    "test:approval-layout": "node scripts/approval-layout.mjs",
+    "test:native-redesign": "node scripts/native-redesign.mjs",
     "test:liquid": "node scripts/liquid-acceptance.mjs"
   },
   "devDependencies": {

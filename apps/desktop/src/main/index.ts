@@ -91,7 +91,7 @@ function makeAdapter(scenario: MockScenario) { return createMockAdapter(f => bri
 function mockAction(action: unknown) {
   if (action === 'disconnect') { reconnectEnabled = false; socket?.close(); update({ kind: 'transport.closed' }); }
   else if (action === 'reconnect') { reconnectEnabled = true; connect(); }
-  else if (action === 'restart' || action === 'out-of-order' || action === 'approval-queue' || action === 'edge-cases' || action === 'completed') {
+  else if (action === 'restart' || action === 'out-of-order' || action === 'approval-queue' || action === 'edge-cases' || action === 'completed' || action === 'long-approval') {
     adapter?.stop(); adapter = makeAdapter(action === 'restart' ? 'normal' : action);
     adapter.start(); reconnectEnabled = true; connect();
   } else throw new Error('Unsupported Mock action');

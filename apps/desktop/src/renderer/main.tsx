@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { GlassAPI, WindowAction, WindowState } from '../shared/api';
-import { DEFAULT_SETTINGS, deriveTask, viewForSize } from '../shared/view-model';
+import { DEFAULT_SETTINGS, deriveTask, viewForSize, type GlassViewMode } from '../shared/view-model';
 import { useGlass } from './store';
 import { ResizeHandles } from './gestures';
 import { TaskCapsule, TaskPeek, TaskExpanded } from './task-views';
@@ -14,6 +14,7 @@ const initialWindow: WindowState = { pinned: false, material: 'acrylic', morphin
 function App() {
   const { projection, selected, replace, select } = useGlass();
   const root = useRef<HTMLElement>(null);
+  const settledMode = useRef<GlassViewMode>('capsule');
   const [windowState, setWindowState] = useState<WindowState>(initialWindow);
   const [size, setSize] = useState({ width: 300, height: 56 });
   const [error, setError] = useState('');
@@ -34,7 +35,8 @@ function App() {
     try { await window.glass.selectSession(id); select(id); } catch { setError('会话已不可用'); }
   }
   const task = deriveTask(projection, selected);
-  const mode = windowState.morphing || windowState.panel ? windowState.viewMode : viewForSize(size.width, size.height, windowState.viewMode);
+  const mode = windowState.morphing === 'collapsing' && windowState.viewMode === 'capsule' ? settledMode.current : windowState.morphing || windowState.panel ? windowState.viewMode : viewForSize(size.width, size.height, windowState.viewMode);
+  if (!windowState.morphing) settledMode.current = mode;
   const invoke = (value: WindowAction) => () => void action(value);
   return <main ref={root} className="glass" data-mode={mode} data-panel={windowState.panel ?? 'none'}
     data-state={task.status} data-material={windowState.material} data-strength={windowState.settings.strength}
@@ -48,7 +50,12 @@ function App() {
     {(mode !== 'capsule' || windowState.panel) && <div className="drag-strip" aria-hidden="true" title="拖动窗口" />}
     {error && mode !== 'capsule' && <p className="inline-error" role="alert">{error}</p>}
     {windowState.panel === 'settings' ? <GlassSettingsPanel value={windowState.settings} projection={projection} back={invoke('back')}
-      update={patch => { void window.glass.setSettings(patch).then(setWindowState).catch(() => setError('设置未保存')); }}
+      update={patch => {
+        setWindowState(current => ({ ...current, settings: { ...current.settings, ...patch } }));
+        void window.glass.setSettings(patch).then(setWindowState).catch(() => {
+          setError('设置未保存'); void window.glass.getWindowState().then(setWindowState).catch(() => {});
+        });
+      }}
       mock={value => { void window.glass.mockAction(value).catch(() => setError('调试操作未完成')); }} />
     : windowState.panel === 'activity' ? <section className="activity-panel"><div className="panel-heading"><h1>最近活动</h1><button className="quiet-button" onClick={invoke('back')}>返回</button></div>
       <div className="activity-list">{task.session?.activities.length ? task.session.activities.map(a => <article key={a.callId + '/' + a.sourceSeq}><strong>{a.toolName}</strong><p>{a.summary}</p></article>) : <p className="empty-state">此会话暂无工具活动</p>}</div></section>

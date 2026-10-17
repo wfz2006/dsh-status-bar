@@ -11,9 +11,10 @@ function Progress({ task }: { task: Task }) {
 }
 export function TaskCapsule({ task, activate }: { task: Task; activate: () => void }) {
   const gesture = useDragClick(activate);
-  const title = task.status === 'disconnected' ? task.label + ' · ' + task.title : task.pending.length ? task.pending.length + ' 项操作需要确认' : task.title;
-  return <button className="task-capsule" aria-label="展开速览" aria-description="可拖动；右键打开菜单。数据来源与调试状态见设置。" title={title + ' · ' + task.label} {...gesture}>
+  const title = task.status === 'disconnected' ? task.label + ' · ' + task.title : task.title;
+  return <button className="task-capsule" aria-label={task.pending.length ? '展开待处理请求' : '展开速览'} aria-description="可拖动；右键打开菜单。数据来源与调试状态见设置。" title={title + ' · ' + task.label + (task.pending.length ? ' · ' + task.pending.length + ' 项待处理' : '')} {...gesture}>
     <StatusOrb task={task} /><span className="capsule-title">{title}</span>
+    {task.pending.length > 0 && <span className="pending-count" aria-label={task.pending.length + ' 项待处理请求'}>{task.pending.length} 待处理</span>}
     {task.total > 0 && <span className="step-count" aria-label={task.completed + '/' + task.total + ' Todo 步骤完成'}>{task.completed}/{task.total}</span>}
   </button>;
 }

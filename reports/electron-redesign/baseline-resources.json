@@ -1,0 +1,1512 @@
+{
+  "phase": "baseline",
+  "durationMs": 300691,
+  "intervalMs": 5000,
+  "state": "Visible stationary task capsule after finite Mock stream settled; normal pin, potentially occluded by user apps",
+  "method": "Electron app.getAppMetrics process CPU since preceding sample, arithmetic mean of summed process percentages; working sets include shared pages, not private memory or GPU VRAM",
+  "averageSummedCPU": 0.10805664572270089,
+  "averageSummedWorkingSetKB": 547279,
+  "errors": [],
+  "samples": [
+    {
+      "elapsedMs": 5007,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.028249835625533525,
+          "workingSetKB": 136944
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0013431047528620766,
+          "workingSetKB": 191528
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0042569578904584505,
+          "workingSetKB": 91448
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.002029463623235813,
+          "workingSetKB": 107032
+        }
+      ]
+    },
+    {
+      "elapsedMs": 10022,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.01774602660514622,
+          "workingSetKB": 136944
+        },
+        {
+          "type": "GPU",
+          "cpu": 0,
+          "workingSetKB": 191528
+        },
+        {
+          "type": "Utility",
+          "cpu": 0,
+          "workingSetKB": 91448
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0012748359483925134,
+          "workingSetKB": 107116
+        }
+      ]
+    },
+    {
+      "elapsedMs": 15029,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.01630733954722494,
+          "workingSetKB": 136944
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00005822853361852671,
+          "workingSetKB": 191528
+        },
+        {
+          "type": "Utility",
+          "cpu": 0,
+          "workingSetKB": 91448
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0007627435397701635,
+          "workingSetKB": 107148
+        }
+      ]
+    },
+    {
+      "elapsedMs": 20039,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.01610301135297242,
+          "workingSetKB": 136944
+        },
+        {
+          "type": "GPU",
+          "cpu": 0,
+          "workingSetKB": 191528
+        },
+        {
+          "type": "Utility",
+          "cpu": 0,
+          "workingSetKB": 91448
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0010724006372971656,
+          "workingSetKB": 107224
+        }
+      ]
+    },
+    {
+      "elapsedMs": 25050,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.04006128028867271,
+          "workingSetKB": 133080
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0003151173866309079,
+          "workingSetKB": 191596
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0001554758322047617,
+          "workingSetKB": 91444
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.018821726499454513,
+          "workingSetKB": 107304
+        }
+      ]
+    },
+    {
+      "elapsedMs": 30060,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.014297040339674792,
+          "workingSetKB": 133256
+        },
+        {
+          "type": "GPU",
+          "cpu": 0,
+          "workingSetKB": 191596
+        },
+        {
+          "type": "Utility",
+          "cpu": 0,
+          "workingSetKB": 91444
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0012915868510902989,
+          "workingSetKB": 107352
+        }
+      ]
+    },
+    {
+      "elapsedMs": 35068,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.010965831935458104,
+          "workingSetKB": 133320
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00003245067497403946,
+          "workingSetKB": 191596
+        },
+        {
+          "type": "Utility",
+          "cpu": 0,
+          "workingSetKB": 91444
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.001319079748715391,
+          "workingSetKB": 107480
+        }
+      ]
+    },
+    {
+      "elapsedMs": 40078,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.0076958593715175695,
+          "workingSetKB": 133384
+        },
+        {
+          "type": "GPU",
+          "cpu": 0,
+          "workingSetKB": 191596
+        },
+        {
+          "type": "Utility",
+          "cpu": 0,
+          "workingSetKB": 91444
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0006527236252759067,
+          "workingSetKB": 107484
+        }
+      ]
+    },
+    {
+      "elapsedMs": 45087,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.013437462687580391,
+          "workingSetKB": 133384
+        },
+        {
+          "type": "GPU",
+          "cpu": 0,
+          "workingSetKB": 191596
+        },
+        {
+          "type": "Utility",
+          "cpu": 0,
+          "workingSetKB": 91444
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0009866977830880865,
+          "workingSetKB": 107548
+        }
+      ]
+    },
+    {
+      "elapsedMs": 50093,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.011818131515703207,
+          "workingSetKB": 133460
+        },
+        {
+          "type": "GPU",
+          "cpu": 0,
+          "workingSetKB": 191596
+        },
+        {
+          "type": "Utility",
+          "cpu": 0,
+          "workingSetKB": 91444
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0013166958903241264,
+          "workingSetKB": 107732
+        }
+      ]
+    },
+    {
+      "elapsedMs": 55113,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.014016894977623767,
+          "workingSetKB": 131880
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0007071373665128826,
+          "workingSetKB": 190860
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0009968012721873357,
+          "workingSetKB": 91300
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.001735576784207795,
+          "workingSetKB": 107320
+        }
+      ]
+    },
+    {
+      "elapsedMs": 60126,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.011190998853408787,
+          "workingSetKB": 131912
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00035735361266884044,
+          "workingSetKB": 190860
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00007562571050770548,
+          "workingSetKB": 91300
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.001354530353911691,
+          "workingSetKB": 106820
+        }
+      ]
+    },
+    {
+      "elapsedMs": 65140,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.013116541447373321,
+          "workingSetKB": 132020
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0003682041074888692,
+          "workingSetKB": 190860
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0053336197878640626,
+          "workingSetKB": 91336
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0010622896741254364,
+          "workingSetKB": 106820
+        }
+      ]
+    },
+    {
+      "elapsedMs": 70156,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.06569937806482477,
+          "workingSetKB": 132032
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00016279221202057694,
+          "workingSetKB": 190860
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0001004980917987112,
+          "workingSetKB": 91336
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0010772424533393719,
+          "workingSetKB": 106820
+        }
+      ]
+    },
+    {
+      "elapsedMs": 75166,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.09555461248810714,
+          "workingSetKB": 132084
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00024537012361397487,
+          "workingSetKB": 190860
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0000948265054256732,
+          "workingSetKB": 91336
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0011112459689053414,
+          "workingSetKB": 106884
+        }
+      ]
+    },
+    {
+      "elapsedMs": 80174,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.07729647952990563,
+          "workingSetKB": 132124
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00008652302114695849,
+          "workingSetKB": 190860
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00007986338569243452,
+          "workingSetKB": 91336
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0010474135059404235,
+          "workingSetKB": 106884
+        }
+      ]
+    },
+    {
+      "elapsedMs": 85184,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.013274136672108064,
+          "workingSetKB": 132200
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00015385216207694895,
+          "workingSetKB": 190864
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00015801632099016286,
+          "workingSetKB": 91336
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0013447320036436997,
+          "workingSetKB": 106488
+        }
+      ]
+    },
+    {
+      "elapsedMs": 90194,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.014008469189618332,
+          "workingSetKB": 132280
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00007402207195131697,
+          "workingSetKB": 190864
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00003992235899622414,
+          "workingSetKB": 91336
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0006779626050800445,
+          "workingSetKB": 106488
+        }
+      ]
+    },
+    {
+      "elapsedMs": 95205,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.013474930874037038,
+          "workingSetKB": 132272
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00019875639371875242,
+          "workingSetKB": 190864
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00007151758111707002,
+          "workingSetKB": 91336
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0010285762256637368,
+          "workingSetKB": 106476
+        }
+      ]
+    },
+    {
+      "elapsedMs": 100216,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.013594550924838548,
+          "workingSetKB": 132336
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00006901257538833958,
+          "workingSetKB": 190868
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00003409223649594871,
+          "workingSetKB": 91336
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0011874187890363926,
+          "workingSetKB": 106892
+        }
+      ]
+    },
+    {
+      "elapsedMs": 105223,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.02166433629840324,
+          "workingSetKB": 132348
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00009320255151305021,
+          "workingSetKB": 190868
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.000043271455152465305,
+          "workingSetKB": 91336
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.000788828747076341,
+          "workingSetKB": 106360
+        }
+      ]
+    },
+    {
+      "elapsedMs": 110238,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.06373590963666952,
+          "workingSetKB": 132452
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00006811605673555825,
+          "workingSetKB": 190868
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00006064526025223909,
+          "workingSetKB": 91336
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0005832162912947043,
+          "workingSetKB": 106424
+        }
+      ]
+    },
+    {
+      "elapsedMs": 115245,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.08425354343648717,
+          "workingSetKB": 132288
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0006491454649099925,
+          "workingSetKB": 190944
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0004759898091580439,
+          "workingSetKB": 91324
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.000674858702395334,
+          "workingSetKB": 106424
+        }
+      ]
+    },
+    {
+      "elapsedMs": 120255,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.01850748532724168,
+          "workingSetKB": 132292
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.000563876870050234,
+          "workingSetKB": 190932
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.000049897958674510626,
+          "workingSetKB": 91328
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0007700882936998994,
+          "workingSetKB": 106432
+        }
+      ]
+    },
+    {
+      "elapsedMs": 125260,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.06922377342875245,
+          "workingSetKB": 132336
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00040954614096658085,
+          "workingSetKB": 190944
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0005943482377225135,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0009156839546465399,
+          "workingSetKB": 106500
+        }
+      ]
+    },
+    {
+      "elapsedMs": 130270,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.36975302197014265,
+          "workingSetKB": 139040
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.3824510244487969,
+          "workingSetKB": 196056
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00005074328430101276,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.2681566290516047,
+          "workingSetKB": 114796
+        }
+      ]
+    },
+    {
+      "elapsedMs": 135288,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.6514422278467559,
+          "workingSetKB": 149764
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.37137307843873474,
+          "workingSetKB": 225544
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00008553130518845188,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.3655738855025292,
+          "workingSetKB": 122392
+        }
+      ]
+    },
+    {
+      "elapsedMs": 140302,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.021140263065535066,
+          "workingSetKB": 149768
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00323435411942698,
+          "workingSetKB": 224940
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00003988758084215447,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0022120859601646365,
+          "workingSetKB": 122392
+        }
+      ]
+    },
+    {
+      "elapsedMs": 145315,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.01734828331123073,
+          "workingSetKB": 149860
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00013547848807736113,
+          "workingSetKB": 224940
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00012302056584672462,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0009243063579510029,
+          "workingSetKB": 122392
+        }
+      ]
+    },
+    {
+      "elapsedMs": 150320,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.01523652623519848,
+          "workingSetKB": 149860
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00007991725367554434,
+          "workingSetKB": 224940
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00005410480323464817,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0008391346843135359,
+          "workingSetKB": 122392
+        }
+      ]
+    },
+    {
+      "elapsedMs": 155328,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.02415268436554612,
+          "workingSetKB": 151684
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.007675261028763533,
+          "workingSetKB": 224948
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00006989367773742584,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.000979187319449339,
+          "workingSetKB": 121936
+        }
+      ]
+    },
+    {
+      "elapsedMs": 160339,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.011403243021444782,
+          "workingSetKB": 151728
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0004440134022202665,
+          "workingSetKB": 199956
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00006069940616357402,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0005596562642783032,
+          "workingSetKB": 121936
+        }
+      ]
+    },
+    {
+      "elapsedMs": 165356,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.013420532245021183,
+          "workingSetKB": 151752
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0001229023883986523,
+          "workingSetKB": 199956
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00006228522807654645,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0006718801242278943,
+          "workingSetKB": 121936
+        }
+      ]
+    },
+    {
+      "elapsedMs": 170368,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.010079528753969703,
+          "workingSetKB": 144232
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00008231342838322657,
+          "workingSetKB": 199956
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.000050715713450698474,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.00057195629136624,
+          "workingSetKB": 121936
+        }
+      ]
+    },
+    {
+      "elapsedMs": 175376,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.011576907405107464,
+          "workingSetKB": 144052
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0005956864051184038,
+          "workingSetKB": 199880
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00018386164020556565,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0006322807124033243,
+          "workingSetKB": 121936
+        }
+      ]
+    },
+    {
+      "elapsedMs": 180383,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.010423252970934984,
+          "workingSetKB": 144008
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00035783544110058594,
+          "workingSetKB": 199728
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00009818934847273292,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0005683964894234978,
+          "workingSetKB": 121936
+        }
+      ]
+    },
+    {
+      "elapsedMs": 185395,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.015150683792659101,
+          "workingSetKB": 144080
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.003103408119067652,
+          "workingSetKB": 199720
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00007981255223980959,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0007715076376595757,
+          "workingSetKB": 121936
+        }
+      ]
+    },
+    {
+      "elapsedMs": 190411,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.01215055201781895,
+          "workingSetKB": 144036
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0003065195665145466,
+          "workingSetKB": 199716
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.000053998138476481564,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.001179657755698129,
+          "workingSetKB": 122004
+        }
+      ]
+    },
+    {
+      "elapsedMs": 195419,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.010964067146083773,
+          "workingSetKB": 144020
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0002362758192065352,
+          "workingSetKB": 199712
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00008235778457759141,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0008235331228016656,
+          "workingSetKB": 122004
+        }
+      ]
+    },
+    {
+      "elapsedMs": 200429,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.01292046787080936,
+          "workingSetKB": 144020
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00012558389859394605,
+          "workingSetKB": 199712
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00010229132569558102,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0006552963110210594,
+          "workingSetKB": 122004
+        }
+      ]
+    },
+    {
+      "elapsedMs": 205447,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.013462462718567629,
+          "workingSetKB": 144080
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00008551663104193264,
+          "workingSetKB": 199712
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00009465205903100203,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0008119863936984277,
+          "workingSetKB": 122004
+        }
+      ]
+    },
+    {
+      "elapsedMs": 210459,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.03935277001202705,
+          "workingSetKB": 144036
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00007731837912742967,
+          "workingSetKB": 199712
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00010308814848098616,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0006742691637273186,
+          "workingSetKB": 122004
+        }
+      ]
+    },
+    {
+      "elapsedMs": 215478,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.05480712647067809,
+          "workingSetKB": 144020
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0002681497890366818,
+          "workingSetKB": 199712
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0001087690288509932,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.001490306680041069,
+          "workingSetKB": 122060
+        }
+      ]
+    },
+    {
+      "elapsedMs": 220492,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.021983907008937553,
+          "workingSetKB": 144020
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00009140692474929905,
+          "workingSetKB": 199712
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00005068500872380399,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0007569850357935097,
+          "workingSetKB": 122060
+        }
+      ]
+    },
+    {
+      "elapsedMs": 225502,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.018959506034838383,
+          "workingSetKB": 144040
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00013473317442137591,
+          "workingSetKB": 199712
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00005405782663851268,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0007909072709377855,
+          "workingSetKB": 122060
+        }
+      ]
+    },
+    {
+      "elapsedMs": 230510,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.019214205161479207,
+          "workingSetKB": 144036
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00007655725104347533,
+          "workingSetKB": 199712
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00004077490289748124,
+          "workingSetKB": 91304
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0006357732780563419,
+          "workingSetKB": 122060
+        }
+      ]
+    },
+    {
+      "elapsedMs": 235526,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.02130079372119982,
+          "workingSetKB": 144020
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0004842482918245333,
+          "workingSetKB": 199696
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0004510584172983146,
+          "workingSetKB": 91316
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0008066026382003554,
+          "workingSetKB": 122060
+        }
+      ]
+    },
+    {
+      "elapsedMs": 240534,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.017568442385458714,
+          "workingSetKB": 144020
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00012728222012137232,
+          "workingSetKB": 199696
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00004991068981165103,
+          "workingSetKB": 91316
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.000621322593684967,
+          "workingSetKB": 122060
+        }
+      ]
+    },
+    {
+      "elapsedMs": 245554,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.08486959289685952,
+          "workingSetKB": 144032
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.04902955786897139,
+          "workingSetKB": 206056
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00020667713565211468,
+          "workingSetKB": 91316
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.02398279546930182,
+          "workingSetKB": 120932
+        }
+      ]
+    },
+    {
+      "elapsedMs": 250562,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.05507497824689365,
+          "workingSetKB": 144032
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00042185557342603436,
+          "workingSetKB": 206016
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00004160509944051459,
+          "workingSetKB": 91316
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0008928448990780715,
+          "workingSetKB": 120932
+        }
+      ]
+    },
+    {
+      "elapsedMs": 255570,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.08129922996143983,
+          "workingSetKB": 144032
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00027708072145229837,
+          "workingSetKB": 206016
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0000790386556599598,
+          "workingSetKB": 91316
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0008819300063072972,
+          "workingSetKB": 120932
+        }
+      ]
+    },
+    {
+      "elapsedMs": 260585,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.041609002174965035,
+          "workingSetKB": 144032
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0003456433549500017,
+          "workingSetKB": 206000
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.000043207461356908394,
+          "workingSetKB": 91316
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.00061741432133984,
+          "workingSetKB": 120932
+        }
+      ]
+    },
+    {
+      "elapsedMs": 265602,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.07286728563045934,
+          "workingSetKB": 144356
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.0004226557568670184,
+          "workingSetKB": 206024
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00029061661072878145,
+          "workingSetKB": 91316
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0011814555678721398,
+          "workingSetKB": 120688
+        }
+      ]
+    },
+    {
+      "elapsedMs": 270622,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.0665981810474515,
+          "workingSetKB": 144164
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00008798212628164227,
+          "workingSetKB": 206024
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00004233463245868987,
+          "workingSetKB": 91316
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.004777602004085742,
+          "workingSetKB": 123820
+        }
+      ]
+    },
+    {
+      "elapsedMs": 275629,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.05336361532102948,
+          "workingSetKB": 141620
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00024714426055136236,
+          "workingSetKB": 206024
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00012397784840354807,
+          "workingSetKB": 91316
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.001248044065340798,
+          "workingSetKB": 122988
+        }
+      ]
+    },
+    {
+      "elapsedMs": 280647,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.0829991875540994,
+          "workingSetKB": 141620
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00008968288133161142,
+          "workingSetKB": 206024
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.00009383855078997444,
+          "workingSetKB": 91316
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0007000215038634213,
+          "workingSetKB": 122988
+        }
+      ]
+    },
+    {
+      "elapsedMs": 285660,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.059332090466600367,
+          "workingSetKB": 141704
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.00009642225553334076,
+          "workingSetKB": 206024
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.000051535313459720535,
+          "workingSetKB": 91316
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0006566992030364974,
+          "workingSetKB": 122988
+        }
+      ]
+    },
+    {
+      "elapsedMs": 290673,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.29606584869107083,
+          "workingSetKB": 142540
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.18937002546919876,
+          "workingSetKB": 212484
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0000673227392276137,
+          "workingSetKB": 91316
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.12251518750482888,
+          "workingSetKB": 122944
+        }
+      ]
+    },
+    {
+      "elapsedMs": 295680,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.6802581494342147,
+          "workingSetKB": 143836
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.4963163938978117,
+          "workingSetKB": 224332
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.0007514085040070793,
+          "workingSetKB": 91448
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.32479210842087874,
+          "workingSetKB": 128672
+        }
+      ]
+    },
+    {
+      "elapsedMs": 300688,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpu": 0.016221009553428194,
+          "workingSetKB": 143836
+        },
+        {
+          "type": "GPU",
+          "cpu": 0.002496775165196632,
+          "workingSetKB": 213328
+        },
+        {
+          "type": "Utility",
+          "cpu": 0.000033290295639131063,
+          "workingSetKB": 91448
+        },
+        {
+          "type": "Tab",
+          "cpu": 0.0014714810330089818,
+          "workingSetKB": 128652
+        }
+      ]
+    }
+  ]
+}

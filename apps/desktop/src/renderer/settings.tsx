@@ -14,7 +14,7 @@ export function GlassSettingsPanel({ value, update, projection, mock, back }: { 
       <label>动画<select aria-label="动画" value={value.animation} onChange={e => update({ animation: e.target.value as GlassSettings['animation'] })}><option value="full">完整</option><option value="reduced">减少</option><option value="off">关闭</option></select></label>
       <label>置顶行为<select aria-label="置顶行为" value={value.pin} onChange={e => update({ pin: e.target.value as GlassSettings['pin'] })}><option value="normal">普通</option><option value="always">始终置顶</option><option value="on-notification">有待处理请求时</option></select></label>
       <details className="debug-settings"><summary>材质降级与调试</summary>
-        <label>系统材质<select aria-label="系统材质" value={value.material} onChange={e => update({ material: e.target.value as GlassSettings['material'] })}><option value="system">原生 Acrylic</option><option value="transparent">透明降级</option><option value="solid">稳定实色</option></select></label>
+        <label>窗口材质<select aria-label="系统材质" value={value.material} onChange={e => update({ material: e.target.value as GlassSettings['material'] })}><option value="system">推荐薄透</option><option value="transparent">纯透明</option><option value="acrylic">Acrylic 对照</option><option value="solid">稳定实色</option></select></label>
         <p className="muted">连接状态：{projection.connection}{projection.stale ? ' · 旧数据' : ''}</p>
         <div className="debug-actions"><button onClick={() => mock('restart')}>重播演示</button><button onClick={() => mock(projection.connection === 'connected' ? 'disconnect' : 'reconnect')}>{projection.connection === 'connected' ? '模拟断线' : '重新连接'}</button><button onClick={() => mock('out-of-order')}>模拟乱序</button></div>
       </details>

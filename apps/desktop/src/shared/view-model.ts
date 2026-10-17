@@ -4,7 +4,7 @@ export type GlassSettings = {
   theme: 'auto' | 'light' | 'dark'; strength: 'clear' | 'balanced' | 'readable';
   defaultView: 'capsule' | 'peek' | 'remember-last'; autoApproval: boolean; autoCollapse: boolean;
   animation: 'full' | 'reduced' | 'off'; pin: 'always' | 'on-notification' | 'normal';
-  material: 'system' | 'transparent' | 'solid';
+  material: 'system' | 'transparent' | 'acrylic' | 'solid';
 };
 export const DEFAULT_SETTINGS: GlassSettings = { theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, animation: 'full', pin: 'normal', material: 'system' };
 export function normalizeSettings(value: unknown): GlassSettings {
@@ -13,7 +13,7 @@ export function normalizeSettings(value: unknown): GlassSettings {
   function choice<T extends string>(key: string, options: readonly T[], fallback: T): T { return options.includes(v[key] as T) ? v[key] as T : fallback; }
   return { theme: choice('theme', ['auto', 'light', 'dark'], 'auto'), strength: choice('strength', ['clear', 'balanced', 'readable'], 'balanced'),
     defaultView: choice('defaultView', ['capsule', 'peek', 'remember-last'], 'capsule'), autoApproval: v.autoApproval === true, autoCollapse: v.autoCollapse === true,
-    animation: choice('animation', ['full', 'reduced', 'off'], 'full'), pin: choice('pin', ['always', 'on-notification', 'normal'], 'normal'), material: choice('material', ['system', 'transparent', 'solid'], 'system') };
+    animation: choice('animation', ['full', 'reduced', 'off'], 'full'), pin: choice('pin', ['always', 'on-notification', 'normal'], 'normal'), material: choice('material', ['system', 'transparent', 'acrylic', 'solid'], 'system') };
 }
 export function viewSize(mode: GlassViewMode) {
   return { capsule: { width: 300, height: 56 }, peek: { width: 340, height: 168 }, expanded: { width: 400, height: 280 }, approval: { width: 400, height: 340 } }[mode];

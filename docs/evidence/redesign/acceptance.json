@@ -10,153 +10,161 @@
   ],
   "motion": [
     {
-      "time": 661.0073,
+      "time": 578.3803,
       "x": 1312,
       "y": 95,
       "width": 312,
-      "height": 82
+      "height": 79
     },
     {
-      "time": 661.1134,
+      "time": 578.4657,
       "x": 1312,
       "y": 95,
       "width": 312,
-      "height": 82
+      "height": 79
     },
     {
-      "time": 691.3136,
+      "time": 608.7817,
       "x": 1312,
       "y": 95,
       "width": 322,
-      "height": 106
+      "height": 103
     },
     {
-      "time": 691.3585,
+      "time": 608.8238,
       "x": 1312,
       "y": 95,
       "width": 322,
-      "height": 106
+      "height": 103
     },
     {
-      "time": 707.3865,
+      "time": 638.7299,
       "x": 1312,
       "y": 95,
-      "width": 326,
-      "height": 117
+      "width": 328,
+      "height": 123
     },
     {
-      "time": 707.4249,
+      "time": 638.7689,
       "x": 1312,
       "y": 95,
-      "width": 326,
-      "height": 117
+      "width": 328,
+      "height": 123
     },
     {
-      "time": 739.5326,
-      "x": 1312,
-      "y": 95,
-      "width": 332,
-      "height": 134
-    },
-    {
-      "time": 739.5915,
+      "time": 655.2551,
       "x": 1312,
       "y": 95,
       "width": 332,
-      "height": 134
+      "height": 132
     },
     {
-      "time": 769.1316,
+      "time": 655.2967,
       "x": 1312,
       "y": 95,
-      "width": 336,
-      "height": 147
+      "width": 332,
+      "height": 132
     },
     {
-      "time": 769.1748,
+      "time": 670.312,
       "x": 1312,
       "y": 95,
-      "width": 336,
-      "height": 147
+      "width": 334,
+      "height": 139
     },
     {
-      "time": 802.3687,
+      "time": 670.3533,
+      "x": 1312,
+      "y": 95,
+      "width": 334,
+      "height": 139
+    },
+    {
+      "time": 700.5246,
       "x": 1312,
       "y": 95,
       "width": 338,
-      "height": 157
+      "height": 151
     },
     {
-      "time": 802.413,
+      "time": 700.5567,
       "x": 1312,
       "y": 95,
       "width": 338,
-      "height": 157
+      "height": 151
     },
     {
-      "time": 818.011,
+      "time": 732.9493,
+      "x": 1312,
+      "y": 95,
+      "width": 338,
+      "height": 159
+    },
+    {
+      "time": 733.0075,
+      "x": 1312,
+      "y": 95,
+      "width": 338,
+      "height": 159
+    },
+    {
+      "time": 762.1726,
       "x": 1312,
       "y": 95,
       "width": 340,
-      "height": 160
+      "height": 164
     },
     {
-      "time": 818.0615,
+      "time": 762.2066,
       "x": 1312,
       "y": 95,
       "width": 340,
-      "height": 160
+      "height": 164
     },
     {
-      "time": 848.6181,
-      "x": 1312,
-      "y": 95,
-      "width": 340,
-      "height": 165
-    },
-    {
-      "time": 848.6664,
-      "x": 1312,
-      "y": 95,
-      "width": 340,
-      "height": 165
-    },
-    {
-      "time": 879.4318,
+      "time": 792.9144,
       "x": 1312,
       "y": 95,
       "width": 340,
       "height": 167
     },
     {
-      "time": 879.478,
+      "time": 792.9459,
       "x": 1312,
       "y": 95,
       "width": 340,
       "height": 167
     },
     {
-      "time": 910.6365,
+      "time": 823.3666,
+      "x": 1312,
+      "y": 95,
+      "width": 340,
+      "height": 168
+    },
+    {
+      "time": 823.3972,
+      "x": 1312,
+      "y": 95,
+      "width": 340,
+      "height": 168
+    },
+    {
+      "time": 854.002,
       "x": 1312,
       "y": 95,
       "width": 340,
       "height": 169
     },
     {
-      "time": 910.6789,
+      "time": 854.0318,
       "x": 1312,
       "y": 95,
       "width": 340,
       "height": 169
     }
   ],
-  "nativeCaptures": [
-    "light-acrylic",
-    "dark-acrylic",
-    "pattern-acrylic",
-    "pattern-transparent",
-    "pattern-solid"
-  ],
+  "nativeCaptures": [],
   "errors": [],
   "menuItems": [
     {
@@ -225,23 +233,23 @@
   "processMetrics": [
     {
       "type": "Browser",
-      "cpu": 0.10511289141545327,
-      "workingSetKB": 148400
+      "cpu": 0.24200084906581007,
+      "workingSetKB": 142528
     },
     {
       "type": "GPU",
-      "cpu": 0.0008685205275986444,
-      "workingSetKB": 279784
+      "cpu": 1.181537530354146,
+      "workingSetKB": 282340
     },
     {
       "type": "Utility",
-      "cpu": 0.00024994552733558894,
-      "workingSetKB": 97084
+      "cpu": 0,
+      "workingSetKB": 91100
     },
     {
       "type": "Tab",
-      "cpu": 0.0040767589282051315,
-      "workingSetKB": 134820
+      "cpu": 0.3549551638308792,
+      "workingSetKB": 132152
     }
   ]
 }

@@ -67,7 +67,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('Invalid settings');
     settings = normalizeSettings({ ...settings, ...patch });
     nativeTheme.themeSource = settings.theme === 'auto' ? 'system' : settings.theme;
-    presentation?.setMaterial(settings.material === 'solid' ? 'solid' : settings.material === 'transparent' || settings.strength === 'clear' ? 'clear' : 'acrylic');
+    presentation?.setMaterial(settings.material === 'solid' ? 'solid' : settings.material === 'acrylic' ? 'acrylic' : 'clear');
     win.setAlwaysOnTop(settings.pin === 'always' || settings.pin === 'on-notification' && sourceConnected && view.pending.length > 0);
     // Settings changes must be saved even while the settings panel is open.
     if (!smoke) try { writeFileSync(preferencePath, JSON.stringify({ version: 1, settings, mode: panelReturn?.mode ?? view.mode, manual: panelReturn?.manual ?? view.manual, bounds: panelReturn?.bounds ?? win.getBounds() })); } catch { /* Optional persistence. */ }
@@ -114,6 +114,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
         { label: '并发审批演示', id: 'mock-approval-queue', click: () => hooks.mock('approval-queue') },
         { label: '长标题与空列表', id: 'mock-edge-cases', click: () => hooks.mock('edge-cases') },
         { label: '明确完成状态', id: 'mock-completed', click: () => hooks.mock('completed') },
+        { label: '长命令只读预览', id: 'mock-long-approval', click: () => hooks.mock('long-approval') },
       ] },
       { type: 'separator' },
       { label: '显示窗口', id: 'show', click: () => win.show() },

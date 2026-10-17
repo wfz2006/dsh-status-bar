@@ -8,6 +8,8 @@
 
 2026-10-17 按 [Liquid UI 重设计规范](DSH_Glass_Liquid_UI_Redesign_Spec.md) 完成四形态 UI 重构：任务胶囊、速览、紧凑详情与独立审批，移除常驻品牌/连接底栏，功能迁至菜单/设置；新增偏好持久化、自动行为与手动尺寸保护。实际验证与尚未覆盖项见 [分阶段记录](docs/redesign-audit.md)。
 
+同日按 UI Improvement Pack 做一轮集中整改：去除正常任务子卡片、默认薄透、审批固定操作栏、内容先退场再收起。真实桌面截图/录屏、材质矩阵、性能记录及尚待用户评价的Gate A见 [验收包](reports/electron-redesign/decision.md)；未擅自迁移技术栈。
+
 ## 推荐阅读顺序
 
 1. [AGENTS.md](AGENTS.md)：Codex 必须遵守的工程规则。

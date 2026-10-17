@@ -107,10 +107,10 @@ export async function runAcceptance({ native = false } = {}) {
     await menu('view-capsule');
     await menu('mock-approval-queue');
     await page.locator('[data-mode=approval][data-morph=idle]').waitFor({ timeout: 15000 });
-    await expect(page.locator('.approval-card')).toHaveCount(2, { timeout: 12000 });
+    await expect(page.locator('.request-selector button')).toHaveCount(2, { timeout: 12000 });
     await screenshot('approval-queue');
     await menu('mock-disconnect'); await menu('reconnect');
-    await expect(page.locator('.approval-card')).toHaveCount(2);
+    await expect(page.locator('.request-selector button')).toHaveCount(2);
     for (const b of await page.getByRole('button', { name: '允许一次', exact: true }).all()) await expect(b).toBeDisabled();
     await menu('view-expanded');
     await page.evaluate(() => window.glass.resizeWindow({ x: 200, y: 120, width: 380, height: 300 }));
@@ -169,8 +169,8 @@ export async function runAcceptance({ native = false } = {}) {
         const glass = BrowserWindow.getAllWindows().find(w => w !== b); glass.setAlwaysOnTop(true, 'screen-saver'); glass.show(); glass.focus(); return b.id;
       });
       for (const [name, background, material] of [
-        ['light-acrylic','#f8fbff','system'], ['dark-acrylic','#111e2e','system'],
-        ['pattern-acrylic','repeating-linear-gradient(35deg,transparent 0 36px,%23ffffff25 36px 38px),conic-gradient(%23a2c9ef,%23e7e8d2,%2387aab5,%23a2c9ef)','system'],
+        ['light-acrylic','#f8fbff','acrylic'], ['dark-acrylic','#111e2e','acrylic'],
+        ['pattern-acrylic','repeating-linear-gradient(35deg,transparent 0 36px,%23ffffff25 36px 38px),conic-gradient(%23a2c9ef,%23e7e8d2,%2387aab5,%23a2c9ef)','acrylic'],
         ['pattern-transparent','conic-gradient(%23a2c9ef,%23e7e8d2,%2387aab5,%23a2c9ef)','transparent'],
         ['pattern-solid','conic-gradient(%23a2c9ef,%23e7e8d2,%2387aab5,%23a2c9ef)','solid'],
       ]) {

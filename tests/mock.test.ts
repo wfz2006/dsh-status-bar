@@ -2,6 +2,18 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { createMockAdapter } from '../packages/adapters/mock/src/index';
 import type { Frame } from '../packages/protocol/src/index';
 afterEach(() => vi.useRealTimers());
+it('retains the entire long preview without claiming complete parameters or control', () => {
+  vi.useFakeTimers();
+  const adapter = createMockAdapter(() => {}, () => {}, 'long-approval');
+  adapter.start(); vi.advanceTimersByTime(10000);
+  const snapshot = adapter.snapshot();
+  if (snapshot.kind !== 'glass.snapshot') throw new Error('fixture');
+  const approval = snapshot.payload.approvals[0];
+  expect(approval?.commandPreview?.split('\n')).toHaveLength(31);
+  expect(approval?.commandPreview?.endsWith('# END OF MOCK PREVIEW')).toBe(true);
+  expect(approval?.displayDetails).toBe('partial'); expect(approval?.actionable).toBe(false);
+  adapter.stop();
+});
 it('completed fixture reconnects to a genuine finished phase, independent of Todo counts', () => {
   vi.useFakeTimers();
   const adapter = createMockAdapter(() => {}, () => {}, 'completed');
