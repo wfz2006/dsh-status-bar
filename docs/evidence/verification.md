@@ -122,3 +122,30 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 
 限制：成本（¥）不在会话投影里，未显示；指标每 5 秒随 `session/list` 轮询刷新，不是逐 token 实时值。
 
+## 磨砂玻璃主题（2026-10-18）
+
+新增 `material: 'frosted'`（设置 → 外观 → 玻璃主题 → 磨砂玻璃），原生窗口保持透明，由渲染层合成：
+
+| 层 | 参数 |
+|---|---|
+| 取样画面 | `filter: blur(34px) saturate(.72) contrast(.9) brightness(1.08)` + `scale(1.06)` 遮住模糊边缘 |
+| 乳白雾面 | 径向渐变 `rgba(255,255,255,.62) → .26 → .10` + 纵向 `.34/.14/.24`，位于折射透镜层下方 |
+| 颗粒 | `radial-gradient` 3px 点阵，`soft-light`，总不透明度约 .22 |
+| 深色 | 深灰雾面 `rgba(52,62,78,.58) → rgba(16,20,28,.12)`，亮边降至 .26 |
+| 未取样回退 | 根节点 `rgba(255,255,255,.30)`（深色 `.32`）半透明白雾，不出现全透明空洞 |
+| auto 主题 | 磨砂表面按浅色解析（`data-theme=light`），避免深色壁纸把文字刷成白色后压在乳白雾面上 |
+
+隔离 Electron 实测（`GLASS_SMOKE=1` + 显式开启取样）：
+
+| 检查 | 结果 |
+|---|---|
+| 材质 | `setSettings({material:'frosted'})` 后 `WindowState.material='frosted'`、`data-material=frosted` |
+| 取样 | `optics.enabled=true`、`running=true`、`error=null`，canvas 可见 |
+| 图层 | `.glass-frost` 存在，canvas 计算样式含 `blur(34px) saturate(0.72) contrast(0.9)`，根背景非透明 |
+| 三种形态 | 胶囊 302×52、速览 340×168、详情 400×280 均保持雾面与模糊 |
+| auto / dark | auto 解析为 `light`；切 dark 后仍保留雾面层 |
+
+截图：`ui-frost-capsule.png`、`ui-frost-peek.png`、`ui-frost-expanded.png`、`ui-frost-dark.png`（仓库外 `evidence-real/`；壁纸为深红色，因此雾面呈玫瑰色，属真实取样结果）。
+
+限制：模糊作用于 30~60fps 的桌面取样帧，采样停止（隐藏窗口/关闭色散）后退回静态白雾；未在 100% DPI 和多屏拼接上复测边缘采样。
+
