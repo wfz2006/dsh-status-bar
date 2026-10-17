@@ -12,6 +12,8 @@
 
 最新状态：已删除整面蓝灰染色和字体白边/阴影，加实字重。旧材质验收失败后完成 Tauri 原生对照；在用户明确授权后，新增**默认关闭的限定区域取样**，让同源透镜实际处理窗后画面。真实原生条纹输入已验证13物理像素偏折及RGB分离，隐藏/停用/实色/异常退出回归通过；见 [真实折射验收](reports/desktop-optics/README.md)。正式入口仍为 Electron。10-17 晚追加跨进程 DSH 适配器与 10 项合同测试；10-18 在真实官方 Host（隔离 DSH_HOME）上完成 Electron 实装联调：认证 303/Cookie、`session/list`、`remote.mux` 会话/Todo 同步、断线清空、错误 token 拒绝，`pnpm test:live` 可复现，证据见 `docs/evidence/live-dsh/`。真实 Desktop 审批仍 BLOCKED，见 [ADR 004](docs/adr/004-authenticated-host.md)。
 
+Glass 另以本地 DSH bundle（`packages/dsh-plugin`）接入插件市场：profile 以 `link:` 依赖声明并加入 `dsh.profile.bundles`，重启后市场「已安装」可见。当前插件入口只是空载占位（启动日志一行），Electron 伴侣仍由桌面单独启动；见 [packages/dsh-plugin/README.md](packages/dsh-plugin/README.md)。
+
 ## 推荐阅读顺序
 
 最新运行版本已落地用户确认的统一视觉方向：清透玻璃、黑白内容、单冷蓝强调、状态色按需，任务/审批/设置共享一套层次。见 [本轮实际样张](reports/refined-ui/README.md)。
