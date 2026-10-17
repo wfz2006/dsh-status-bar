@@ -1,0 +1,151 @@
+/* Approved direction: one clear surface, neutral content, one action accent. */
+.glass[data-theme] {
+  --fg:#000; --muted:#20242a; --line:rgba(24,29,40,.12);
+  --accent:#5271e8; --action-ink:#2449a8; --warning:#805b13;
+  --success:#146849; --danger:#9d314c; --code-ink:var(--fg);
+  --surface-edge:rgba(24,29,40,.13); --surface-hover:rgba(255,255,255,.12);
+  --surface-glint:rgba(255,255,255,.25); --neutral-fill:rgba(255,255,255,.035);
+}
+@media(prefers-color-scheme:dark) {
+  .glass[data-theme=auto]:not([data-backdrop-tone=light]) {
+    --fg:#f4f5f7; --muted:#d2d5dc; --line:rgba(235,239,247,.12); --accent:#5271e8;
+    --action-ink:#afbeff; --warning:#e8c180; --success:#a6d5be; --danger:#f0b0bd;
+    --surface-edge:rgba(235,239,247,.16); --surface-hover:rgba(255,255,255,.06);
+    --surface-glint:rgba(255,255,255,.15); --neutral-fill:rgba(255,255,255,.025);
+  }
+}
+.glass[data-theme=dark],.glass[data-theme=auto][data-backdrop-tone=dark] {
+  --fg:#f4f5f7; --muted:#d2d5dc; --line:rgba(235,239,247,.12); --accent:#5271e8;
+  --action-ink:#afbeff; --warning:#e8c180; --success:#a6d5be; --danger:#f0b0bd;
+  --surface-edge:rgba(235,239,247,.16); --surface-hover:rgba(255,255,255,.06);
+  --surface-glint:rgba(255,255,255,.15); --neutral-fill:rgba(255,255,255,.025);
+}
+.glass[data-theme=light],.glass[data-theme=auto][data-backdrop-tone=light] {
+  --fg:#000; --muted:#20242a; --line:rgba(24,29,40,.12); --accent:#5271e8;
+  --action-ink:#2449a8; --warning:#805b13; --success:#146849; --danger:#9d314c;
+  --surface-edge:rgba(24,29,40,.13); --surface-hover:rgba(255,255,255,.12);
+  --surface-glint:rgba(255,255,255,.25); --neutral-fill:rgba(255,255,255,.035);
+}
+.glass[data-theme] { --code-ink:var(--fg); }
+.glass[data-theme][data-strength=readable] { --neutral-fill:rgba(255,255,255,.18); }
+.glass[data-theme=dark][data-strength=readable],.glass[data-theme=auto][data-backdrop-tone=dark][data-strength=readable] { --neutral-fill:rgba(18,22,30,.18); }
+@media(prefers-color-scheme:dark) { .glass[data-theme=auto][data-strength=readable]:not([data-backdrop-tone=light]) { --neutral-fill:rgba(18,22,30,.18); } }
+.glass[data-theme] .glass-rim { box-shadow:inset 0 0 0 1.5px #ffffff14,inset 0 1px 2px #ffffff52; }
+.glass[data-theme] .glass-rim::before { background:linear-gradient(140deg,#fffffff0,#ffffff55 25%,#ffffff0a 48%,#ffffff22 70%,#ffffffaa); }
+.glass[data-theme] h1 { font-size:16px; font-weight:500; line-height:1.5; letter-spacing:0; }
+.glass[data-theme] .chrome-group { border-color:var(--surface-edge); background:transparent; box-shadow:inset 0 1px 0 #ffffff16; }
+.glass[data-theme] .chrome-button,.glass[data-theme] .back-button { color:var(--muted); background:transparent; }
+.glass[data-theme] .chrome-button:hover,.glass[data-theme] .back-button:hover { color:var(--fg); background:var(--surface-hover); }
+.glass[data-theme] :is(.step-count,.task-meta,.request-session) { color:var(--muted); font-weight:400; }
+.glass[data-theme] .step-count { font-size:12px; }
+.glass[data-theme] :is(.current-step,.todo.in_progress,.todo.completed,.command-preview,.command-full,.request-heading strong) { color:var(--fg); }
+.glass[data-theme] .current-step { font-size:14px; font-weight:500; }
+.glass[data-theme] .task-progress { background:var(--line); }
+.glass[data-theme] .task-progress>span { background:var(--accent); }
+.glass[data-theme] .status-orb.running { background:var(--accent); box-shadow:none; }
+.glass[data-theme] .todo { padding:8px 0; line-height:1.5; font-weight:500; }
+.glass[data-theme] .todo+.todo { border:0; }
+.glass[data-theme] .todo.completed { color:var(--muted); }
+.glass[data-theme] .todo-symbol { color:var(--muted); }
+.glass[data-theme] .todo.in_progress .todo-symbol { color:var(--accent); }
+.glass[data-theme] .todo.completed .todo-symbol,.glass[data-theme] .status-orb.completed { color:var(--success); }
+.glass[data-state=waiting_approval] .task-meta,.glass[data-state=waiting_answer] .task-meta { color:var(--warning); }
+.glass[data-state=error] .current-step,.glass[data-state=disconnected] .current-step { color:var(--danger); }
+.glass[data-theme] .status-orb:is(.error,.disconnected),.glass[data-state=disconnected] .approval-footer .safety-note { color:var(--danger); }
+.glass[data-theme] :is(.quiet-button,.attention-link,.command-preview,.command-full,:where(.decision-buttons button),:where(.request-heading .text-button),:where(.debug-actions button)) {
+  background:var(--neutral-fill); border:1px solid var(--surface-edge); box-shadow:none; backdrop-filter:none;
+}
+.glass[data-theme] :is(.quiet-button,.request-heading .text-button,.debug-actions button) { color:var(--fg); font-size:12px; font-weight:500; border-radius:8px; }
+.glass[data-theme] :is(.quiet-button,.request-heading .text-button,.debug-actions button):hover { background:var(--surface-hover); filter:none; }
+.glass[data-theme] .attention-link { min-height:36px; padding:7px 11px; border-radius:12px; color:var(--warning); background:color-mix(in srgb,var(--warning) 5%,transparent); border-color:color-mix(in srgb,var(--warning) 18%,transparent); font-size:12px; font-weight:500; }
+.glass[data-theme] .attention-link:hover { background:color-mix(in srgb,var(--warning) 9%,transparent); filter:none; }
+.glass[data-theme] :is(.command-preview,.command-full) { border:0; border-left:2px solid var(--line); border-radius:0 8px 8px 0; background:var(--neutral-fill); padding:8px 10px; font-size:13px; font-weight:400; line-height:1.6; }
+.glass[data-theme] .request-heading strong { font-size:11px; font-weight:500; padding:3px 7px; border-radius:6px; border:1px solid var(--line); }
+.glass[data-theme] .request-heading .text-button { border:0; background:transparent; font-size:12px; padding:4px 6px; }
+.glass[data-theme] :is(.request-details>summary,.debug-settings>summary) { background:transparent; border:0; border-radius:8px; color:var(--muted); font-size:12px; padding:7px 4px; min-height:32px; }
+.glass[data-theme] :is(.request-details>summary,.debug-settings>summary):hover { color:var(--fg); background:var(--surface-hover); }
+.glass[data-theme] .request-details>summary>.ui-icon:first-child { color:var(--muted); }
+.glass[data-theme] .request-selector { gap:6px; }
+.glass[data-theme] .request-selector button { min-height:28px; flex-basis:32px; border-color:transparent; }
+.glass[data-theme] .request-selector button[aria-current=true] { background:color-mix(in srgb,var(--accent) 7%,transparent); color:var(--action-ink); border-color:color-mix(in srgb,var(--accent) 28%,transparent); box-shadow:none; }
+.glass[data-theme] .approval-footer { border-color:var(--line); }
+.glass[data-theme] .approval-footer .safety-note { color:var(--muted); font-size:11px; line-height:1.6; }
+.glass[data-theme] .decision-buttons button { min-height:40px; font-size:12px; font-weight:600; border-radius:10px; background:linear-gradient(180deg,var(--surface-glint),transparent 2px); }
+.glass[data-theme] .decision-buttons .decision-allow { --decision-ink:var(--success); }
+.glass[data-theme] .decision-buttons .decision-reject { --decision-ink:var(--danger); }
+.glass[data-theme] .decision-buttons button { width:100%; color:var(--decision-ink); border-color:color-mix(in srgb,var(--decision-ink) 36%,transparent); background:linear-gradient(180deg,var(--surface-glint),transparent 2px),color-mix(in srgb,var(--decision-ink) 18%,transparent); }
+.glass[data-theme] .decision-buttons button:disabled { opacity:1; cursor:not-allowed; }
+.glass[data-theme] .decision-preview { display:block; flex:1; min-width:0; border-radius:10px; cursor:help; }
+.glass[data-theme] .decision-preview button { pointer-events:none; }
+.glass[data-theme] .decision-preview:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.glass[data-theme] .decision-preview:is(:hover,:focus-visible)>button { background:linear-gradient(180deg,var(--surface-glint),transparent 2px),color-mix(in srgb,var(--decision-ink) 26%,transparent); box-shadow:inset 0 1px 0 var(--surface-glint); }
+.glass[data-theme] .decision-preview:is(:active,[data-pressed=true])>button { background:color-mix(in srgb,var(--decision-ink) 34%,transparent); box-shadow:inset 0 1px 3px #00000018; }
+.glass[data-theme] .decision-preview .control-label { transition:transform 360ms var(--motion-spring); }
+.glass[data-theme] .decision-preview:is(:active,[data-pressed=true]) .control-label { transform:translateY(1px) scale(.95); transition-duration:70ms; }
+.glass[data-theme] .request-heading .request-external { display:grid; place-items:center; flex:0 0 26px; width:26px; height:26px; padding:4px; border:0; border-radius:7px; background:transparent; color:var(--muted); }
+.glass[data-theme] .open-original { color:var(--action-ink); font-size:11px; font-weight:500; }
+.glass[data-theme] .source-notice { background:transparent; border-left:2px solid var(--line); border-radius:0; padding:0 0 0 10px; font-size:11px; color:var(--muted); margin-bottom:18px; }
+.glass[data-theme] .settings-group { border:0; min-width:0; margin:0 0 18px; padding:0; }
+.glass[data-theme] .settings-group legend { color:var(--muted); font-size:12px; font-weight:500; padding:0; margin-bottom:5px; }
+.glass[data-theme] .settings-panel label { min-height:40px; font-size:13px; border:0; }
+.glass[data-theme] .settings-panel select { background:transparent; border:1px solid var(--surface-edge); border-radius:8px; min-height:29px; font-size:12px; }
+.glass[data-theme] .settings-panel .muted { font-size:11px; line-height:1.65; }
+.glass[data-theme] .tint-choice { display:flex; align-items:center; gap:9px; margin-left:auto; }
+.glass[data-theme] .tint-choice input[type=color] { appearance:none; width:32px; height:26px; padding:3px; border:1px solid var(--surface-edge); border-radius:8px; background:var(--neutral-fill); cursor:pointer; }
+.glass[data-theme] .tint-choice input::-webkit-color-swatch-wrapper { padding:0; }
+.glass[data-theme] .tint-choice input::-webkit-color-swatch { border:0; border-radius:4px; }
+.glass[data-theme] :is(.tint-choice,.appearance-slider) output { font:12px/1.5 Consolas,monospace; color:var(--muted); font-variant-numeric:tabular-nums; }
+.glass[data-theme] .appearance-slider { display:flex; align-items:center; gap:9px; width:174px; max-width:60%; margin-left:auto; }
+.glass[data-theme] .appearance-slider output { flex:0 0 37px; text-align:right; }
+.glass[data-theme] .appearance-slider input[type=range] { appearance:none; flex:1; min-width:0; width:100%; height:26px; padding:0; margin:0; background:transparent; accent-color:var(--accent); cursor:pointer; }
+.glass[data-theme] .appearance-slider input::-webkit-slider-runnable-track { height:3px; background:var(--line); border-radius:3px; }
+.glass[data-theme] .appearance-slider input::-webkit-slider-thumb { appearance:none; width:12px; height:12px; margin-top:-4.5px; border:1px solid var(--surface-glint); border-radius:50%; background:var(--accent); }
+.glass[data-theme] :is(.tint-choice,.appearance-slider) input:disabled { opacity:.4; cursor:not-allowed; }
+.glass[data-theme] .appearance-footer { display:flex; align-items:flex-start; gap:12px; margin:4px 0 10px; }
+.glass[data-theme] .appearance-footer .muted { flex:1; margin:0; }
+.glass[data-theme] .appearance-reset { flex:0 0 auto; min-height:26px; padding:3px 5px; border:0; border-radius:6px; background:transparent; color:var(--action-ink); font-size:10px; }
+.glass[data-theme] .appearance-reset:disabled { color:var(--muted); opacity:.55; cursor:default; }
+.glass[data-theme] .settings-panel input[type=checkbox] { appearance:none; position:relative; width:30px; height:18px; flex:0 0 30px; margin-right:0; border:1px solid var(--surface-edge); border-radius:12px; background:var(--neutral-fill); cursor:pointer; }
+.glass[data-theme] .settings-panel input[type=checkbox]::after { content:""; position:absolute; width:10px; height:10px; left:3px; top:3px; border-radius:50%; background:var(--muted); transition:transform 160ms ease; }
+.glass[data-theme] .settings-panel input[type=checkbox]:checked { border-color:color-mix(in srgb,var(--accent) 45%,transparent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+.glass[data-theme] .settings-panel input[type=checkbox]:checked::after { background:var(--accent); transform:translateX(12px); }
+.glass[data-theme] .activity-list article { background:transparent; border:0; border-bottom:1px solid var(--line); border-radius:0; padding:12px 0; }
+/* Fast contact, a damped release, and stable optical / pointer geometry.
+   Only the contents move: hit targets, native bounds and lens stay fixed. */
+.glass[data-theme] { --motion-settle:cubic-bezier(.2,.8,.2,1); --motion-spring:cubic-bezier(.2,1.65,.35,1); }
+.glass[data-theme] :is(button,summary,select,input[type=checkbox]) { transition:background-color 180ms var(--motion-settle),border-color 180ms var(--motion-settle),box-shadow 180ms var(--motion-settle),color 180ms var(--motion-settle); }
+.glass[data-theme] :is(button:not(:disabled):not(.task-capsule):not(.peek-main),summary,select,input[type=checkbox]):hover { border-color:color-mix(in srgb,var(--accent) 32%,var(--surface-edge)); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 10%,transparent); background-color:var(--surface-hover); }
+.glass[data-theme] :is(button:not(:disabled):not(.task-capsule):not(.peek-main),summary,select,input[type=checkbox]):active { transform:none; border-color:color-mix(in srgb,var(--accent) 55%,var(--surface-edge)); box-shadow:inset 0 1px 4px rgba(0,0,0,.16); }
+.glass[data-theme] :is(.task-capsule,.peek-main):hover { box-shadow:inset 0 1px 0 var(--surface-glint); }
+.glass[data-theme] :is(.task-capsule,.peek-main):active { transform:none; box-shadow:inset 0 1px 2px rgba(0,0,0,.10); }
+.glass[data-theme] :is(button,summary,select,input[type=checkbox]):focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.control-label { display:inline-block; pointer-events:none; }
+.glass[data-theme] .attention-link>.control-label { margin-left:0; }
+.glass[data-theme] button:not(:disabled)>:is(.ui-icon,.control-label),
+.glass[data-theme] :is(.request-details,.debug-settings)>summary>span {
+  transform:translateY(0) scale(1); transition:transform 360ms var(--motion-spring);
+}
+.glass[data-theme] button:not(:disabled):hover>:is(.ui-icon,.control-label) { transform:translateY(-1px) scale(1); }
+.glass[data-theme] button:not(:disabled):active>:is(.ui-icon,.control-label) { transform:translateY(1px) scale(.95); transition-duration:70ms; transition-timing-function:var(--motion-settle); }
+.glass[data-theme] :is(.chrome-button,.back-button):not(:disabled):active>.ui-icon { transform:translateY(1px) scale(.86); }
+.glass[data-theme] :is(.attention-link,.open-original)>[aria-hidden=true] { display:inline-block; transition:transform 360ms var(--motion-spring); }
+.glass[data-theme] :is(.attention-link,.open-original):hover>[aria-hidden=true] { transform:translate(2px,-1px); }
+.glass[data-theme] :is(.attention-link,.open-original):active>[aria-hidden=true] { transform:translate(1px,0) scale(.9); transition-duration:70ms; }
+.glass[data-theme] :is(.request-details,.debug-settings)>summary:hover>span { transform:translateX(2px); }
+.glass[data-theme] :is(.request-details,.debug-settings)>summary:active>span { transform:translateX(1px) scale(.99); transition-duration:70ms; }
+.glass[data-theme] :is(.request-details,.debug-settings)>summary>.ui-icon:last-child { transition:transform 360ms var(--motion-spring); }
+.glass[data-theme] .settings-panel input[type=checkbox]::after { transition:transform 360ms var(--motion-spring); }
+.glass[data-theme] .task-capsule>.status-orb { transition:transform 360ms var(--motion-spring); }
+.glass[data-theme] .task-capsule:hover>.status-orb { transform:scale(1.12); }
+.glass[data-theme] .task-capsule:active>.status-orb { transform:scale(.85); transition-duration:70ms; }
+.glass:is([data-animation=off],[data-animation=reduced]) :is(button>.ui-icon,button>.control-label,.attention-link>[aria-hidden=true],.open-original>[aria-hidden=true],summary>span,.task-capsule>.status-orb) { transform:none!important; }
+.glass[data-animation=off] input::after,.glass[data-animation=reduced] input::after { transition:none!important; }
+@media(prefers-reduced-motion:reduce) {
+  .glass :is(button>.ui-icon,button>.control-label,.attention-link>[aria-hidden=true],.open-original>[aria-hidden=true],summary>span,.task-capsule>.status-orb) { transform:none!important; }
+}
+
+/* Real installed text faces, clear hierarchy, and no text effects on glass. */
+.glass[data-theme] { font-weight:400; font-kerning:normal; }
+.glass[data-theme] .task-capsule { font-size:14px; }
+.glass[data-theme] .capsule-title { font-weight:500; }
+.glass[data-theme] button:not(:disabled):hover:not(:active)>.control-label { transform:none; }
