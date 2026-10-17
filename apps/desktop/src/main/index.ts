@@ -9,6 +9,7 @@ import { createMockAdapter, mockSnapshot, mockWelcome, type MockScenario } from 
 import { createDshAdapter } from '@glass/dsh';
 import { frameSchema, initialProjection, reduceProjection, type Frame, type LocalEvent } from '@glass/protocol';
 import { clampBounds, type Bounds } from '../shared/window';
+import { dshLinkFromArgs } from '../shared/launch';
 import { deriveTask } from '../shared/view-model';
 import type { MockAction, WindowAction, SourceState } from '../shared/api';
 import { assertApprovalResponse, assertQuestionResponse } from './request-gate';
@@ -177,7 +178,11 @@ function finiteRecord(value: unknown, keys: string[]): value is Record<string, n
 }
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
-  app.on('second-instance', () => { if (win) { win.show(); win.focus(); } });
+  app.on('second-instance', (_event, argv) => {
+    if (win) { win.show(); win.focus(); }
+    const link = dshLinkFromArgs(argv);
+    if (link) void connectDSH(link).catch(() => { /* connectDSH already published the failure state */ });
+  });
   app.whenReady().then(async () => {
     app.setAppUserModelId('local.dsh-glass.preview');
     win = new BrowserWindow({ ...position(), minWidth: 180, minHeight: 50, maxWidth: 900, maxHeight: 1000,
@@ -279,6 +284,10 @@ else {
     screen.on('display-removed', () => win.setBounds(clampBounds(win.getBounds(), screen.getPrimaryDisplay().workArea)));
     screen.on('display-metrics-changed', () => win.setBounds(clampBounds(win.getBounds(), screen.getDisplayMatching(win.getBounds()).workArea)));
     if (devURL) await win.loadURL(devURL); else await win.loadFile(rendererFile);
+    const startupLink = dshLinkFromArgs(process.argv);
+    // The DSH bundle hands over the authenticated host link on launch. Connect once the
+    // renderer exists; failures land in the normal source state instead of a dialog.
+    if (startupLink && !smoke) void connectDSH(startupLink).catch(() => { /* connectDSH published the failure state */ });
   }).catch(error => { console.error('[glass] Startup failed: ' + (error instanceof Error ? error.message : 'unknown')); app.quit(); });
 }
 app.on('before-quit', () => {
