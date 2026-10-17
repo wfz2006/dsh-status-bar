@@ -114,6 +114,7 @@ type UserQuestionView = {
 | `session.updated` | bridge→desktop | sessionId, sourceSeq, fields | 顺序状态更新 |
 | `session.todo.snapshot` | bridge→desktop | sessionId, sourceSeq, todos | 整表替换 |
 | `session.tool.activity` | bridge→desktop | sessionId, sourceSeq, toolName, callId, summary | 脱敏工具事件 |
+| `session.note` | bridge→desktop | sessionId, note {id, kind, text, sourceSeq} | 思考/正文转录，追加去重 |
 | `approval.requested` | bridge→desktop | ApprovalView | 待审批/仅观察状态 |
 | `approval.respond` | desktop→bridge | requestId, sessionId, epoch, decision | 用户意图，不直接代表批准成功 |
 | `approval.ack` | bridge→desktop | correlationId, requestId, status, outcome? | 实际结果/不可用状态 |
@@ -171,7 +172,7 @@ type UserQuestionView = {
 
 ## 9. 首轮实际实现子集（2026-10-17）
 
-`packages/protocol/src/index.ts` 的 Zod 是本轮唯一运行时定义。实现 welcome/snapshot/heartbeat、session.updated/todo.snapshot/tool.activity、approval.requested、question.requested、approval.respond/ack/resolved、question.respond/ack/resolved。应答命令仅在连接成功且活动投递匹配时被接受：`capabilities.respondApproval/respondQuestion` 由适配器按连接级能力上报，Mock Adapter 保持 false；每次应答仍由 `deliveries` 校验 runtime/epoch/session/过期状态。
+`packages/protocol/src/index.ts` 的 Zod 是本轮唯一运行时定义。实现 welcome/snapshot/heartbeat、session.updated/todo.snapshot/tool.activity/note、approval.requested、question.requested、approval.respond/ack/resolved、question.respond/ack/resolved。应答命令仅在连接成功且活动投递匹配时被接受：`capabilities.respondApproval/respondQuestion` 由适配器按连接级能力上报，Mock Adapter 保持 false；每次应答仍由 `deliveries` 校验 runtime/epoch/session/过期状态。
 
 客户端握手使用受认证 WS 的精简控制帧 `{kind:'glass.hello',protocolVersion:1,clientNonce}`；快照请求为 `{kind:'glass.snapshot.request',reason}`。这些**控制帧没有服务端事件 envelope**；token 仅在 Main 的 Authorization header，renderer 无 WS/凭据。服务端事件使用本文标准 envelope。
 

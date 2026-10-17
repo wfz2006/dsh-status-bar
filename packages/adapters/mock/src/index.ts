@@ -6,6 +6,10 @@ const base = { protocolVersion: 1 as const, runtimeId: MOCK_RUNTIME, epoch: MOCK
 const initialSessions: Session[] = [
   { runtimeId: MOCK_RUNTIME, sessionId: 'demo-main', title: '构建 DSH Glass 悬浮伴侣', workspaceLabel: 'dsh-glass / 开发预览', agentStatus: 'running', phase: 'working', lastSourceSeq: 1,
     todos: [{ content: '梳理项目与接口边界', status: 'completed' }, { content: '搭建本地通信桥', status: 'in_progress' }, { content: '验证悬浮窗与状态同步', status: 'pending' }], activities: [],
+    notes: [
+      { id: 'mock-note-1', kind: 'message', text: '先把协议里的活动数据梳理清楚，再决定过程视图复用哪些字段。', sourceSeq: 1 },
+      { id: 'mock-note-2', kind: 'reasoning', text: '过程页要像 DSH 的转录一样按时间排列：先思考，再调用工具，最后给出结果。', sourceSeq: 2 },
+    ],
     stats: { turns: 3, steps: 42, tokensPerSecond: 218, cacheHitPercent: 96.4, contextPercent: 7.2, tokens: { input: 18_400, cacheRead: 1_240_000, cacheWrite: 0, output: 21_800, total: 1_280_200 } } },
   { runtimeId: MOCK_RUNTIME, sessionId: 'demo-other', title: '视觉探索', workspaceLabel: 'design / Mock', agentStatus: 'idle', phase: 'unknown', lastSourceSeq: 1,
     todos: [{ content: '整理设计参考', status: 'pending' }], activities: [],
@@ -22,11 +26,13 @@ export function mockSnapshot(): Frame {
 export function mockDeltas(): Frame[] {
   return [
     { ...base, messageId: 'todos-2', kind: 'session.todo.snapshot', payload: { sessionId: 'demo-main', sourceSeq: 2, todos: initialSessions[0]!.todos } },
-    { ...base, messageId: 'tool-3', kind: 'session.tool.activity', payload: { sessionId: 'demo-main', sourceSeq: 3, callId: 'mock-call-1', toolName: 'read_file', summary: '查看协议与状态模型 · Mock 事件', } },
+    { ...base, messageId: 'tool-3', kind: 'session.tool.activity', payload: { sessionId: 'demo-main', sourceSeq: 3, callId: 'mock-call-1', toolName: 'read_file', summary: 'packages/protocol/src/index.ts', } },
     { ...base, messageId: 'todos-4', kind: 'session.todo.snapshot', payload: { sessionId: 'demo-main', sourceSeq: 4, todos: [
       { content: '梳理项目与接口边界', status: 'completed' }, { content: '验证悬浮窗与状态同步', status: 'in_progress' },
     ] } },
     { ...base, messageId: 'approval-5', kind: 'approval.requested', payload: { requestId: 'mock-approval-1', runtimeId: MOCK_RUNTIME, sessionId: 'demo-main', toolName: 'bash', callId: 'mock-call-2', reason: '这是只读的模拟审批卡片，没有连接 DSH。', commandPreview: 'echo "DSH Glass preview"', displayDetails: 'partial', status: 'pending', actionable: false, createdAt: base.sentAt, sourceEpoch: MOCK_EPOCH } },
+    { ...base, messageId: 'note-6', kind: 'session.note', payload: { sessionId: 'demo-main', note: { id: 'mock-note-6', kind: 'reasoning', text: '过程视图需要同时展示思考与工具调用，才能还原 DSH 的工作节奏。', sourceSeq: 6 } } },
+    { ...base, messageId: 'note-7', kind: 'session.note', payload: { sessionId: 'demo-main', note: { id: 'mock-note-7', kind: 'message', text: '已确认协议里可以携带活动与说明，接下来补齐过程页的图标与展开详情。', sourceSeq: 7 } } },
   ];
 }
 export function mockFrames(): Frame[] { return [mockWelcome(), mockSnapshot(), ...mockDeltas()]; }
@@ -55,12 +61,14 @@ export function createMockAdapter(publish: (f: Frame) => void, disconnect: () =>
     }
     if (scenario === 'out-of-order') frames.push(frames[0]!);
     frames.forEach((f, i) => timers.push(setTimeout(() => {
-      if (snapshot.kind === 'glass.snapshot' && (f.kind === 'session.todo.snapshot' || f.kind === 'session.tool.activity' || f.kind === 'session.updated')) {
+      if (snapshot.kind === 'glass.snapshot' && (f.kind === 'session.todo.snapshot' || f.kind === 'session.tool.activity' || f.kind === 'session.note' || f.kind === 'session.updated')) {
         snapshot = { ...snapshot, payload: { ...snapshot.payload, sessions: snapshot.payload.sessions.map(s => {
-          if (!('sessionId' in f.payload) || f.payload.sessionId !== s.sessionId || f.payload.sourceSeq <= s.lastSourceSeq) return s;
-          if (f.kind === 'session.todo.snapshot') return { ...s, todos: f.payload.todos, lastSourceSeq: f.payload.sourceSeq };
-          if (f.kind === 'session.tool.activity') return { ...s, activities: [f.payload, ...s.activities].slice(0, 100), lastSourceSeq: f.payload.sourceSeq };
-          if (f.kind === 'session.updated') return { ...s, ...f.payload.fields, lastSourceSeq: f.payload.sourceSeq };
+          const seq = f.kind === 'session.note' ? f.payload.note.sourceSeq : f.payload.sourceSeq;
+          if (!('sessionId' in f.payload) || f.payload.sessionId !== s.sessionId || seq <= s.lastSourceSeq) return s;
+          if (f.kind === 'session.todo.snapshot') return { ...s, todos: f.payload.todos, lastSourceSeq: seq };
+          if (f.kind === 'session.tool.activity') return { ...s, activities: [f.payload, ...s.activities].slice(0, 100), lastSourceSeq: seq };
+          if (f.kind === 'session.note') return { ...s, notes: [f.payload.note, ...(s.notes ?? [])].slice(0, 60), lastSourceSeq: seq };
+          if (f.kind === 'session.updated') return { ...s, ...f.payload.fields, lastSourceSeq: seq };
           return s;
         }) } };
       }

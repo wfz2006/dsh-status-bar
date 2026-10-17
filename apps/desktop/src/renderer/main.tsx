@@ -46,7 +46,7 @@ function App() {
   const invoke = (value: WindowAction) => () => void action(value);
   return <main ref={root} {...drag} className="glass" data-mode={mode} data-panel={windowState.panel ?? 'none'}
     data-state={task.status} data-material={windowState.material} data-strength={windowState.settings.strength}
-    data-theme={windowState.material === 'frosted' && windowState.settings.theme === 'auto' ? 'light' : windowState.settings.theme} data-morph={windowState.morphing ?? 'idle'}
+    data-theme={windowState.material === 'frosted' ? 'dark' : windowState.settings.theme} data-morph={windowState.morphing ?? 'idle'}
     data-animation={windowState.settings.animation} data-completion={windowState.completionFeedback}
     onKeyDown={e => {
       if (e.key === 'Escape') { e.preventDefault(); void action(windowState.panel ? 'back' : 'collapse'); }

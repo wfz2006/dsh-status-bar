@@ -27,7 +27,7 @@ it('completed fixture reconnects to a genuine finished phase, independent of Tod
 it('retains concurrent approval identities in authoritative reconnect snapshots', () => {
   vi.useFakeTimers();
   const adapter = createMockAdapter(() => {}, () => {}, 'approval-queue');
-  adapter.start(); vi.advanceTimersByTime(10000);
+  adapter.start(); vi.advanceTimersByTime(20000);
   const snapshot = adapter.snapshot();
   if (snapshot.kind !== 'glass.snapshot') throw new Error('fixture');
   expect(snapshot.payload.approvals.map(a => a.requestId)).toEqual(['mock-approval-1', 'mock-approval-2']);

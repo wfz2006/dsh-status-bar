@@ -215,6 +215,23 @@ describe('dsh host contract', () => {
     expect(h.state().sessions['s1']?.agentStatus).toBe('idle');
   });
 
+  it('projects assistant transcript notes with reasoning and message kinds', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.audit('s1', { type: 'assistant/message', data: { message: { content: [
+      { type: 'reasoning', text: '  先读规范，再改协议。  ' },
+      { type: 'text', text: '第一步已经完成。' },
+      { type: 'text', text: '   ' },
+    ] } } });
+    await expect.poll(() => h.state().sessions['s1']?.notes?.length, { timeout: 3000 }).toBe(2);
+    const session = h.state().sessions['s1'];
+    expect(session?.notes).toEqual([
+      expect.objectContaining({ kind: 'message', text: '第一步已经完成。' }),
+      expect.objectContaining({ kind: 'reasoning', text: '先读规范，再改协议。' }),
+    ]);
+    expect(h.state().sessions['s1']?.notes?.[0]?.sourceSeq).toEqual(expect.any(Number));
+  });
+
   it('derives compact usage stats from cached session projections', async () => {
     const h = await setup({ seeds: [{ sessionId: 's1', stats: {
       sessionStats: { turns: 5, steps: 137, decodeMs: 625876, decodeTokens: 159154 },

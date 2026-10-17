@@ -156,7 +156,6 @@
 /* Hierarchy pass: three ink levels, semantic status colour, mono data. */
 .glass[data-theme] h1 { color:var(--fg); }
 .glass[data-theme] .capsule-title { color:var(--fg); }
-.glass[data-state=running] .capsule-title { background:linear-gradient(92deg,var(--fg) 60%,color-mix(in srgb,var(--fg) 78%,var(--accent)) 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
 .glass[data-state=completed] .capsule-title { color:color-mix(in srgb,var(--fg) 74%,var(--success)); }
 .glass[data-theme] .task-meta { color:var(--ink-3); }
 .glass[data-theme] .task-meta>span:first-of-type { color:var(--ink-2); }

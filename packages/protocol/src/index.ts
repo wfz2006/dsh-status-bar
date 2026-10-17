@@ -17,12 +17,14 @@ export const capabilitiesSchema = z.object({
 }).strict();
 export const activitySchema = z.object({ callId: id, toolName: id, summary: text, sourceSeq: seq,
   status: z.enum(['pending', 'running', 'success', 'error', 'cancelled']).default('running'), resultSummary: text.optional() });
+export const noteSchema = z.object({ id: id, kind: z.enum(['reasoning', 'message']), text: z.string().min(1).max(2000), sourceSeq: seq }).strict();
 export const sessionSchema = z.object({
   runtimeId: id, sessionId: id, title: text, workspaceLabel: text,
   agentStatus: z.enum(['starting', 'running', 'stopping', 'idle', 'unknown']),
   phase: z.enum(['working', 'waiting-approval', 'waiting-question', 'finished', 'error', 'cancelled', 'archived', 'unknown']),
   todos: z.array(todoSchema).max(1000), lastSourceSeq: seq,
   activities: z.array(activitySchema).max(100),
+  notes: z.array(noteSchema).max(60).optional(),
   stats: sessionStatsSchema.optional(),
 });
 export const approvalSchema = z.object({
@@ -51,6 +53,7 @@ export const frameSchema = z.discriminatedUnion('kind', [
   frame('session.todo.snapshot', z.object({ sessionId: id, sourceSeq: seq, todos: z.array(todoSchema).max(1000) }).strict()),
   frame('session.updated', z.object({ sessionId: id, sourceSeq: seq, fields: sessionSchema.pick({ agentStatus: true, phase: true }) }).strict()),
   frame('session.tool.activity', activitySchema.extend({ sessionId: id }).strict()),
+  frame('session.note', z.object({ sessionId: id, note: noteSchema }).strict()),
   frame('approval.requested', approvalSchema),
   frame('approval.resolved', approvalSchema),
   frame('question.requested', questionSchema),
@@ -68,6 +71,7 @@ export type SessionStats = z.infer<typeof sessionStatsSchema>;
 export type Approval = z.infer<typeof approvalSchema>;
 export type Question = z.input<typeof questionSchema>;
 export type Activity = z.input<typeof activitySchema>;
+export type SessionNote = z.infer<typeof noteSchema>;
 export type Capabilities = z.infer<typeof capabilitiesSchema>;
 export type Connection = 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'incompatible';
 export type Projection = {
@@ -163,14 +167,19 @@ export function reduceProjection(state: Projection, event: Frame | LocalEvent): 
   }
   if (!Object.hasOwn(state.sessions, f.payload.sessionId)) return state;
   const previous = state.sessions[f.payload.sessionId];
-  if (!previous || f.payload.sourceSeq <= previous.lastSourceSeq) return state;
-  let session: Session = { ...previous, lastSourceSeq: f.payload.sourceSeq };
+  const sourceSeq = f.kind === 'session.note' ? f.payload.note.sourceSeq : f.payload.sourceSeq;
+  if (!previous || sourceSeq <= previous.lastSourceSeq) return state;
+  let session: Session = { ...previous, lastSourceSeq: sourceSeq };
   if (f.kind === 'session.todo.snapshot') session = { ...session, todos: f.payload.todos };
   if (f.kind === 'session.updated') session = { ...session, ...f.payload.fields };
   if (f.kind === 'session.tool.activity') {
     const old = previous.activities.find(a => a.callId === f.payload.callId);
     if (old && !['pending', 'running'].includes(old.status ?? 'running') && ['pending', 'running'].includes(f.payload.status)) return state;
     session = { ...session, activities: [f.payload, ...previous.activities.filter(a => a.callId !== f.payload.callId)].slice(0, 100) };
+  }
+  if (f.kind === 'session.note') {
+    const notes = [f.payload.note, ...(previous.notes ?? []).filter(n => n.id !== f.payload.note.id)].slice(0, 60);
+    session = { ...session, notes };
   }
   const updated = { ...next, sessions: { ...state.sessions, [session.sessionId]: session } };
   return { ...updated, approvals: safeApprovals(updated.approvals, updated), questions: safeQuestions(updated.questions, updated) };

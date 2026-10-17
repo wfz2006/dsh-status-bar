@@ -174,3 +174,15 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 
 限制：显示字体依赖本机 Georgia/宋体/等宽字体可用性，缺失时回退系统字体；深色截图是透明窗口内容落在浅灰背景上的取样效果，真实深色壁纸下对比更高；approval 视图存在既有截图重影（与字体无关，待查）。
 
+## 烟熏磨砂、过程转录与逐字波动（2026-10-18）
+
+磨砂主题按反馈重做为烟熏深色：取样画面 `filter: blur(30px) saturate(1.35) brightness(.74) contrast(1.06) scale(1.06)`，叠加深色雾面渐变、白色斜向光泽与 3px 颗粒；`auto` 主题在磨砂下解析为深色，未取样时退回 `rgba(26,14,19,.34)` 深色底。截图 `shot-frost-capsule.png`、`shot-frost-expanded.png`（仓库外）为深红壁纸上的烟熏效果。
+
+过程数据：协议新增 `session.note`（`kind: reasoning|message`，`text` 1–2000，按 `sourceSeq` 去重、最多 60 条）与 `Session.notes`；DSH 适配器在 `assistant/message` 事件中抽取 `content` 的 reasoning/text 块（空白归一化、忽略空块），工具活动摘要改为命令预览（完整可解析时）。大窗过程页把 notes 与 activities 按 `sourceSeq` 降序混排，每行带类型图标（思考/正文/read_file/pwsh/edit/search/globe 等）、工具名与状态，行可展开看完整正文/结果。Fake Host 合同测试新增 assistant/message 用例，协议生命周期新增 note 顺序/去重/过期用例，Mock 快照回放包含 notes。
+
+文字波动：工作胶囊标题拆为逐字符 `span.wave-char`，`capsule-wave` 每字符 3s 循环（0.4→−1.6px 上浮 + 透明度 0.82→1），相邻延迟 45ms（最多 24 字符错相）；空格用 `flex:0 0 .3em` 固定占位，避免 flex 收缩吞掉间距（截图曾呈现「构建DSHGlass悬浮伴侣」）。`data-animation=reduced/off` 与 `prefers-reduced-motion` 关闭动画，静态渲染不受影响。
+
+隔离 Electron 断言：磨砂层 `data-theme=dark`/`.glass-frost` 存在；波动 17 个字符、空格宽 4.34px、`animationName=capsule-wave`、第二字符延迟 45ms；过程页 5 行（message/reasoning/tool/reasoning/message）、5 个图标、工具行可展开；检查结果 lint 0、typecheck 0、13 文件 97 测试全过、`pnpm --filter @glass/desktop build` 成功。
+
+限制：实时转录依赖被 follow 的 running 会话（`session/follow` 的 assistant/message 流；归档会话只有缓存投影，通常没有 notes）；思考文本可能很长，列表预览截断、详情最多显示 6 行；截图仍受既有 approval 重影影响的视图未纳入本轮证据。
+

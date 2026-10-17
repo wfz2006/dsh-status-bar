@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Approval, Frame, Question, Session } from '@glass/protocol';
+import type { Approval, Frame, Question, Session, SessionNote } from '@glass/protocol';
 import { HostTransport, bounded, record, type RecordValue } from './transport';
 
 export const dshIntegration = Object.freeze({ status: 'AVAILABLE', mode: 'authenticated-host', respondApproval: true, respondQuestion: true,
@@ -68,15 +68,21 @@ export function createDshAdapter(options: Options) {
     let session = sessions.get(id);
     if (!session) {
       if (sessions.size >= 100) return;
-      session = { runtimeId, sessionId: id, title: '未命名会话', workspaceLabel: bounded(row.cwd, 'DSH', 160), agentStatus: row.running === true ? 'running' : 'idle', phase: row.running === true ? 'working' : 'finished', todos: [], activities: [], lastSourceSeq: 0 };
+      session = { runtimeId, sessionId: id, title: '未命名会话', workspaceLabel: bounded(row.cwd, 'DSH', 160), agentStatus: row.running === true ? 'running' : 'idle', phase: row.running === true ? 'working' : 'finished', todos: [], activities: [], notes: [], lastSourceSeq: 0 };
       sessions.set(id, session);
     }
     if (typeof row.cwd === 'string') session.workspaceLabel = bounded(row.cwd, 'DSH', 160);
     if (typeof row.running === 'boolean') session.agentStatus = row.running ? 'running' : 'idle';
     return session;
   }
-  function applyProjections(id: string, values: unknown) {
-    const session = ensureSession(id); if (!session) return;
+  function addNote(id: string, note: SessionNote) {
+    const session = sessions.get(id); if (!session) return;
+    const normalized = note.text.replace(/\s+/g, ' ').trim(); if (!normalized) return;
+    const previous = session.notes?.[0];
+    if (previous && previous.sourceSeq === note.sourceSeq && previous.text === normalized) return;
+    session.notes = [{ ...note, text: normalized.slice(0, 2000) }, ...(session.notes ?? []).filter(n => n.id !== note.id)].slice(0, 60);
+  }
+  function applyProjections(id: string, values: unknown) {    const session = ensureSession(id); if (!session) return;
     const p = record(values);
     if ('title' in p) session.title = bounded(p.title, '未命名会话');
     const stats = sessionStats(record(p.sessionStats), record(p.tokenUsage), record(p.contextPressure));
@@ -119,6 +125,17 @@ export function createDshAdapter(options: Options) {
       if (reason === 'aborted' || reason === 'error') session.activities = session.activities.map(a => a.status === 'running' || a.status === 'pending' ? { ...a, status: reason === 'aborted' ? 'cancelled' : 'error' } : a);
     }
     if (type === 'todo/write') applyProjections(id, { todos: data.todos });
+    if (type === 'assistant/message') {
+      const message = record(data.message); const blocks = Array.isArray(message.content) ? message.content : [];
+      const sourceSeq = typeof e.seq === 'number' && Number.isInteger(e.seq) && e.seq >= 0 ? e.seq : revision(id);
+      let added = false;
+      blocks.forEach((block, index) => {
+        const b = record(block); const kind = b.type === 'reasoning' ? 'reasoning' as const : b.type === 'text' ? 'message' as const : undefined;
+        if (!kind || typeof b.text !== 'string' || !b.text.trim()) return;
+        addNote(id, { id: `${id}:${sourceSeq}:${index}`, kind, text: b.text, sourceSeq }); added = true;
+      });
+      if (added) emitSession(id);
+    }
     if (type === 'tool/call') {
       const callId = bounded(data.callId, '', 200); const name = bounded(data.name, 'tool', 200);
       if (callId) {
@@ -126,7 +143,7 @@ export function createDshAdapter(options: Options) {
         const containsSensitive = (v: unknown): boolean => Array.isArray(v) ? v.some(containsSensitive) : Object.entries(record(v)).some(([key, nested]) => /(?:secret|password|token|authorization|api.?key|^env$)/i.test(key) || containsSensitive(nested));
         const args = record(parsed); const encoded = JSON.stringify(args); const complete = parsed !== undefined && Object.keys(args).length > 0 && !containsSensitive(parsed) && encoded.length <= 4096;
         toolArguments.set(`${id}:${callId}`, { name, preview: complete ? bounded(args.command, encoded) : '参数包含敏感字段、过长或格式不可验证，请在 DSH 中确认。', complete });
-        session.activities = [{ callId, toolName: name, summary: name, sourceSeq: revision(id), status: 'running' as const }, ...session.activities.filter(a => a.callId !== callId)].slice(0, 100);
+        session.activities = [{ callId, toolName: name, summary: complete ? bounded(args.command ?? encoded, name, 400) : name, sourceSeq: revision(id), status: 'running' as const }, ...session.activities.filter(a => a.callId !== callId)].slice(0, 100);
         for (const a of approvals.values()) if (a.sessionId === id && a.callId === callId && a.toolName === name && isPending(a.status)) {
           const tool = toolArguments.get(`${id}:${callId}`)!; a.commandPreview = tool.preview; a.displayDetails = tool.complete ? 'complete' : 'partial'; a.actionable = tool.complete && [...deliveries.values()].some(d => d.identity.requestId === a.requestId); a.revision = revision(id);
           if (connected) options.publish(frame('approval.requested', structuredClone(a)));

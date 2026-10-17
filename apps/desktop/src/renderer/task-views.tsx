@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Projection } from '@glass/protocol';
 import { formatTokens, taskMetrics, type deriveTask } from '../shared/view-model';
+import { Icon, type IconName } from './icon';
 export type Task = ReturnType<typeof deriveTask>;
 export function StatusOrb({ task }: { task: Task }) {
   const symbol = task.status === 'completed' ? '✓' : task.status === 'disconnected' || task.status === 'error' ? '!' : task.status === 'waiting_approval' || task.status === 'waiting_answer' ? '◇' : task.status === 'cancelled' ? '−' : task.status === 'archived' ? '▦' : '';
@@ -13,8 +14,14 @@ export function TaskCapsule({ task, activate }: { task: Task; activate: () => vo
   const title = task.status === 'disconnected' ? task.label + ' · ' + task.title : task.title;
   const metrics = taskMetrics(task.session);
   const metricsTitle = metrics ? metrics.turns + ' 轮 · ' + metrics.steps + ' 步' + (metrics.tokensPerSecond !== undefined ? ' · ' + metrics.tokensPerSecond + ' tok/s' : '') : '';
+  const working = task.status === 'running' || task.status === 'starting';
+  const titleNode = working
+    ? <span className="capsule-title" aria-hidden="true">{Array.from(title).map((char, index) => char === ' '
+      ? <span className="wave-char wave-space" key={index} />
+      : <span className="wave-char" key={index} style={{ animationDelay: (index % 24) * 0.045 + 's' }}>{char}</span>)}</span>
+    : <span className="capsule-title">{title}</span>;
   return <button className="task-capsule" aria-label={task.attentionCount ? '展开待处理请求' : '展开速览'} aria-description="可拖动；右键打开菜单。数据来源与调试状态见设置。" title={title + ' · ' + task.label + (metricsTitle ? ' · ' + metricsTitle : '') + (task.attentionCount ? ' · ' + task.attentionCount + ' 项待处理' : '')} onClick={activate}>
-    <StatusOrb task={task} /><span className="capsule-title">{title}</span>
+    <StatusOrb task={task} />{titleNode}
     {task.attentionCount > 0 && <span className="pending-count" aria-label={task.attentionCount + ' 项待处理请求'}>{task.attentionCount} 待处理</span>}
     {metrics && <span className="capsule-metrics" title={metricsTitle}><b>{metrics.turns}</b>轮 · <b>{metrics.steps}</b>步</span>}
     {task.total > 0 && <span className="step-count" aria-label={task.completed + '/' + task.total + ' Todo 步骤完成'}>{task.completed}/{task.total}</span>}
@@ -38,15 +45,51 @@ export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; ex
   </section>;
 }
 const activityLabels = { pending: '等待执行', running: '执行中', success: '已完成', error: '执行失败', cancelled: '已取消' } as const;
+function toolIcon(name: string): IconName {
+  const value = name.toLowerCase();
+  if (/read|cat|view/.test(value)) return 'file';
+  if (/image|screenshot/.test(value)) return 'image';
+  if (/pwsh|powershell|bash|shell|exec|terminal/.test(value)) return 'terminal';
+  if (/edit|write|patch|apply/.test(value)) return 'pencil';
+  if (/grep|search|find|glob/.test(value)) return 'search';
+  if (/web|fetch|browser|http/.test(value)) return 'globe';
+  if (/todo|task|plan/.test(value)) return 'list';
+  if (/code/.test(value)) return 'code';
+  return 'wrench';
+}
 function ProcessList({ task }: { task: Task }) {
+  const notes = task.session?.notes ?? [];
   const activities = task.session?.activities ?? [];
-  if (!activities.length) return <p className="empty-state">此会话尚无工具活动；开始工作后，这里会按步骤出现。</p>;
+  const rows = [
+    ...notes.map(note => ({ kind: 'note' as const, key: note.id, sourceSeq: note.sourceSeq, note })),
+    ...activities.map(activity => ({ kind: 'tool' as const, key: activity.callId, sourceSeq: activity.sourceSeq ?? 0, activity })),
+  ].sort((a, b) => b.sourceSeq - a.sourceSeq);
+  if (!rows.length) return <p className="empty-state">此会话尚无过程；开始工作后，这里会按时间出现思考与工具调用。</p>;
   return <div className="activity-list process-list" role="tabpanel" aria-label="AI 工作过程">
-    {activities.map(activity => <article key={activity.callId} data-tool-status={activity.status ?? 'running'}>
-      <div className="activity-heading"><strong>{activity.toolName}</strong><span className="activity-status">{activityLabels[activity.status ?? 'running']}</span></div>
-      <p>{activity.summary}</p>
-      {activity.resultSummary && <p className="activity-result">{activity.resultSummary}</p>}
-    </article>)}
+    {rows.map(row => row.kind === 'note'
+      ? <details className="process-entry" data-kind={row.note.kind} key={row.key}>
+        <summary>
+          <span className="entry-icon" aria-hidden="true"><Icon name={row.note.kind === 'reasoning' ? 'brain' : 'chat'} /></span>
+          <span className="entry-title">{row.note.kind === 'reasoning' ? '思考' : 'DSH'}</span>
+          <span className="entry-preview">{row.note.text}</span>
+          <span className="entry-status" />
+          <Icon name="chevron" />
+        </summary>
+        <p className="entry-body">{row.note.text}</p>
+      </details>
+      : <details className="process-entry" data-kind="tool" data-tool-status={row.activity.status ?? 'running'} key={row.key}>
+        <summary>
+          <span className="entry-icon" aria-hidden="true"><Icon name={toolIcon(row.activity.toolName)} /></span>
+          <span className="entry-title">{row.activity.toolName}</span>
+          <span className="entry-preview">{row.activity.summary}</span>
+          <span className="entry-status">{activityLabels[row.activity.status ?? 'running']}</span>
+          <Icon name="chevron" />
+        </summary>
+        <div className="entry-body">
+          <p>{row.activity.summary}</p>
+          {row.activity.resultSummary && <p className="activity-result">{row.activity.resultSummary}</p>}
+        </div>
+      </details>)}
   </div>;
 }
 export function TaskExpanded({ task, projection, selected, select, approval, reconnect }: { task: Task; projection: Projection; selected: string; select: (id: string) => void; approval: () => void; reconnect: () => void }) {
