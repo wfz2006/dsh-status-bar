@@ -8,3 +8,5 @@
 - insert:
     - id: dsh-glass-plugin
       name: 'dsh-glass-plugin'
+      config:
+        autoLaunch: true
