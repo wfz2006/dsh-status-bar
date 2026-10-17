@@ -90,6 +90,7 @@
 - [x] M5-07 本地 DSH bundle（`packages/dsh-plugin`）：`dsh.bundle.patch` + profile `link:` 依赖 + `dsh.profile.bundles` 挂载，隔离 Web Profile 启动实测打印 `[dsh-glass-plugin] loaded`（2026-10-18）；desktop profile 已同样接线。
 - [x] M5-08 启动器钩子（2026-10-18）：Host 启动后插件用 `connection.authenticatedUrl(origin)` 取认证链接，`spawn` Glass 并传 `--dsh-link`；Glass 启动即自动连接，第二实例聚焦并重连。隔离 Host 实测 PASS（`node autolaunch-check.mjs`，脚本仓库外），认证链接不写日志。
 - [x] M5-09 默认与外观收紧（2026-10-18）：默认始终置顶（设置版本 2 一次性迁移旧 normal）、启动即开真实折射与色散（原生助手可用且非实色材质）、完成态胶囊绿色高亮 +「已完成」、圆角胶囊 18/大框 20 DIP、胶囊高度 56→52。隔离 smoke 断言 PASS（pinned/pin/radius/height/chip/背景渐变/色散 enabled+running），截图 `evidence-real/ui-capsule-*.png`（仓库外）。
+- [x] M5-10 会话用量指标（2026-10-18）：适配器从 `sessionStats`/`tokenUsage`/`contextPressure` 计算轮数、步数、tok/s、总 token、缓存命中率与上下文占用；胶囊显示「N轮 · N步」，速览两行、详情一行补充 tok/s/总 token/缓存/上下文。真实投影 `{turns:5,steps:137}` 样例断言与 Fake Host 合同测试覆盖（11 项），13 文件 94 测试全过。
 
 ## 后续扩展（P2）
 - [ ] 多 Agent 统一抽象与插件接口。

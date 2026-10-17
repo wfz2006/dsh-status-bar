@@ -96,3 +96,29 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 
 限制：验证用 `GLASS_SMOKE=1` 的 Mock 投影与临时用户目录；自动化期间窗口以 `setIgnoreMouseEvents(true)` 隔离真实鼠标，未覆盖人工交互下的置顶行为与完成态动画观感。
 
+## 会话用量指标（2026-10-18）
+
+数据来源：DSH 会话投影的 `sessionStats`、`tokenUsage`、`contextPressure`，由跨进程适配器归一化后随 `session.upserted` 下发；缺失字段整体省略，不伪造数字。
+
+| 指标 | 计算 |
+|---|---|
+| 轮数 / 步数 | `sessionStats.turns` / `sessionStats.steps` |
+| tok/s | `decodeTokens / decodeMs × 1000`，取整 |
+| 总 token | `uncachedInput + cacheRead + cacheWrite + output` |
+| 缓存命中 | `cacheRead / (cacheRead + uncachedInput) × 100`，保留 1 位 |
+| 上下文占用 | `contextPressure.projectedTokens / contextWindow × 100`，保留 1 位 |
+
+真实投影样例（快照会话 `session-de3b6b77…`）：`turns=5, steps=137, tokens=9,354,169, tok/s=254, cache=95.6%, context=9.9%`。
+
+| 检查 | 结果 |
+|---|---|
+| 适配器合同测试 | Fake Host 注入真实形状投影，`session.stats` 六项逐一相等（`tests/dsh-host-contract.test.ts`，11 项） |
+| 视图汇总 | `taskMetrics` + `formatTokens`：1.3M / 432K / 9.8K 格式与空会话隐藏（`tests/view-model.test.ts`，94 项总） |
+| 胶囊 | 文案「3轮 · 42步」与 Todo 进度并存，宽度不换行 |
+| 速览 | 两行：「3 轮 · 42 步 · 218 tok/s」「1.3M tok · 缓存 96.4% · 上下文 7.2%」 |
+| 详情 | 单行指标条：轮/步、tok/s、总 token、缓存、上下文，不挤压 Todo 列表 |
+
+截图：`ui-capsule-metrics.png`、`ui-peek-metrics.png`、`ui-expanded-metrics.png`（仓库外 `evidence-real/`）。
+
+限制：成本（¥）不在会话投影里，未显示；指标每 5 秒随 `session/list` 轮询刷新，不是逐 token 实时值。
+
