@@ -8,3 +8,6 @@ test-results/
 docs/evidence/upstream/
 .local-dsh-probe/
 .tools/
+experiments/tauri-glass/target/
+experiments/tauri-glass/gen/
+apps/desktop/native/*.exe
