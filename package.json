@@ -2,8 +2,8 @@
   "name": "dsh-glass", "version": "0.1.0", "private": true, "type": "module",
   "packageManager": "pnpm@12.4.1",
   "scripts": {
-    "dev": "pnpm --filter @glass/desktop dev",
-    "build": "pnpm --filter @glass/desktop build",
+    "dev": "node scripts/build-region-capture.mjs && pnpm --filter @glass/desktop dev",
+    "build": "node scripts/build-region-capture.mjs && pnpm --filter @glass/desktop build",
     "start": "pnpm --filter @glass/desktop start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
