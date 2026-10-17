@@ -1,0 +1,29 @@
+{
+  "$comment": "DSH Glass 自定义协议 Mock fixture，不是 DSH 原生事件",
+  "protocolVersion": 1,
+  "messageId": "mock-1",
+  "kind": "glass.snapshot",
+  "sentAt": "2026-10-17T01:00:00.000Z",
+  "runtimeId": "mock-runtime",
+  "epoch": "mock-epoch-1",
+  "payload": {
+    "sessions": [
+      {
+        "runtimeId": "mock-runtime",
+        "sessionId": "mock-session-1",
+        "title": "Mock: Matrix Kernel",
+        "connectionState": "connected",
+        "agentStatus": "running",
+        "phase": "working",
+        "todos": [
+          { "content": "分析性能瓶颈", "status": "completed" },
+          { "content": "优化 Tiling", "status": "in_progress" },
+          { "content": "运行回归测试", "status": "pending" }
+        ]
+      }
+    ],
+    "approvals": [],
+    "questions": [],
+    "lastSeq": { "mock-session-1": 3 }
+  }
+}

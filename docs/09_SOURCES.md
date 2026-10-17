@@ -1,0 +1,66 @@
+# 09 — 官方资料索引与核验记录
+
+文档编制日：2026-10-17。本文件中的“已证实”仅指**公开官方文档描述**，不代表已在用户的本机 DSH 版本执行成功。
+
+## 1. 官方项目与架构
+
+- DSH 官方仓库：<https://github.com/deepseek-ai/deepseek-harness>
+- DSH 架构说明：<https://deepseek-harness.github.io/deepseek-harness/en/reference/>
+- 官方首个插件教程：<https://deepseek-harness.github.io/deepseek-harness/en/develop/basic/>
+- 官方插件打包与安装：<https://deepseek-harness.github.io/deepseek-harness/en/develop/basic/publish>
+- Cordis 事件系统（官方仓库源码文档）：<https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/develop/framework/events.md>
+
+## 2. 关键事件与审批
+
+- 官方审批 API：<https://deepseek-harness.github.io/deepseek-harness/en/reference/subsystems/approval>
+- 官方结构化提问：<https://deepseek-harness.github.io/deepseek-harness/en/reference/subsystems/user-questions>
+- 官方 Todo：<https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/todo.md>
+- 官方 Session 事件目录：<https://deepseek-harness.github.io/deepseek-harness/en/reference/persistence-catalog>
+- 官方工具目录：<https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/tool-catalog.md>
+
+**从这些官方资料能够确认**：
+
+- `todo/write` 整表写入，TodoItem 有 `content` 和 `status` (`pending`, `in_progress`, `completed`)；未提供每项的稳定业务 ID。
+- `approval/request` 是 waterfall，`allowed-once` 是唯一放行结果，审批请求不直接重复附带工具参数，通过 `callId` 与工具调用数据关联。
+- `user-questions/request` 单独处理结构化输入，不应视为审批的别名。
+- 持久事件可以通过 `session/event` 的观察方式处理；详细事件回调签名需要目标源码确认。
+
+## 3. Desktop 特性
+
+- 官方 Desktop README：<https://github.com/deepseek-ai/deepseek-harness/blob/master/apps/desktop/README.md>
+- DSH 官方架构 Desktop 部分：<https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/architecture.md>
+- 社区报告的本地插件 `link:` + peerDependencies 问题（需确认版本和真实性）：<https://github.com/deepseek-ai/deepseek-harness/discussions/9494>
+
+**已证实**：Desktop 自己管理 `$DSH_HOME/profiles/desktop`，内置 Electron Host 和插件生命周期；同其他 CLI Profiles 不完全相同。
+
+**未证实**：当前用户 Desktop 版本是否允许 Glass 完成审批所有权接管；这里必须做 SPIKE。
+
+## 4. Electron 官方资料
+
+- BrowserWindow API：<https://www.electronjs.org/docs/latest/api/browser-window>
+- 窗口创建选项：<https://www.electronjs.org/docs/latest/api/structures/base-window-options>
+
+系统材质 `setBackgroundMaterial('acrylic')` 是 Windows 11 22H2+ 的 Electron API 功能；与透明无边框窗口组合是否能够表现预期效果需要实测。`setIgnoreMouseEvents` 可以开启穿透，但必须具备恢复机制。
+
+## 5. 目标运行环境核验（Codex 本地填写）
+
+```text
+检查日期：TODO
+OS + Build：TODO
+Node：TODO
+pnpm：TODO
+Glass Electron：TODO
+DSH CLI 版本：TODO / not installed
+DSH Desktop 版本：TODO / not installed
+DSH Git SHA / tag：TODO
+运行模式：Web / Official Desktop / Third-party fork / none
+Profile：TODO
+核心源码签名校验：TODO
+真实 todo 事件：PASS / FAIL / BLOCKED
+Desktop 插件装载：PASS / FAIL / BLOCKED
+Approval ownership：PASS / FAIL / BLOCKED
+Structured question ownership：PASS / FAIL / BLOCKED
+备注/复现步骤：TODO
+```
+
+请按可复现证据填写，不可从网页最近版本号推定用户当前的安装版本。
