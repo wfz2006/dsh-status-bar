@@ -142,10 +142,25 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 | 材质 | `setSettings({material:'frosted'})` 后 `WindowState.material='frosted'`、`data-material=frosted` |
 | 取样 | `optics.enabled=true`、`running=true`、`error=null`，canvas 可见 |
 | 图层 | `.glass-frost` 存在，canvas 计算样式含 `blur(34px) saturate(0.72) contrast(0.9)`，根背景非透明 |
-| 三种形态 | 胶囊 302×52、速览 340×168、详情 400×280 均保持雾面与模糊 |
+| 三种形态 | 胶囊 302×52、速览 340×168、详情 400×360 均保持雾面与模糊 |
 | auto / dark | auto 解析为 `light`；切 dark 后仍保留雾面层 |
 
 截图：`ui-frost-capsule.png`、`ui-frost-peek.png`、`ui-frost-expanded.png`、`ui-frost-dark.png`（仓库外 `evidence-real/`；壁纸为深红色，因此雾面呈玫瑰色，属真实取样结果）。
 
 限制：模糊作用于 30~60fps 的桌面取样帧，采样停止（隐藏窗口/关闭色散）后退回静态白雾；未在 100% DPI 和多屏拼接上复测边缘采样。
+
+## 工作过程视图与胶囊动效（2026-10-18）
+
+大窗（400×360）新增「过程 / 步骤」两个页签。过程页复用 `session.activities` 的工具活动时间线，逐条显示工具名、执行状态（等待执行/执行中/已完成/执行失败/已取消）与摘要、结果摘要；数据与「最近活动」面板同源，DSH 会话来自 `tool/call`、`tool/result` 与 follow 审计事件，Mock 会话来自 `session.tool.activity` 帧。工作胶囊在 `agentStatus=running/starting` 时标题做呼吸动画（透明度 .8↔1、上下 0.5px），标题尾部三点错峰跳动；`data-animation=reduced` 放慢到 6s，`off` 与系统 `prefers-reduced-motion` 直接停用。
+
+隔离 Electron 实测（`GLASS_SMOKE=1`）：
+
+| 检查 | 结果 |
+|---|---|
+| 胶囊呼吸 | `data-state=running`、`.working-dots` 存在、`.capsule-title` 计算样式 `animationName=capsule-breathe`、点 `dot-breathe` |
+| 过程页 | 切大窗后高度 360、两个页签、默认「过程」选中，过程页 1 条 `read_file` /「执行中」/「查看协议与状态模型 · Mock 事件」 |
+| 步骤页 | 点「步骤」后 `aria-selected=true`，Todo 2 条 |
+| 窗口 | `getBounds()` 400×360（忽略鼠标事件、位置固定在 120,120 后测量） |
+
+截图：`ui-capsule-working.png`、`ui-expanded-process.png`、`ui-expanded-steps.png`（仓库外 `evidence-real/`）。限制：过程页只覆盖工具活动，不含模型流式文字；真实会话中非运行态不再 follow，历史活动来自重连时 follow 快照与 `session/list` 的有限投影。
 

@@ -17,7 +17,7 @@ export function normalizeSettings(value: unknown): GlassSettings {
     animation: choice('animation', ['full', 'reduced', 'off'], 'full'), pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], 'system') };
 }
 export function viewSize(mode: GlassViewMode) {
-  return { capsule: { width: 300, height: 52 }, peek: { width: 340, height: 168 }, expanded: { width: 400, height: 280 }, approval: { width: 400, height: 340 } }[mode];
+  return { capsule: { width: 300, height: 52 }, peek: { width: 340, height: 168 }, expanded: { width: 400, height: 360 }, approval: { width: 400, height: 340 } }[mode];
 }
 export function viewForSize(width: number, height: number, current: GlassViewMode): GlassViewMode {
   if (height < 96) return 'capsule';

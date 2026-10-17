@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Projection } from '@glass/protocol';
 import { formatTokens, taskMetrics, type deriveTask } from '../shared/view-model';
 export type Task = ReturnType<typeof deriveTask>;
@@ -14,6 +15,7 @@ export function TaskCapsule({ task, activate }: { task: Task; activate: () => vo
   const metricsTitle = metrics ? metrics.turns + ' 轮 · ' + metrics.steps + ' 步' + (metrics.tokensPerSecond !== undefined ? ' · ' + metrics.tokensPerSecond + ' tok/s' : '') : '';
   return <button className="task-capsule" aria-label={task.attentionCount ? '展开待处理请求' : '展开速览'} aria-description="可拖动；右键打开菜单。数据来源与调试状态见设置。" title={title + ' · ' + task.label + (metricsTitle ? ' · ' + metricsTitle : '') + (task.attentionCount ? ' · ' + task.attentionCount + ' 项待处理' : '')} onClick={activate}>
     <StatusOrb task={task} /><span className="capsule-title">{title}</span>
+    {(task.status === 'running' || task.status === 'starting') && <span className="working-dots" aria-hidden="true"><i /><i /><i /></span>}
     {task.attentionCount > 0 && <span className="pending-count" aria-label={task.attentionCount + ' 项待处理请求'}>{task.attentionCount} 待处理</span>}
     {metrics && <span className="capsule-metrics" title={metricsTitle}>{metrics.turns}轮 · {metrics.steps}步</span>}
     {task.total > 0 && <span className="step-count" aria-label={task.completed + '/' + task.total + ' Todo 步骤完成'}>{task.completed}/{task.total}</span>}
@@ -36,8 +38,21 @@ export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; ex
     {failure ? <button className="attention-link" onClick={reconnect}><span className="control-label">重新连接</span> <span aria-hidden="true">↗</span></button> : task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}
   </section>;
 }
+const activityLabels = { pending: '等待执行', running: '执行中', success: '已完成', error: '执行失败', cancelled: '已取消' } as const;
+function ProcessList({ task }: { task: Task }) {
+  const activities = task.session?.activities ?? [];
+  if (!activities.length) return <p className="empty-state">此会话尚无工具活动；开始工作后，这里会按步骤出现。</p>;
+  return <div className="activity-list process-list" role="tabpanel" aria-label="AI 工作过程">
+    {activities.map(activity => <article key={activity.callId} data-tool-status={activity.status ?? 'running'}>
+      <div className="activity-heading"><strong>{activity.toolName}</strong><span className="activity-status">{activityLabels[activity.status ?? 'running']}</span></div>
+      <p>{activity.summary}</p>
+      {activity.resultSummary && <p className="activity-result">{activity.resultSummary}</p>}
+    </article>)}
+  </div>;
+}
 export function TaskExpanded({ task, projection, selected, select, approval, reconnect }: { task: Task; projection: Projection; selected: string; select: (id: string) => void; approval: () => void; reconnect: () => void }) {
   const rank = { in_progress: 0, pending: 1, completed: 2 };
+  const [tab, setTab] = useState<'process' | 'steps'>('process');
   const metrics = taskMetrics(task.session);
   const todos = [...task.todos].sort((a, b) => rank[a.status] - rank[b.status]);
   return <section className="task-expanded">
@@ -53,8 +68,14 @@ export function TaskExpanded({ task, projection, selected, select, approval, rec
       {metrics.contextPercent !== undefined && <span>上下文 <b>{metrics.contextPercent}%</b></span>}
     </div>}
     <Progress task={task} />
-    <ol className="todo-list" aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span>{todo.content}</span></li>)}</ol>
-    {!todos.length && <p className="empty-state">此会话尚无 Todo，不显示百分比。</p>}
+    <div className="task-tabs" role="tablist" aria-label="任务详情视图">
+      <button className="task-tab" role="tab" aria-selected={tab === 'process'} onClick={() => setTab('process')}>过程</button>
+      <button className="task-tab" role="tab" aria-selected={tab === 'steps'} onClick={() => setTab('steps')}>步骤{task.total > 0 ? ' ' + task.completed + '/' + task.total : ''}</button>
+    </div>
+    {tab === 'process' ? <ProcessList task={task} /> : <>
+      <ol className="todo-list" aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span>{todo.content}</span></li>)}</ol>
+      {!todos.length && <p className="empty-state">此会话尚无 Todo，不显示百分比。</p>}
+    </>}
     {task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}
     {(task.status === 'disconnected' || task.status === 'error') && <button className="attention-link" onClick={reconnect}><span className="control-label">检查连接并重试</span> <span aria-hidden="true">↗</span></button>}
   </section>;
