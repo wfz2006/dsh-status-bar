@@ -11,14 +11,19 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   const preferencePath = join(directory, 'glass-ui.json');
   let settings = { ...DEFAULT_SETTINGS };
   let remembered: { mode: GlassViewMode; bounds: Bounds; manual: boolean } | undefined;
+  let savedVersion: number | undefined;
   if (!smoke) try {
     const saved: unknown = JSON.parse(readFileSync(preferencePath, 'utf8'));
+    if (saved && typeof saved === 'object' && 'version' in saved && typeof saved.version === 'number') savedVersion = saved.version;
     if (saved && typeof saved === 'object' && 'settings' in saved) settings = normalizeSettings(saved.settings);
     if (saved && typeof saved === 'object' && 'mode' in saved && 'bounds' in saved && ['capsule', 'peek', 'expanded', 'approval'].includes(String(saved.mode))) {
       const b = saved.bounds;
       if (b && typeof b === 'object' && 'x' in b && 'y' in b && 'width' in b && 'height' in b && [b.x, b.y, b.width, b.height].every(v => typeof v === 'number' && Number.isFinite(v))) remembered = { mode: saved.mode as GlassViewMode, bounds: b as Bounds, manual: 'manual' in saved && saved.manual === true };
     }
   } catch { /* Invalid or absent local preferences use defaults. */ }
+  // Version 1 defaulted to a floating but ordinary window; adopt the newer
+  // always-on-top default exactly once instead of silently keeping the old value.
+  if (savedVersion === 1 && settings.pin === 'normal') settings = { ...settings, pin: 'always' };
   let view = initialView(settings.defaultView === 'peek' ? 'peek' : settings.defaultView === 'remember-last' ? remembered?.mode ?? 'capsule' : 'capsule');
   if (settings.defaultView === 'remember-last' && remembered?.manual) view = manualView(view, remembered.mode);
   let sourceConnected = false;
@@ -33,7 +38,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   }
   function persist() {
     if (smoke || win.isDestroyed() || panel || presentation?.state().morphing) return;
-    try { writeFileSync(preferencePath, JSON.stringify({ version: 1, settings, mode: view.mode, manual: view.manual, bounds: win.getBounds() })); } catch { /* User preference failures do not affect observations. */ }
+    try { writeFileSync(preferencePath, JSON.stringify({ version: 2, settings, mode: view.mode, manual: view.manual, bounds: win.getBounds() })); } catch { /* User preference failures do not affect observations. */ }
   }
   function saveSoon() { clearTimeout(persistenceTimer); persistenceTimer = setTimeout(persist, 180); }
   function publish() {
@@ -70,7 +75,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     presentation?.setMaterial(settings.material === 'solid' ? 'solid' : settings.material === 'acrylic' ? 'acrylic' : 'clear');
     win.setAlwaysOnTop(settings.pin === 'always' || settings.pin === 'on-notification' && sourceConnected && view.pending.length > 0);
     // Settings changes must be saved even while the settings panel is open.
-    if (!smoke) try { writeFileSync(preferencePath, JSON.stringify({ version: 1, settings, mode: panelReturn?.mode ?? view.mode, manual: panelReturn?.manual ?? view.manual, bounds: panelReturn?.bounds ?? win.getBounds() })); } catch { /* Optional persistence. */ }
+    if (!smoke) try { writeFileSync(preferencePath, JSON.stringify({ version: 2, settings, mode: panelReturn?.mode ?? view.mode, manual: panelReturn?.manual ?? view.manual, bounds: panelReturn?.bounds ?? win.getBounds() })); } catch { /* Optional persistence. */ }
     publish(); return state();
   }
   function observe(facts: AttentionFacts, connected: boolean) {

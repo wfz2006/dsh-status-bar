@@ -14,6 +14,7 @@ export function TaskCapsule({ task, activate }: { task: Task; activate: () => vo
     <StatusOrb task={task} /><span className="capsule-title">{title}</span>
     {task.attentionCount > 0 && <span className="pending-count" aria-label={task.attentionCount + ' 项待处理请求'}>{task.attentionCount} 待处理</span>}
     {task.total > 0 && <span className="step-count" aria-label={task.completed + '/' + task.total + ' Todo 步骤完成'}>{task.completed}/{task.total}</span>}
+    {task.status === 'completed' && <span className="capsule-state">已完成</span>}
   </button>;
 }
 export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; expand: () => void; approval: () => void; reconnect: () => void }) {

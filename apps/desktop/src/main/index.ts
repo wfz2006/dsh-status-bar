@@ -200,16 +200,19 @@ else {
       menuChanged: menu => { if (tray && !tray.isDestroyed()) tray.setContextMenu(menu); },
     });
     optics=createDesktopOptics(win,join(here,'../../native/RegionCapture.exe'));
+    const opticsBinary = join(here, '../../native/RegionCapture.exe');
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', event => event.preventDefault());
     win.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
     win.on('close', event => { if (!quitting) { event.preventDefault(); win.hide(); } });
     win.once('ready-to-show', () => {
       win.show();
-      // An explicit launch option is equivalent to opting in for this session.
-      // It is never persisted or enabled by ordinary startup.
-      if(process.argv.includes('--desktop-optics')) {
+      // Refraction ships on by default; the settings checkbox still turns it off
+      // for the session. Solid acrylic has nothing to refract, so skip the worker.
+      if (process.argv.includes('--desktop-optics')) {
         ui!.setSettings({material:'transparent'});ui!.request('collapse',true);ui!.request('expand',true);
+        optics!.enable(true);
+      } else if (!smoke && existsSync(opticsBinary) && ui!.state().settings.material !== 'solid') {
         optics!.enable(true);
       }
     });

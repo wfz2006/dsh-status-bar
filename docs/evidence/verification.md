@@ -80,3 +80,19 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 
 限制：本验证用隔离 Profile（非 desktop profile），未自动验证市场「已安装」条目在用户 Desktop 重启后的实际加载；插件拉起的是开发态 `apps/desktop`，不是安装包。
 
+## 默认与外观收紧（2026-10-18）
+
+目标：默认始终置顶、启动即开启真实折射与色散、任务完成时胶囊绿色高亮并显示「已完成」、缩小圆角、压缩胶囊高度。
+
+| 检查 | 结果 |
+|---|---|
+| 默认置顶 | `getWindowState().pinned === true`、`settings.pin === 'always'`；旧配置 `normal` 由设置版本 2 一次性迁移为 `always` |
+| 胶囊尺寸/圆角 | 窗口 302×52（原 300×56），`.glass` computed `border-radius: 18px`（原 20px）；大框 20px |
+| 完成高亮 | mock 完成场景 8.6s 后 `data-state=completed`、`.capsule-state` 文本「已完成」、`.task-capsule` 背景为绿色渐变 `linear-gradient(160deg, rgba(72,205,122,.34), rgba(34,160,88,.22))` |
+| 色散默认开 | 非 smoke 启动 2.6s 后 `getOpticsState() = { enabled: true, running: true, error: null }` |
+| 单元/构建 | `pnpm lint` 0、`pnpm typecheck` 0、`pnpm test` 13 文件 92 用例、`pnpm build` 成功（renderer 829.66 kB） |
+
+截图：`ui-capsule-default.png`、`ui-capsule-completed.png`（保存在仓库外 `evidence-real/`，避免把本机窗口画面入库）。
+
+限制：验证用 `GLASS_SMOKE=1` 的 Mock 投影与临时用户目录；自动化期间窗口以 `setIgnoreMouseEvents(true)` 隔离真实鼠标，未覆盖人工交互下的置顶行为与完成态动画观感。
+

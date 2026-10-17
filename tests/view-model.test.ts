@@ -6,9 +6,10 @@ import { DEFAULT_SETTINGS, normalizeSettings, deriveTask, initialView, observeFa
 it('defaults to a calm task capsule and validates persisted preferences', () => {
   expect(initialView().mode).toBe('capsule');
   expect(DEFAULT_SETTINGS.autoApproval).toBe(false);
+  expect(DEFAULT_SETTINGS.pin).toBe('always');
   expect(normalizeSettings({ animation: 'invalid', theme: 'light', autoApproval: true }).theme).toBe('light');
   expect(normalizeSettings({ animation: 'invalid' }).animation).toBe('full');
-  expect(viewSize('capsule')).toEqual({ width: 300, height: 56 });
+  expect(viewSize('capsule')).toEqual({ width: 300, height: 52 });
   expect(viewForSize(330, 180, 'expanded')).toBe('peek');
   expect(viewForSize(400, 320, 'approval')).toBe('approval');
 });

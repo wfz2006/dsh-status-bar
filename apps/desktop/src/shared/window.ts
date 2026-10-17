@@ -13,7 +13,7 @@ export function morphBounds(start: Bounds, end: Bounds, progress: number): Bound
   return { x: lerp(start.x, end.x, ease), y: lerp(start.y, end.y, heightEase), width: lerp(start.width, end.width, ease), height: lerp(start.height, end.height, heightEase) };
 }
 export function roundedRegion(width: number, height: number): Bounds[] {
-  const radius = Math.min(height < 96 ? 20 : 22, Math.floor(height / 2), Math.floor(width / 2));
+  const radius = Math.min(height < 96 ? 18 : 20, Math.floor(height / 2), Math.floor(width / 2));
   const rows: Bounds[] = [{ x: 0, y: radius, width, height: height - radius * 2 }];
   for (let y = 0; y < radius; y++) {
     const inset = Math.max(0, Math.ceil(radius - Math.sqrt(radius ** 2 - (radius - y - 0.5) ** 2) - 0.5));
@@ -23,13 +23,13 @@ export function roundedRegion(width: number, height: number): Bounds[] {
 }
 export function resizeBounds(start: Bounds, edge: ResizeEdge, dx: number, dy: number): Bounds {
   const width = Math.max(180, Math.min(900, start.width + (edge.includes('w') ? -dx : edge.includes('e') ? dx : 0)));
-  const height = Math.max(54, Math.min(1000, start.height + (edge.includes('n') ? -dy : edge.includes('s') ? dy : 0)));
+  const height = Math.max(50, Math.min(1000, start.height + (edge.includes('n') ? -dy : edge.includes('s') ? dy : 0)));
   return { x: edge.includes('w') ? start.x + start.width - width : start.x,
     y: edge.includes('n') ? start.y + start.height - height : start.y, width, height };
 }
 export function clampBounds(bounds: Bounds, area: Bounds): Bounds {
   const width = Math.min(Math.max(bounds.width, 180), area.width);
-  const height = Math.min(Math.max(bounds.height, 54), area.height);
+  const height = Math.min(Math.max(bounds.height, 50), area.height);
   return { width, height,
     x: Math.max(area.x, Math.min(bounds.x, area.x + area.width - width)),
     y: Math.max(area.y, Math.min(bounds.y, area.y + area.height - height)) };

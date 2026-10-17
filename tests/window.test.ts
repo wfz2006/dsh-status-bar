@@ -31,7 +31,7 @@ it('keeps a short capsule slightly squarer while clamping tiny-window corners', 
 });
 it('custom resizing respects minimum size while anchoring the opposite edge', () => {
   expect(resizeBounds({ x: 500, y: 100, width: 340, height: 360 }, 'w', 300, 0)).toEqual({ x: 660, y: 100, width: 180, height: 360 });
-  expect(resizeBounds({ x: 500, y: 100, width: 340, height: 360 }, 'se', 40, -500)).toEqual({ x: 500, y: 100, width: 380, height: 54 });
+  expect(resizeBounds({ x: 500, y: 100, width: 340, height: 360 }, 'se', 40, -500)).toEqual({ x: 500, y: 100, width: 380, height: 50 });
 });
 it('uses both dimensions so a wide short window stays compact', () => {
   expect(density(180, 54)).toBe('capsule');
