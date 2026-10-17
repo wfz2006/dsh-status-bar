@@ -1,0 +1,14 @@
+{
+  "tintOpacity": 0.1,
+  "region": {
+    "left": 50,
+    "right": 463,
+    "top": 99,
+    "bottom": 184
+  },
+  "pixelCount": 35105,
+  "brightnessRatio": 0.8977777777777778,
+  "textOpacity": "1",
+  "rootOpacity": "1",
+  "noAddedBackdropBlur": true
+}

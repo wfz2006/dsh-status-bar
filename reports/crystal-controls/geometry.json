@@ -1,0 +1,46 @@
+[
+  {
+    "tone": "light",
+    "buttons": [
+      {
+        "x": 27,
+        "y": 387,
+        "width": 265.5,
+        "height": 60
+      },
+      {
+        "x": 307.5,
+        "y": 387,
+        "width": 265.5,
+        "height": 60
+      }
+    ],
+    "css": {
+      "filter": "none",
+      "shadow": "none",
+      "background": "none"
+    }
+  },
+  {
+    "tone": "dark",
+    "buttons": [
+      {
+        "x": 27,
+        "y": 387,
+        "width": 265.5,
+        "height": 60
+      },
+      {
+        "x": 307.5,
+        "y": 387,
+        "width": 265.5,
+        "height": 60
+      }
+    ],
+    "css": {
+      "filter": "none",
+      "shadow": "none",
+      "background": "none"
+    }
+  }
+]

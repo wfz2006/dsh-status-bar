@@ -1,5 +1,7 @@
 # Edge 新标签页材质移植
 
+**最新结论：用户判定失败。** 下文是历史引擎移植记录，不是桌面光学验收。已撤销整面染色、渐变及字体阴影/白边；真实跨应用折射、色散没有实现。Tauri 原生对照与 Windows API 的实际限制见 `../native-compositor/README.md`。
+
 用户指定参考：`D:/workb/DSHwoek/edge-liquid-glass-newtab`。只读该项目，未修改其已有的 `tests/sync-writer-ownership.test.js` 脏改动。本轮按用户明确的新方向执行，取代此前 Gate A 等待评价的样式方向；未迁移技术栈。
 
 ## 实际移植

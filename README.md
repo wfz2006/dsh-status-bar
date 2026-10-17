@@ -4,15 +4,23 @@
 
 **一句话定义**：以液态玻璃为视觉语言、可自由移动与伸缩的桌面窗口，让用户查看 DSH 会话任务、Todo、工具活动，并在已验证的授权通道中直接处理审批和结构化提问，无需切回 DSH 主窗口。
 
-原始输入是开发规格包。2026-10-17 已实现首轮 **Mock 开发预览**（协议、鉴权桥、Electron 自适应窗口），并完成独立 DSH Web 插件探测。**尚未连接官方 Desktop 的当前任务，真实审批不可用**。运行方式见 [RUNNING.md](docs/RUNNING.md)，实测范围见 [支持矩阵](docs/integration-matrix.md)。原始完整规格保留在下文及 MASTER_SPEC。
+原始输入是开发规格包。2026-10-17 已实现首轮 **Mock 开发预览**（协议、鉴权桥、Electron 自适应窗口），并完成独立 DSH Web 插件探测。**尚未连接官方 Desktop 的当前任务，真实审批不可用**。后续轮次补上跨进程认证适配器（官方 Host 认证链接 → 本机 JSON-RPC + `remote.mux` WS），以 Fake Host 合同测试验证；官方 Desktop 的当前任务与真实审批仍未联通。运行方式见 [RUNNING.md](docs/RUNNING.md)，实测范围见 [支持矩阵](docs/integration-matrix.md)。原始完整规格保留在下文及 MASTER_SPEC。
 
 2026-10-17 按 [Liquid UI 重设计规范](DSH_Glass_Liquid_UI_Redesign_Spec.md) 完成四形态 UI 重构：任务胶囊、速览、紧凑详情与独立审批，移除常驻品牌/连接底栏，功能迁至菜单/设置；新增偏好持久化、自动行为与手动尺寸保护。实际验证与尚未覆盖项见 [分阶段记录](docs/redesign-audit.md)。
 
 同日按 UI Improvement Pack 做一轮集中整改：去除正常任务子卡片、默认薄透、审批固定操作栏、内容先退场再收起。真实桌面截图/录屏、材质矩阵、性能记录及尚待用户评价的Gate A见 [验收包](reports/electron-redesign/decision.md)；未擅自迁移技术栈。
 
-最新材质按用户指定的 `edge-liquid-glass-newtab` 移植：同源SDF透镜/RGB滤镜、渐变与方向内高光，保留原MIT声明。31项单测、原生截图与像素能力边界见 [材质移植记录](reports/edge-material-port/README.md)；网页内折射已验证，跨应用桌面折射未证实。
+最新状态：已删除整面蓝灰染色和字体白边/阴影，加实字重。旧材质验收失败后完成 Tauri 原生对照；在用户明确授权后，新增**默认关闭的限定区域取样**，让同源透镜实际处理窗后画面。真实原生条纹输入已验证13物理像素偏折及RGB分离，隐藏/停用/实色/异常退出回归通过；见 [真实折射验收](reports/desktop-optics/README.md)。正式入口仍为 Electron。10-17 晚追加跨进程 DSH 适配器与 10 项合同测试，真实 Desktop 审批仍 BLOCKED，见 [ADR 004](docs/adr/004-authenticated-host.md)。
 
 ## 推荐阅读顺序
+
+最新运行版本已落地用户确认的统一视觉方向：清透玻璃、黑白内容、单冷蓝强调、状态色按需，任务/审批/设置共享一套层次。见 [本轮实际样张](reports/refined-ui/README.md)。
+
+内部色块已按后续反馈改为薄透彩色玻璃，保留实色文字与功能色。真实条纹穿透按钮的对照见 [晶透控件验收](reports/crystal-controls/README.md)。
+
+最新截图反馈修订：去掉装饰短横条与独立蓝色角落按钮，改为内缩透明操作组和SVG详情展开行；旧Acrylic对照因系统方角已停用并迁回薄透。设计参考与原生角像素证据见 [三处细节重设计](reports/chrome-redesign/README.md)。
+
+本轮补充：修复150% DPI拖动尺寸持续增长，改为原生只移动；窗口内亮边微增至1.5px，控件/命令使用更鲜明的局部色底，文字按功能区分蓝/紫/绿/红/琥珀，主标题与普通正文保持实色，提供可见收起/菜单。实测边界见 [移动尺寸](reports/move-size/README.md) 与 [可读性样张](reports/ui-clarity/README.md)。
 
 1. [AGENTS.md](AGENTS.md)：Codex 必须遵守的工程规则。
 2. [docs/00_PRODUCT_PRD.md](docs/00_PRODUCT_PRD.md)：产品边界、用户场景和验收条件。

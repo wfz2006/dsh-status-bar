@@ -1,0 +1,17 @@
+[
+  {
+    "material": "acrylic",
+    "actual": "transparent",
+    "path": "C:\\Users\\wfz\\AppData\\Local\\Temp\\dsh-chrome-acrylic.png"
+  },
+  {
+    "material": "transparent",
+    "actual": "transparent",
+    "path": "C:\\Users\\wfz\\AppData\\Local\\Temp\\dsh-chrome-transparent.png"
+  },
+  {
+    "material": "solid",
+    "actual": "solid",
+    "path": "C:\\Users\\wfz\\AppData\\Local\\Temp\\dsh-chrome-solid.png"
+  }
+]

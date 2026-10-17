@@ -1,14 +1,14 @@
 # 本地接入支持矩阵
 
-检查日期：2026-10-17。当前交付版本：Glass 0.1.0，**Mock 开发预览**。
+检查日期：2026-10-17。当前交付版本：Glass 0.1.0，**Mock 开发预览 + 认证适配器（合同测试层）**。
 
 | 目标 | 插件加载 | Session/Todo | Glass UI 真实连接 | 审批 / 问题回答 |
 |---|---|---|---|---|
 | Mock Adapter | PASS | PASS，确定性夹具 | PASS，认证 WS + Electron | 不提供，按钮禁用 |
-| 官方 0.2.0-rc.2 bundled CLI / 独立 Web Profile | PASS | PASS：插件通过官方 SessionStore 写入测试事件并收到 `session/event`，Todo 数量 3→2 | 尚未实现跨进程 DSH Adapter 传输 | BLOCKED，未注册 answerer |
+| 官方 0.2.0-rc.2 bundled CLI / 独立 Web Profile | PASS | PASS：插件通过官方 SessionStore 写入测试事件并收到 `session/event`，Todo 数量 3→2 | 已实现跨进程 DSH Adapter：认证链接 + JSON-RPC + `remote.mux` WS；本机 Fake Host 合同测试 10 项 PASS，未在官方 Desktop 实测 | 代码路径已实现（`$events/result` 回写），真实 Desktop 未验收 → BLOCKED |
 | 官方 Desktop 0.2.0-rc.2 / 原有 desktop Profile | 未测试 | 未测试现有用户会话 | BLOCKED | BLOCKED，未验证唯一 owner/委派 |
 
-Web 证据是**真实 DSH Runtime 中的人工测试夹具**，不是模型驱动的 Agent 任务，也不证明 Desktop UI 已联通。Glass 当前仍只显示 Mock 数据。不能据此宣传 Observe PASS 或 Control PASS。
+Web 证据是**真实 DSH Runtime 中的人工测试夹具**，不是模型驱动的 Agent 任务，也不证明 Desktop UI 已联通。Glass 默认仍显示 Mock 数据；DSH 模式需要用户粘贴官方启动器输出的认证链接，该链路目前只在本机 Fake Host 合同测试中验证，不能据此宣传 Observe PASS 或 Control PASS。
 
 ## 环境
 
@@ -36,4 +36,4 @@ $env:GLASS_PROBE_FIXTURE = '1'
 
 ## Go / No-Go
 
-只允许交付 Mock Preview。Desktop 插件正常装载、live Session 快照、生命周期和审批所有权验证完成前，不开启 DSH 模式、不实现 `approval.respond`、不接管任何官方 answerer。
+默认只允许交付 Mock Preview。DSH 模式保持实验性、默认关闭，只能由用户粘贴自己的认证链接开启；官方 Desktop 的插件正常装载、live Session 快照、生命周期和审批所有权验证完成前，不对外宣称真实审批可用，不接管任何官方 answerer。

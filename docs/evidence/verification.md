@@ -22,3 +22,14 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 自动化详情见 [desktop-smoke.json](desktop-smoke.json)。桌面截图保留在同目录，系统缩放使物理像素尺寸大于 DIP；这不是完整 DPI 矩阵验收。
 
 已知工具提示：Playwright 1.56.1 启动器在 Node 24 输出 DEP0190；官方 DSH CLI 输出 DEP0180。它们是上游弃用提示，未压制；检查均返回成功。不同壁纸下的系统 Acrylic、原生拖拽手感、托盘恢复、休眠/多屏、性能与安装包尚未验收。
+
+## 跨进程 DSH Adapter 合同测试（2026-10-17 晚）
+
+| 检查 | 结果 |
+|---|---|
+| `pnpm lint` | PASS，0 errors |
+| `pnpm typecheck` | PASS |
+| `pnpm test` | PASS，12 files / 88 tests（含 `tests/dsh-host-contract.test.ts` 10 项） |
+| `pnpm build` | PASS |
+
+合同测试在本机 Fake Host（HTTP 303 认证 + `/api/<method>` JSON-RPC + `/api/remote.mux` WS）上复现握手、快照、网关事件、审批与提问投递、`$events/result` 回写与断线失效；不连接官方 Desktop，不能替代真实 owner/answerer 验收。首轮修复：welcome 能力位曾写成「连接时是否已有投递」，恒为 false 导致审批卡片永久禁用；现改为连接级能力，逐投递授权仍由适配器与 `request-gate` 强制。

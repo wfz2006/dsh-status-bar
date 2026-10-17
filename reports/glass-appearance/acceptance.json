@@ -1,0 +1,21 @@
+{
+  "ui": {
+    "color": "#4090e0",
+    "opacity": "72",
+    "brightness": "149",
+    "stableWindow": true
+  },
+  "region": {
+    "left": 50,
+    "right": 460,
+    "top": 126,
+    "bottom": 184
+  },
+  "layers": {
+    "textFilter": "none",
+    "rimFilter": "none",
+    "textOpacity": "1",
+    "tint": "rgba(64, 144, 224, 0.3)"
+  },
+  "noSamplingOnRestore": true
+}

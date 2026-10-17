@@ -171,7 +171,7 @@ type UserQuestionView = {
 
 ## 9. 首轮实际实现子集（2026-10-17）
 
-`packages/protocol/src/index.ts` 的 Zod 是本轮唯一运行时定义。实现 welcome/snapshot/heartbeat、session.updated/todo.snapshot/tool.activity、只读 approval.requested。尚未实现 question、approval respond/ack/resolved；所有应答命令被 Bridge 拒绝，capabilities/respondApproval/respondQuestion 强制 false。
+`packages/protocol/src/index.ts` 的 Zod 是本轮唯一运行时定义。实现 welcome/snapshot/heartbeat、session.updated/todo.snapshot/tool.activity、approval.requested、question.requested、approval.respond/ack/resolved、question.respond/ack/resolved。应答命令仅在连接成功且活动投递匹配时被接受：`capabilities.respondApproval/respondQuestion` 由适配器按连接级能力上报，Mock Adapter 保持 false；每次应答仍由 `deliveries` 校验 runtime/epoch/session/过期状态。
 
 客户端握手使用受认证 WS 的精简控制帧 `{kind:'glass.hello',protocolVersion:1,clientNonce}`；快照请求为 `{kind:'glass.snapshot.request',reason}`。这些**控制帧没有服务端事件 envelope**；token 仅在 Main 的 Authorization header，renderer 无 WS/凭据。服务端事件使用本文标准 envelope。
 
@@ -179,4 +179,16 @@ type UserQuestionView = {
 
 初始/重连：hello → welcome → snapshot.request → snapshot，快照仅在连接同步阶段接受；已连接后不接受迟到的旧快照。正常刷新需重新进入同步阶段。过滤事件序号跳号正常，不推断丢包；旧/重复序号、不同 runtime/epoch 拒收。重连保留旧内容并标 stale，收到新快照后原子替换。
 
-Bridge：系统分配端口、127.0.0.1、随机 256-bit token、拒绝所有带 Origin 的浏览器升级、单客户端、256 KiB 最大帧、40 条/秒输入限流、2 秒 hello 超时、背压上限。心跳 2.5 秒；Main 9 秒无有效帧即失效并重连观察。连接参数仅在同一 Main 进程内传递，尚未定义跨进程 DSH Adapter 发现通道。
+Bridge：系统分配端口、127.0.0.1、随机 256-bit token、拒绝所有带 Origin 的浏览器升级、单客户端、256 KiB 最大帧、40 条/秒输入限流、2 秒 hello 超时、背压上限。心跳 2.5 秒；Main 9 秒无有效帧即失效并重连观察。连接参数由 Main 解析用户粘贴的 `dsh://host=…&token=…` 启动链接后在同一进程内传递到跨进程适配器：`packages/adapters/dsh/src/transport.ts` 以认证 HTTP RPC（`POST /api/<method>`）取数，并以 `remote.mux` WebSocket 的 `open/item/subscribe` 消费官方事件流。第二轮的应答帧（approval.respond/ack/resolved、question.respond/ack/resolved）由 Mock Host 合同测试覆盖，官方 Desktop 上仍未验收。
+
+## 10. 独立的桌面光学IPC（不进入DSH协议）
+
+现有 `glass:settings` 的本地窗口偏好新增 `tintColor`（六位十六进制色，默认`#000000`）、`tintOpacity`（整数0–100，默认10）、`brightness`（整数50–150，默认100）。Main验证颜色格式、拒绝非有限数字并限幅，旧配置补默认值，沿用本地JSON保存。它们不进入Bridge或DSH事件协议，也不会启用屏幕取样。亮度只调整玻璃背景合成组；文字与亮边独立。
+
+窗口偏好的旧`material: acrylic`只作向后兼容输入；规范化为`transparent`，避免已证实的系统Acrylic方角。未新增renderer权限或原生窗口句柄接口，DSH协议与审批能力不变。
+
+已有 `glass:move` 仍仅接受 x/y。Windows Main 转为物理坐标，通过固定本窗 HWND/PID 的助手 `--position` 模式移动并等待确认；原生 SWP_NOSIZE 避免 DPI 尺寸回写增长。此模式不取样，空闲退出，隐藏/最小化/关闭停止；不提供 renderer 指定 HWND 的能力。
+
+用户明确授权后新增：`getOpticsState`、`setOpticsEnabled(boolean)`、`subscribeOpticsState`、`subscribeOpticsFrame`。仅受信主frame可调用；renderer不能指定取样HWND、PID或矩形。默认关闭且不持久化，显式启动参数或设置勾选才开启。
+
+Main给助手固定本窗HWND/本进程PID；助手校验owner、可见性与WDA_EXCLUDEFROMCAPTURE，读取物理矩形加24 DIP（最多48物理px）边距。私有管道为40字节DSHG头+定长RGBA；移动后取样不覆盖当前窗才发送DSHS跳帧。Main再次验证长度/边距，并仅在完整覆盖时重投影、裁剪到当前窗每侧最多48物理px。单向`subscribeOpticsPosition`在移动/缩放时通知当前物理矩形，画布按世界坐标调整，无覆盖即隐藏旧纹理。单帧24MiB上限、单帧在途，主窗隐藏/关闭/异常停止。帧只在Main→本窗renderer本地IPC内传递，不经Bridge/WS，不写文件或网络，不包含审批授权能力。

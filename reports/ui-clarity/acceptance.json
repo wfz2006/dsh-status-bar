@@ -1,0 +1,30 @@
+[
+  {
+    "tone": "light",
+    "name": "允许一次",
+    "bg": "linear-gradient(rgba(255, 255, 255, 0.36), rgba(0, 0, 0, 0) 3px), linear-gradient(rgba(30, 187, 119, 0.09), rgba(30, 187, 119, 0.09)), none",
+    "opacity": "1",
+    "font": "13px"
+  },
+  {
+    "tone": "light",
+    "name": "拒绝",
+    "bg": "linear-gradient(rgba(255, 255, 255, 0.36), rgba(0, 0, 0, 0) 3px), linear-gradient(rgba(236, 83, 118, 0.08), rgba(236, 83, 118, 0.08)), none",
+    "opacity": "1",
+    "font": "13px"
+  },
+  {
+    "tone": "dark",
+    "name": "允许一次",
+    "bg": "linear-gradient(rgba(255, 255, 255, 0.26), rgba(0, 0, 0, 0) 3px), linear-gradient(rgba(30, 187, 119, 0.09), rgba(30, 187, 119, 0.09)), none",
+    "opacity": "1",
+    "font": "13px"
+  },
+  {
+    "tone": "dark",
+    "name": "拒绝",
+    "bg": "linear-gradient(rgba(255, 255, 255, 0.26), rgba(0, 0, 0, 0) 3px), linear-gradient(rgba(236, 83, 118, 0.08), rgba(236, 83, 118, 0.08)), none",
+    "opacity": "1",
+    "font": "13px"
+  }
+]
