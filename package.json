@@ -1,0 +1,18 @@
+{
+  "name": "dsh-glass", "version": "0.1.0", "private": true, "type": "module",
+  "packageManager": "pnpm@12.4.1",
+  "scripts": {
+    "dev": "pnpm --filter @glass/desktop dev",
+    "build": "pnpm --filter @glass/desktop build",
+    "start": "pnpm --filter @glass/desktop start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:desktop": "node scripts/desktop-smoke.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.1", "eslint": "9.39.1", "typescript-eslint": "8.48.0",
+    "typescript": "5.9.3", "vitest": "5.0.5", "@types/node": "24.10.0",
+    "@playwright/test": "1.56.1", "@types/ws": "8.18.1", "ws": "8.18.3", "vite": "8.3.4"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+out/
+dist/
+.vite/
+test-results/
+*.log
+.env*
+docs/evidence/upstream/
+.local-dsh-probe/

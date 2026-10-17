@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-glass-probe
+      name: 'D:/codexwork/dsh/dsh-glass-spec/packages/adapters/dsh/probe/index.mjs'
