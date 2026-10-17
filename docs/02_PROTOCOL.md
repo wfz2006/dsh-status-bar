@@ -168,3 +168,15 @@ type UserQuestionView = {
 ## 8. 版本协商
 
 当前开发协议 `protocolVersion = 1`。主版本不一致时 `ConnectionState='incompatible'`，禁止控制操作但允许显示可识别错误。协议字段做向前兼容时新增可选字段；更改含义必须升版本。
+
+## 9. 首轮实际实现子集（2026-10-17）
+
+`packages/protocol/src/index.ts` 的 Zod 是本轮唯一运行时定义。实现 welcome/snapshot/heartbeat、session.updated/todo.snapshot/tool.activity、只读 approval.requested。尚未实现 question、approval respond/ack/resolved；所有应答命令被 Bridge 拒绝，capabilities/respondApproval/respondQuestion 强制 false。
+
+客户端握手使用受认证 WS 的精简控制帧 `{kind:'glass.hello',protocolVersion:1,clientNonce}`；快照请求为 `{kind:'glass.snapshot.request',reason}`。这些**控制帧没有服务端事件 envelope**；token 仅在 Main 的 Authorization header，renderer 无 WS/凭据。服务端事件使用本文标准 envelope。
+
+快照包含 `sessions`、`approvals`，每个 Session 内含 `lastSourceSeq` 和最多 100 个 `activities`。这替代第一轮独立 `lastSeq` map；问题数组待 M4 加入。Session 显示值 title/workspaceLabel/activities 在本轮为必填，缺失使用 Adapter 显式默认值，不透传原生对象。
+
+初始/重连：hello → welcome → snapshot.request → snapshot，快照仅在连接同步阶段接受；已连接后不接受迟到的旧快照。正常刷新需重新进入同步阶段。过滤事件序号跳号正常，不推断丢包；旧/重复序号、不同 runtime/epoch 拒收。重连保留旧内容并标 stale，收到新快照后原子替换。
+
+Bridge：系统分配端口、127.0.0.1、随机 256-bit token、拒绝所有带 Origin 的浏览器升级、单客户端、256 KiB 最大帧、40 条/秒输入限流、2 秒 hello 超时、背压上限。心跳 2.5 秒；Main 9 秒无有效帧即失效并重连观察。连接参数仅在同一 Main 进程内传递，尚未定义跨进程 DSH Adapter 发现通道。

@@ -3,26 +3,26 @@
 说明：以下均为**待执行任务**，勾选需附证据（测试、截图、日志或提交链接），不能仅凭实现意图标记完成。状态 `BLOCKED` 须写明原因。
 
 ## M0 — 环境与可行性探测（P0）
-- [ ] M0-01 收集 OS、Electron/Node/pnpm、DSH CLI/Desktop 版本及安装方式。
-- [ ] M0-02 阅读目标 DSH 版本官方源码：`session/event`、`approval/request`、`user-questions/request`、`todo/write`。
-- [ ] M0-03 验证 Web Profile 以正常插件形式启动，输出真实 Session 事件。
-- [ ] M0-04 验证 Desktop Profile 是否可以安全安装启用 Bridge 插件（无修改已签名资源）。
-- [ ] M0-05 审批 answerer 所有权探测：官方 Desktop UI 与 Glass 如何保证仅一个回答者；失败则确认观测模式可用。
-- [ ] M0-06 记录支持矩阵和接口快照，明确第一版目标构建方式。
+- [x] M0-01 收集 OS、Electron/Node/pnpm、DSH CLI/Desktop 版本及安装方式。证据：docs/integration-matrix.md；官方 bundled CLI `--version`=0.2.0-rc.2。
+- [x] M0-02 阅读目标 DSH 版本官方源码：`session/event`、`approval/request`、`user-questions/request`、`todo/write`。证据：安装包 JS 摘录/哈希及公开源码快照，见 docs/local-source-signatures.md；安装包不含声明文件。
+- [x] M0-03 验证 Web Profile 以正常插件形式启动，输出真实 Session 事件。证据：docs/evidence/dsh-web-probe.txt，隔离 Profile 人工夹具写入 Todo 3→2，非模型任务；插件热卸载待补测。
+- [ ] M0-04 验证 Desktop Profile 是否可以安全安装启用 Bridge 插件（无修改已签名资源）。BLOCKED：尚未通过 Desktop 官方插件 UI 在隔离环境验证；本轮未修改安装/Profile。
+- [ ] M0-05 审批 answerer 所有权探测：官方 Desktop UI 与 Glass 如何保证仅一个回答者；失败则确认观测模式可用。BLOCKED：静态确认 waterfall，不足以证明 Desktop 委派/owner；Glass 的真实观察模式也未验收。
+- [x] M0-06 记录支持矩阵和接口快照，明确第一版目标构建方式。证据：docs/integration-matrix.md；首轮仅 Mock Preview。
 
 ## M1 — 可测试的基础设施（P0）
-- [ ] M1-01 pnpm monorepo + workspace 脚本 + TypeScript strict。
-- [ ] M1-02 `packages/protocol`：Schema、解析验证、类型与协议版本。
-- [ ] M1-03 `packages/adapters/mock`：确定性 Mock 事件流、延迟/乱序/断线测试模式。
-- [ ] M1-04 `packages/bridge`：单实例本机 Transport、鉴权、连接生命周期。
-- [ ] M1-05 Session Store：快照、增量、顺序与跨会话隔离。
-- [ ] M1-06 单测：重复消息、旧 epoch、错误 payload、Todo 整表替换。
+- [x] M1-01 pnpm monorepo + workspace 脚本 + TypeScript strict。证据：pnpm lint/typecheck/test/build 通过，锁文件已生成。
+- [x] M1-02 `packages/protocol`：Schema、解析验证、类型与协议版本。首轮只读子集，精确范围见 docs/02_PROTOCOL.md §9；应答命令未实现且拒绝。
+- [x] M1-03 `packages/adapters/mock`：确定性 Mock 事件流、延迟/乱序/断线测试模式。证据：tests/mock.test.ts + Electron 桌面断线/重连。
+- [x] M1-04 `packages/bridge`：单实例本机 Transport、鉴权、连接生命周期。证据：tests/bridge.test.ts；Origin/token/并发客户端/大小/速率/握手顺序；跨进程发现待真实适配阶段。
+- [x] M1-05 Session Store：快照、增量、顺序与跨会话隔离。证据：tests/projection.test.ts + Electron 会话切换和重连最新快照。
+- [x] M1-06 单测：重复消息、旧 epoch、错误 payload、Todo 整表替换。证据：pnpm test；含空 Todo、并行 Todo、原型键、迟到快照回归。
 
 ## M2 — 桌面窗口和自适应 UI（P0）
-- [ ] M2-01 Electron 主进程：单实例、托盘、关闭行为、窗口尺寸记忆。
-- [ ] M2-02 Preload 白名单 IPC（禁止在 renderer 开 Node）。
+- [ ] M2-01 Electron 主进程：单实例、托盘、关闭行为、窗口尺寸记忆。已实现最小版本；跨重启展开尺寸/位置偏好与原生托盘操作尚待完整验收。
+- [x] M2-02 Preload 白名单 IPC（禁止在 renderer 开 Node）。证据：Playwright Electron 验证 sandbox/contextIsolation/nodeIntegration 与窄 API，无 token。
 - [ ] M2-03 可拖拽、可调整尺寸、磁性吸附、跨屏恢复。
-- [ ] M2-04 胶囊/紧凑/工作台布局与高度不足时滚动降级。
+- [x] M2-04 胶囊/紧凑/工作台布局与高度不足时滚动降级。证据：docs/evidence/size-*.png；180×54、280×140、340×280、520×90、520×620 DIP。
 - [ ] M2-05 状态 UI：未连接/运行/等待/完成/失败、无 Todo 和多个 in_progress。
 - [ ] M2-06 玻璃主题（原生材质优先，CSS 降级）与减少动画选项。
 - [ ] M2-07 快捷键和置顶开关可用，避免覆盖全屏应用。

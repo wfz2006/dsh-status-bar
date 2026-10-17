@@ -1,0 +1,366 @@
+[
+  {
+    "package": "@deepseek-ai/dsh-session",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-session/lib/index.js",
+    "sha256": "87ea85e2fb5318bf1f826db9a1c88c1b26d3ea328027a7f32b211880c4d62b9d",
+    "excerpts": [
+      {
+        "offset": 5106,
+        "text": "equest\",\n\t\"step/end\",\n\t\"step/start\",\n\t\"subagent/catalog\",\n\t\"subagent/descriptor\",\n\t\"subagent/model-selection-policy\",\n\t\"system/message\",\n\t\"team/member\",\n\t\"team/message/delivered\",\n\t\"team/message/queued\",\n\t\"team/task\",\n\t\"todo/write\",\n\t\"tool-workflow/agent-end\",\n\t\"tool-workflow/agent-start\",\n\t\"tool-workflow/run-end\",\n\t\"tool-workflow/run-start\",\n\t\"tool/call\",\n\t\"tool/ptc-dispatch\",\n\t\"tool/ptc-dispatch-start\",\n\t\"tool/result\",\n\t\"turn/end\",\n\t\"turn/start\",\n\t\"user/message\",\n\t\"web/deepseek-search-llm-request\",\n\t\"workspace/changes\"\n]);\n/** Event types whose model-visible effects require an explicit pure interpreter. */\nconst MESSAGE_PROJECTION_EVENT_TYPES = new Set([\"image"
+      },
+      {
+        "offset": 44878,
+        "text": "egers\");\n}\n//#endregion\n//#region lib/types/index.js\n/**\n* Event-sourced session service: append-only session log, in-memory store, and\n* the derived LLM message history. Persistence is a plugin concern (subscribe\n* to `session/event`, drain on `session/flush`).\n*\n* @module @deepseek-ai/dsh-session\n*/\n/** Validate and freeze one detached creation header in place. */\nfunction validateSessionHeader(id, input) {\n\tif (input === null || typeof input !== \"object\" || Array.isArray(input)) throw new Error(\"session header is not a plain JSON record\");\n\tconst record = input;\n\tif (Object.hasOwn(record, \"seedLength\")) throw new Error(\"session header has invalid field \\\"seed"
+      },
+      {
+        "offset": 58027,
+        "text": "ved from its durable header's single copy. */\n\tget id() {\n\t\treturn this.header.id;\n\t}\n\t/**\n\t* The constructor seed length (0 without one), before any marker appended\n\t* during construction. Seed events never publish on `session/event`. A\n\t* marker appended before the store attaches occupies this seq without\n\t* publishing either; otherwise this seq is available for the next append.\n\t*\n\t* This in-process offset is not persisted. A fork seed can already contain\n\t* the child's inherited marker and synthetic closers, so its child-owned\n\t* history starts at {@link inheritedEventCount}, before this offset. A\n\t* resumed Session's seed contains its full stored log, while"
+      },
+      {
+        "offset": 69595,
+        "text": "nt);\n\t\tif (entry !== void 0) entry.appending = true;\n\t\ttry {\n\t\t\tlet callbacks;\n\t\t\tconst callbackArgs = [this, event];\n\t\t\tif (entry !== void 0) callbacks = collectSessionCallbacks(entry.emitCtx, [\n\t\t\t\tentry.carrier,\n\t\t\t\t\"session/event\",\n\t\t\t\t...callbackArgs\n\t\t\t]);\n\t\t\tthis.log.push(event);\n\t\t\tthis.eventsSnapshot = void 0;\n\t\t\tif (callbacks !== void 0 && entry !== void 0) invokeContainedSessionObservers(entry.emitCtx, \"session/event\", entry.id, callbackArgs, callbacks);\n\t\t\treturn event;\n\t\t} finally {\n\t\t\tif (entry !== void 0) {\n\t\t\t\tentry.appending = false;\n\t\t\t\tif (entry.detachRequested && !entry.announcing) entry.detach();\n\t\t\t}\n\t\t}\n\t}\n\t/** Cached fold of the request-h"
+      },
+      {
+        "offset": 69793,
+        "text": "\t\tentry.carrier,\n\t\t\t\t\"session/event\",\n\t\t\t\t...callbackArgs\n\t\t\t]);\n\t\t\tthis.log.push(event);\n\t\t\tthis.eventsSnapshot = void 0;\n\t\t\tif (callbacks !== void 0 && entry !== void 0) invokeContainedSessionObservers(entry.emitCtx, \"session/event\", entry.id, callbackArgs, callbacks);\n\t\t\treturn event;\n\t\t} finally {\n\t\t\tif (entry !== void 0) {\n\t\t\t\tentry.appending = false;\n\t\t\t\tif (entry.detachRequested && !entry.announcing) entry.detach();\n\t\t\t}\n\t\t}\n\t}\n\t/** Cached fold of the request-header events — see {@link requestHeader}. */\n\theaderFold;\n\t/** Log position (events consumed) the header fold has reached. */\n\theaderFoldSeq = 0;\n\t/**\n\t* The {@link EpochHeader} in force after the l"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-session",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-session/lib/invariant.js",
+    "sha256": "53066dc4945c0159fb5b48944b578a2d2d22f2f3bd5042599f2f6278edc84466",
+    "excerpts": [
+      {
+        "offset": 5509,
+        "text": "sion) => {\n\t\tconst trace = freshTrace();\n\t\ttraces.set(session, trace);\n\t\tfor (const event of session.snapshotEvents()) applyTransition(trace, validateEvent(trace, event, fail));\n\t\treturn trace;\n\t};\n\t/* v8 ignore next -- session/event always follows list() or session/created seeding */\n\tconst traceFor = (session) => traces.get(session) ?? seedSession(session);\n\tfor (const session of ctx.sessions.list()) seedSession(session);\n\tctx.on(\"session/created\", (session) => {\n\t\tseedSession(session);\n\t}, { global: true });\n\tctx.on(\"session/event\", (session, event) => {\n\t\tconst staged = stagedTransitions.get(event);\n\t\t/* v8 ignore next 2 -- internal/dispatch stages the exact"
+      },
+      {
+        "offset": 5815,
+        "text": "ession) => traces.get(session) ?? seedSession(session);\n\tfor (const session of ctx.sessions.list()) seedSession(session);\n\tctx.on(\"session/created\", (session) => {\n\t\tseedSession(session);\n\t}, { global: true });\n\tctx.on(\"session/event\", (session, event) => {\n\t\tconst staged = stagedTransitions.get(event);\n\t\t/* v8 ignore next 2 -- internal/dispatch stages the exact callback arguments */\n\t\tif (staged === void 0 || staged.session !== session) return fail(\"session/event reached publication without matching pre-commit validation\");\n\t\tstagedTransitions.delete(event);\n\t\tapplyTransition(staged.trace, staged.transition);\n\t}, { global: true });\n\tctx.on(\"internal/dispatch\", "
+      },
+      {
+        "offset": 6050,
+        "text": " (session, event) => {\n\t\tconst staged = stagedTransitions.get(event);\n\t\t/* v8 ignore next 2 -- internal/dispatch stages the exact callback arguments */\n\t\tif (staged === void 0 || staged.session !== session) return fail(\"session/event reached publication without matching pre-commit validation\");\n\t\tstagedTransitions.delete(event);\n\t\tapplyTransition(staged.trace, staged.transition);\n\t}, { global: true });\n\tctx.on(\"internal/dispatch\", (_mode, eventName, args) => {\n\t\tif (eventName !== \"session/event\") return;\n\t\tconst [session, event] = args;\n\t\tconst trace = traceFor(session);\n\t\tconst transition = validateEvent(trace, event, fail);\n\t\tstagedTransitions.set(event, {\n\t\t\t"
+      },
+      {
+        "offset": 6316,
+        "text": "hing pre-commit validation\");\n\t\tstagedTransitions.delete(event);\n\t\tapplyTransition(staged.trace, staged.transition);\n\t}, { global: true });\n\tctx.on(\"internal/dispatch\", (_mode, eventName, args) => {\n\t\tif (eventName !== \"session/event\") return;\n\t\tconst [session, event] = args;\n\t\tconst trace = traceFor(session);\n\t\tconst transition = validateEvent(trace, event, fail);\n\t\tstagedTransitions.set(event, {\n\t\t\tsession,\n\t\t\ttrace,\n\t\t\ttransition\n\t\t});\n\t}, { global: true });\n}, { inject: [\"sessions\"] });\n/**\n* Register the session invariant companion.\n* @param ctx - Cordis context carrying the invariant service.\n* @returns the installed registration's disposer after setup suc"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-session",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-session/lib/types/index.js",
+    "sha256": "71b3a3578b85704f026b590462e7d5e8bceb6dededd4e8782a83696138ec7da7",
+    "excerpts": [
+      {
+        "offset": 170,
+        "text": "/**\n * Event-sourced session service: append-only session log, in-memory store, and\n * the derived LLM message history. Persistence is a plugin concern (subscribe\n * to `session/event`, drain on `session/flush`).\n *\n * @module @deepseek-ai/dsh-session\n */\nimport { Service } from '@deepseek-ai/cordis';\nimport { isAbsolute } from 'node:path';\nimport { brandString } from '@deepseek-ai/dsh-brand';\nimport { assertNever, deepFreeze, snapshotJsonValue } from '@deepseek-ai/dsh-util-values';\nimport { scopeOf, scopeTarget } from '@deepseek-ai/dsh-scope';\nimport { SESSION_FORMAT_VERSION, SessionLogOffset, SessionSeq } from "
+      },
+      {
+        "offset": 16385,
+        "text": "ader's single copy. */\n    get id() {\n        return this.header.id;\n    }\n    /**\n     * The constructor seed length (0 without one), before any marker appended\n     * during construction. Seed events never publish on `session/event`. A\n     * marker appended before the store attaches occupies this seq without\n     * publishing either; otherwise this seq is available for the next append.\n     *\n     * This in-process offset is not persisted. A fork seed can already contain\n     * the child's inherited marker and synthetic closers, so its child-owned\n     * history starts at {@link inheritedEventCount}, before this offset. A\n     * resumed Session's seed contain"
+      },
+      {
+        "offset": 30721,
+        "text": "= true;\n        try {\n            let callbacks;\n            const callbackArgs = [this, event];\n            if (entry !== undefined) {\n                callbacks = collectSessionCallbacks(entry.emitCtx, [entry.carrier, 'session/event', ...callbackArgs]);\n            }\n            this.log.push(event);\n            this.eventsSnapshot = undefined;\n            if (callbacks !== undefined && entry !== undefined) {\n                invokeContainedSessionObservers(entry.emitCtx, 'session/event', entry.id, callbackArgs, callbacks);\n            }\n            return event;\n        }\n        finally {\n            if (entry !== undefined) {\n                entry.appending ="
+      },
+      {
+        "offset": 30979,
+        "text": "         }\n            this.log.push(event);\n            this.eventsSnapshot = undefined;\n            if (callbacks !== undefined && entry !== undefined) {\n                invokeContainedSessionObservers(entry.emitCtx, 'session/event', entry.id, callbackArgs, callbacks);\n            }\n            return event;\n        }\n        finally {\n            if (entry !== undefined) {\n                entry.appending = false;\n                if (entry.detachRequested && !entry.announcing)\n                    entry.detach();\n            }\n        }\n    }\n    /** Cached fold of the request-header events — see {@link requestHeader}. */\n    headerFold;\n    /** Log position (e"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-session",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-session/lib/types/invariant.js",
+    "sha256": "975e1640ad5dba930b6031315ee7d98dd01151155d2db7e993021de1feef4f32",
+    "excerpts": [
+      {
+        "offset": 7304,
+        "text": "ry read; migration deferred.\n        for (const event of session.snapshotEvents()) {\n            applyTransition(trace, validateEvent(trace, event, fail));\n        }\n        return trace;\n    };\n    /* v8 ignore next -- session/event always follows list() or session/created seeding */\n    const traceFor = (session) => traces.get(session) ?? seedSession(session);\n    for (const session of ctx.sessions.list())\n        seedSession(session);\n    ctx.on('session/created', (session) => { seedSession(session); }, { global: true });\n    ctx.on('session/event', (session, event) => {\n        const staged = stagedTransitions.get(event);\n        /* v8 ignore next 2 -- inter"
+      },
+      {
+        "offset": 7627,
+        "text": "ces.get(session) ?? seedSession(session);\n    for (const session of ctx.sessions.list())\n        seedSession(session);\n    ctx.on('session/created', (session) => { seedSession(session); }, { global: true });\n    ctx.on('session/event', (session, event) => {\n        const staged = stagedTransitions.get(event);\n        /* v8 ignore next 2 -- internal/dispatch stages the exact callback arguments */\n        if (staged === undefined || staged.session !== session) {\n            return fail('session/event reached publication without matching pre-commit validation');\n        }\n        stagedTransitions.delete(event);\n        applyTransition(staged.trace, staged.transiti"
+      },
+      {
+        "offset": 7897,
+        "text": "t staged = stagedTransitions.get(event);\n        /* v8 ignore next 2 -- internal/dispatch stages the exact callback arguments */\n        if (staged === undefined || staged.session !== session) {\n            return fail('session/event reached publication without matching pre-commit validation');\n        }\n        stagedTransitions.delete(event);\n        applyTransition(staged.trace, staged.transition);\n    }, { global: true });\n    ctx.on('internal/dispatch', (_mode, eventName, args) => {\n        if (eventName !== 'session/event')\n            return;\n        const [session, event] = args;\n        const trace = traceFor(session);\n        const transition = validat"
+      },
+      {
+        "offset": 8197,
+        "text": "    }\n        stagedTransitions.delete(event);\n        applyTransition(staged.trace, staged.transition);\n    }, { global: true });\n    ctx.on('internal/dispatch', (_mode, eventName, args) => {\n        if (eventName !== 'session/event')\n            return;\n        const [session, event] = args;\n        const trace = traceFor(session);\n        const transition = validateEvent(trace, event, fail);\n        // A later dispatch listener may veto. Validation is pure, so abandoning\n        // this weakly keyed transition does not advance or retain the session.\n        stagedTransitions.set(event, { session, trace, transition });\n    }, { global: true });\n}, { inject: ['"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-session",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-session/lib/types/known-event-types.js",
+    "sha256": "8f38e6fc9439bb4e47f2bd3aa21c86d5141ef9679f41181c9d9a48765c67d3be",
+    "excerpts": [
+      {
+        "offset": 2284,
+        "text": "p/start',\n    'subagent/catalog',\n    'subagent/descriptor',\n    'subagent/model-selection-policy',\n    'system/message',\n    'team/member',\n    'team/message/delivered',\n    'team/message/queued',\n    'team/task',\n    'todo/write',\n    'tool-workflow/agent-end',\n    'tool-workflow/agent-start',\n    'tool-workflow/run-end',\n    'tool-workflow/run-start',\n    'tool/call',\n    'tool/ptc-dispatch',\n    'tool/ptc-dispatch-start',\n    'tool/result',\n    'turn/end',\n    'turn/start',\n    'user/message',\n    'web/deepseek-search-llm-request',\n    'workspace/changes',\n]);\n/** Event types whose model-visible effects require an explicit pure interpreter. */\nexport const M"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-user-approval",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-user-approval/lib/index.js",
+    "sha256": "6a5ad1ba3c3dc3abbbae52e6c8c4463970ee0c1c8988cebb0d5cf2acd17ee90b",
+    "excerpts": [
+      {
+        "offset": 7817,
+        "text": "signal;\n\t\tif (signal?.aborted) return \"cancelled\";\n\t\tif (this.effectivePolicy(session) === \"never\") return \"rejected\";\n\t\tconst answer = Promise.resolve().then(() => this.ctx.waterfall(scopeTarget(req.agent, req.agent), \"approval/request\", req, () => Promise.resolve(\"unavailable\"))).then((outcome) => OUTCOMES.includes(outcome) ? outcome : \"unavailable\", () => \"unavailable\");\n\t\tif (signal === void 0) return answer;\n\t\treturn await new Promise((resolve) => {\n\t\t\tconst onAbort = () => {\n\t\t\t\tsignal.removeEventListener(\"abort\", onAbort);\n\t\t\t\tresolve(\"cancelled\");\n\t\t\t};\n\t\t\tsignal.addEventListener(\"abort\", onAbort, { once: true });\n\t\t\tanswer.then((outcome) => {\n\t\t\t\tsignal"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-user-approval",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-user-approval/lib/invariant.js",
+    "sha256": "4c4d4f497a9cf8b2397ce0f029456c5d9dc52005f0e60e3fb6365695b3cded7a",
+    "excerpts": [
+      {
+        "offset": 7552,
+        "text": "signal;\n\t\tif (signal?.aborted) return \"cancelled\";\n\t\tif (this.effectivePolicy(session) === \"never\") return \"rejected\";\n\t\tconst answer = Promise.resolve().then(() => this.ctx.waterfall(scopeTarget(req.agent, req.agent), \"approval/request\", req, () => Promise.resolve(\"unavailable\"))).then((outcome) => OUTCOMES.includes(outcome) ? outcome : \"unavailable\", () => \"unavailable\");\n\t\tif (signal === void 0) return answer;\n\t\treturn await new Promise((resolve) => {\n\t\t\tconst onAbort = () => {\n\t\t\t\tsignal.removeEventListener(\"abort\", onAbort);\n\t\t\t\tresolve(\"cancelled\");\n\t\t\t};\n\t\t\tsignal.addEventListener(\"abort\", onAbort, { once: true });\n\t\t\tanswer.then((outcome) => {\n\t\t\t\tsignal"
+      },
+      {
+        "offset": 10846,
+        "text": "\n\tconst traceFor = (session) => traces.get(session) ?? seed(session);\n\tfor (const session of ctx.sessions.list()) seed(session);\n\tctx.on(\"session/created\", (session) => {\n\t\tseed(session);\n\t}, { global: true });\n\tctx.on(\"session/event\", (session, event) => {\n\t\tconst trace = traceFor(session);\n\t\tif (event.type === \"turn/start\") {\n\t\t\ttrace.openTurn = event.data.turn;\n\t\t\treturn;\n\t\t}\n\t\tif (event.type === \"turn/end\") {\n\t\t\ttrace.openTurn = null;\n\t\t\treturn;\n\t\t}\n\t\tif (event.type !== \"approval/asked\" && event.type !== \"approval/decided\") return;\n\t\tconst candidate = staged.get(event);\n\t\t/* v8 ignore next -- internal/dispatch stages every package-owned pair event */\n\t\tif (c"
+      },
+      {
+        "offset": 11618,
+        "text": "out pre-commit validation\");\n\t\tstaged.delete(event);\n\t\tapplyApprovalTransition(trace.pending, candidate.transition);\n\t}, { global: true });\n\tctx.on(\"internal/dispatch\", (_mode, eventName, args) => {\n\t\tif (eventName !== \"session/event\") return;\n\t\tconst [session, event] = args;\n\t\tconst transition = validateApprovalEvent(traceFor(session), event, fail);\n\t\tif (transition !== void 0) staged.set(event, {\n\t\t\tsession,\n\t\t\ttransition\n\t\t});\n\t}, { global: true });\n}, { inject: [\"sessions\"] });\n/**\n* Register the approval invariant companion.\n* @param ctx - Cordis context carrying the invariant service.\n* @returns the installed registration's disposer after setup succeeds.\n*"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-user-approval",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-user-approval/lib/types/index.js",
+    "sha256": "0b2e00fe1b2cedc9b6349a38e07e26a05a09492da838f069c10b76cf13f6d6e8",
+    "excerpts": [
+      {
+        "offset": 9477,
+        "text": "path as an async one — `Promise.resolve(call())` would let it escape\n        // the containment into the caller.\n        const answer = Promise.resolve().then(() => this.ctx.waterfall(scopeTarget(req.agent, req.agent), 'approval/request', req, () => Promise.resolve('unavailable'))).then(\n        // Normalize a rogue (non-vocabulary) answerer return to the fail-closed\n        // outcome instead of leaking it into callers' closed-union switches.\n        outcome => OUTCOMES.includes(outcome) ? outcome : 'unavailable', \n        // A throwing answerer must fail the QUESTION closed, not the caller's\n        // tool call open — the seam contains its callbacks.\n        "
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-user-approval",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-user-approval/lib/types/invariant.js",
+    "sha256": "0ee679ea1449b99266df9dc3c53606a61573caa432cfca3d44badfdac71a0ef8",
+    "excerpts": [
+      {
+        "offset": 3294,
+        "text": "or = (session) => traces.get(session) ?? seed(session);\n    for (const session of ctx.sessions.list())\n        seed(session);\n    ctx.on('session/created', (session) => { seed(session); }, { global: true });\n    ctx.on('session/event', (session, event) => {\n        const trace = traceFor(session);\n        if (event.type === 'turn/start') {\n            trace.openTurn = event.data.turn;\n            return;\n        }\n        if (event.type === 'turn/end') {\n            trace.openTurn = null;\n            return;\n        }\n        if (event.type !== 'approval/asked' && event.type !== 'approval/decided')\n            return;\n        const candidate = staged.get(event);"
+      },
+      {
+        "offset": 4207,
+        "text": "n');\n        staged.delete(event);\n        applyApprovalTransition(trace.pending, candidate.transition);\n    }, { global: true });\n    ctx.on('internal/dispatch', (_mode, eventName, args) => {\n        if (eventName !== 'session/event')\n            return;\n        const [session, event] = args;\n        const transition = validateApprovalEvent(traceFor(session), event, fail);\n        if (transition !== undefined)\n            staged.set(event, { session, transition });\n    }, { global: true });\n}, { inject: ['sessions'] });\n/* jscpd:ignore-end */\n/**\n * Register the approval invariant companion.\n * @param ctx - Cordis context carrying the invariant service.\n * @ret"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-todo",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-tool-todo/lib/index.js",
+    "sha256": "6baad8bf8e53647319b408cbab0c8c13c0693f65d20b779484c4436f47a6a11b",
+    "excerpts": [
+      {
+        "offset": 220,
+        "text": "import z from \"@deepseek-ai/schemastery\";\nimport { z as z$1 } from \"zod\";\nimport { defineTool } from \"@deepseek-ai/dsh-tools\";\n//#region lib/types/index.js\n/**\n* Model-facing whole-list replacement. Each call appends a `todo/write` snapshot to the calling\n* agent's session; replay is last-write-wins, and UIs render from session events. A non-agent\n* caller has no owning list and is rejected. Named exports preserve loader injection metadata.\n* @module @deepseek-ai/dsh-tool-todo\n*/\nconst name = \"tool-todo\";\nconst inject = [\"tools\", \"sessionProjections\"];\n/** The valid {@link TodoItem} statuses, as a runtime set for input narrowing. */\nconst STATUSES = [\n\t\"pending\""
+      },
+      {
+        "offset": 3969,
+        "text": ") {\n\tconst allowParallel = config.allowParallelInProgress;\n\tctx.sessionProjections.register({\n\t\tkey: \"todos\",\n\t\tstateSchema: todosProjectionSchema,\n\t\tinit: () => null,\n\t\tapply: (state, event) => {\n\t\t\tif (event.type === \"todo/write\") return event.data.todos;\n\t\t\tif (event.type === \"turn/start\") return null;\n\t\t\treturn state;\n\t\t},\n\t\twire: {\n\t\t\tviewSchema: todosProjectionSchema,\n\t\t\tview: (state) => state\n\t\t},\n\t\tstateVersion: 2\n\t});\n\tctx.tools.register(defineTool({\n\t\tname: \"todo_write\",\n\t\tdescription: describe(allowParallel),\n\t\tparameters: { todos: {\n\t\t\ttype: \"array\",\n\t\t\trequired: true,\n\t\t\tdescription: \"The COMPLETE task list, replacing any previous list.\",\n\t\t\titems: "
+      },
+      {
+        "offset": 6047,
+        "text": "d} completed.`\n\t\t\t}]\n\t\t},\n\t\texecute(args, exec) {\n\t\t\tconst todos = toTodoList(args.todos, allowParallel);\n\t\t\tif (!exec.agent) throw new Error(\"todo_write requires an owning agent session\");\n\t\t\texec.agent.session.append(\"todo/write\", { todos });\n\t\t\tconst count = (status) => todos.filter((t) => t.status === status).length;\n\t\t\treturn Promise.resolve({\n\t\t\t\ttodos: todos.map((todo) => ({\n\t\t\t\t\tcontent: todo.content,\n\t\t\t\t\tstatus: todo.status\n\t\t\t\t})),\n\t\t\t\tcounts: {\n\t\t\t\t\tpending: count(\"pending\"),\n\t\t\t\t\tinProgress: count(\"in_progress\"),\n\t\t\t\t\tcompleted: count(\"completed\")\n\t\t\t\t}\n\t\t\t});\n\t\t},\n\t\tpresentCall: (args) => ({\n\t\t\tcard: \"generic\",\n\t\t\ttitle: \"Update todo list\",\n\t\t\tkind"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-todo",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-tool-todo/lib/invariant.js",
+    "sha256": "7cb83943b470399b5c7c047b6144a07345b069035337b6c0d9c00c79ec942f9f",
+    "excerpts": [
+      {
+        "offset": 973,
+        "text": "fter a\n* deployment tightens the policy, so tying the invariant to the current config\n* would reject history that was valid when it was written.\n*/\nfunction validateTodos(value, fail) {\n\tif (!Array.isArray(value)) fail(\"todo/write todos must be an array\");\n\tconst seen = /* @__PURE__ */ new Set();\n\tfor (const item of value) {\n\t\tif (typeof item !== \"object\" || item === null) fail(\"todo/write entries must be objects\");\n\t\tconst { content, status } = item;\n\t\tif (typeof content !== \"string\" || content.length === 0 || content.trim() !== content) fail(\"todo/write content must be non-empty and already trimmed\");\n\t\tif (seen.has(content)) fail(`todo/write repeats content $"
+      },
+      {
+        "offset": 1135,
+        "text": "ateTodos(value, fail) {\n\tif (!Array.isArray(value)) fail(\"todo/write todos must be an array\");\n\tconst seen = /* @__PURE__ */ new Set();\n\tfor (const item of value) {\n\t\tif (typeof item !== \"object\" || item === null) fail(\"todo/write entries must be objects\");\n\t\tconst { content, status } = item;\n\t\tif (typeof content !== \"string\" || content.length === 0 || content.trim() !== content) fail(\"todo/write content must be non-empty and already trimmed\");\n\t\tif (seen.has(content)) fail(`todo/write repeats content ${JSON.stringify(content)}`);\n\t\tseen.add(content);\n\t\tif (typeof status !== \"string\" || !TODO_STATUSES.has(status)) fail(`todo/write carries unknown status ${JSON.s"
+      },
+      {
+        "offset": 1304,
+        "text": " (typeof item !== \"object\" || item === null) fail(\"todo/write entries must be objects\");\n\t\tconst { content, status } = item;\n\t\tif (typeof content !== \"string\" || content.length === 0 || content.trim() !== content) fail(\"todo/write content must be non-empty and already trimmed\");\n\t\tif (seen.has(content)) fail(`todo/write repeats content ${JSON.stringify(content)}`);\n\t\tseen.add(content);\n\t\tif (typeof status !== \"string\" || !TODO_STATUSES.has(status)) fail(`todo/write carries unknown status ${JSON.stringify(status)}`);\n\t}\n}\n/** Advance the trace after one event has committed. */\nfunction advanceTrace(trace, event) {\n\tif (event.type === \"turn/start\") trace.open = tr"
+      },
+      {
+        "offset": 1395,
+        "text": "const { content, status } = item;\n\t\tif (typeof content !== \"string\" || content.length === 0 || content.trim() !== content) fail(\"todo/write content must be non-empty and already trimmed\");\n\t\tif (seen.has(content)) fail(`todo/write repeats content ${JSON.stringify(content)}`);\n\t\tseen.add(content);\n\t\tif (typeof status !== \"string\" || !TODO_STATUSES.has(status)) fail(`todo/write carries unknown status ${JSON.stringify(status)}`);\n\t}\n}\n/** Advance the trace after one event has committed. */\nfunction advanceTrace(trace, event) {\n\tif (event.type === \"turn/start\") trace.open = true;\n\tif (event.type === \"turn/end\") trace.open = false;\n}\n/** Validate one package-owned ev"
+      },
+      {
+        "offset": 1543,
+        "text": "must be non-empty and already trimmed\");\n\t\tif (seen.has(content)) fail(`todo/write repeats content ${JSON.stringify(content)}`);\n\t\tseen.add(content);\n\t\tif (typeof status !== \"string\" || !TODO_STATUSES.has(status)) fail(`todo/write carries unknown status ${JSON.stringify(status)}`);\n\t}\n}\n/** Advance the trace after one event has committed. */\nfunction advanceTrace(trace, event) {\n\tif (event.type === \"turn/start\") trace.open = true;\n\tif (event.type === \"turn/end\") trace.open = false;\n}\n/** Validate one package-owned event against the preceding committed trace. */\nfunction validateEvent(event, trace, fail) {\n\tif (event.type !== \"todo/write\") return;\n\tvalidateTodos("
+      },
+      {
+        "offset": 1957,
+        "text": ") trace.open = true;\n\tif (event.type === \"turn/end\") trace.open = false;\n}\n/** Validate one package-owned event against the preceding committed trace. */\nfunction validateEvent(event, trace, fail) {\n\tif (event.type !== \"todo/write\") return;\n\tvalidateTodos(event.data.todos, fail);\n\tif (!trace.open) fail(\"todo/write appended outside any open turn\");\n}\n/** Validate one existing log in a single pass and return its tail trace. */\nfunction seedTrace(session, fail) {\n\tconst trace = { open: false };\n\tfor (const event of session.snapshotEvents()) {\n\t\tvalidateEvent(event, trace, fail);\n\t\tadvanceTrace(trace, event);\n\t}\n\treturn trace;\n}\n/** Install validation for loaded and"
+      },
+      {
+        "offset": 2042,
+        "text": "te one package-owned event against the preceding committed trace. */\nfunction validateEvent(event, trace, fail) {\n\tif (event.type !== \"todo/write\") return;\n\tvalidateTodos(event.data.todos, fail);\n\tif (!trace.open) fail(\"todo/write appended outside any open turn\");\n}\n/** Validate one existing log in a single pass and return its tail trace. */\nfunction seedTrace(session, fail) {\n\tconst trace = { open: false };\n\tfor (const event of session.snapshotEvents()) {\n\t\tvalidateEvent(event, trace, fail);\n\t\tadvanceTrace(trace, event);\n\t}\n\treturn trace;\n}\n/** Install validation for loaded and newly appended whole-list todo snapshots. */\nconst install = Object.assign((ctx, fai"
+      },
+      {
+        "offset": 3036,
+        "text": "for (const session of ctx.sessions.list()) seed(session);\n\tctx.on(\"session/created\", (session) => {\n\t\tseed(session);\n\t}, { global: true });\n\tctx.on(\"internal/dispatch\", (_mode, eventName, args) => {\n\t\tif (eventName !== \"session/event\") return;\n\t\tconst [session, event] = args;\n\t\tvalidateEvent(event, traceFor(session), fail);\n\t}, { global: true });\n\tctx.on(\"session/event\", (session, event) => {\n\t\tadvanceTrace(traceFor(session), event);\n\t}, { global: true });\n}, { inject: [\"sessions\"] });\n/**\n* Register the todo invariant companion.\n* @param ctx - Cordis context carrying the invariant service.\n* @returns the installed registration's disposer after setup succeeds.\n*"
+      },
+      {
+        "offset": 3174,
+        "text": ";\n\tctx.on(\"internal/dispatch\", (_mode, eventName, args) => {\n\t\tif (eventName !== \"session/event\") return;\n\t\tconst [session, event] = args;\n\t\tvalidateEvent(event, traceFor(session), fail);\n\t}, { global: true });\n\tctx.on(\"session/event\", (session, event) => {\n\t\tadvanceTrace(traceFor(session), event);\n\t}, { global: true });\n}, { inject: [\"sessions\"] });\n/**\n* Register the todo invariant companion.\n* @param ctx - Cordis context carrying the invariant service.\n* @returns the installed registration's disposer after setup succeeds.\n*/\nconst apply = (ctx) => Promise.resolve(ctx.invariants.register(PACKAGE_NAME, install));\n//#endregion\nexport { apply, inject, name };\n"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-todo",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-tool-todo/lib/types/index.js",
+    "sha256": "d2cdf40f3523f2af5b0cadba6af775cb1003d185ae19c6e8ba2f3dbfc02b917d",
+    "excerpts": [
+      {
+        "offset": 65,
+        "text": "/**\n * Model-facing whole-list replacement. Each call appends a `todo/write` snapshot to the calling\n * agent's session; replay is last-write-wins, and UIs render from session events. A non-agent\n * caller has no owning list and is rejected. Named exports preserve loader injection metadata.\n * @module @deepseek-ai/dsh-tool-todo\n */\nimport z from '@deepseek-ai/schemastery';\nimport { z as zod } from 'zod';\nimport { defineTool } from '@deepseek-ai/dsh-tools';\nexport const name = 'tool-todo';\nexport const inject ="
+      },
+      {
+        "offset": 4033,
+        "text": "ion-projection registries.\n * @param config - deployment's explicit todo policy.\n */\nexport function apply(ctx, config) {\n    const allowParallel = config.allowParallelInProgress;\n    // Standing-plan fold: latest whole todo/write list, cleared by the next\n    // turn/start (turn/end keeps the finished checklist visible); null before the\n    // first write or after a later turn begins; every other event returns the\n    // same state reference.\n    ctx.sessionProjections.register({\n        key: 'todos',\n        stateSchema: todosProjectionSchema,\n        init: () => null,\n        apply: (state, event) => {\n            if (event.type === 'todo/write')\n            "
+      },
+      {
+        "offset": 4458,
+        "text": " same state reference.\n    ctx.sessionProjections.register({\n        key: 'todos',\n        stateSchema: todosProjectionSchema,\n        init: () => null,\n        apply: (state, event) => {\n            if (event.type === 'todo/write')\n                return event.data.todos;\n            if (event.type === 'turn/start')\n                return null;\n            return state;\n        },\n        wire: { viewSchema: todosProjectionSchema, view: state => state },\n        stateVersion: 2,\n    });\n    ctx.tools.register(defineTool({\n        name: 'todo_write',\n        description: describe(allowParallel),\n        parameters: {\n            todos: {\n                type: 'a"
+      },
+      {
+        "offset": 7572,
+        "text": "               // session) has nowhere to write it. Reject rather than silently no-op.\n                throw new Error('todo_write requires an owning agent session');\n            }\n            exec.agent.session.append('todo/write', { todos });\n            const count = (status) => todos.filter(t => t.status === status).length;\n            return Promise.resolve({\n                todos: todos.map(todo => ({ content: todo.content, status: todo.status })),\n                counts: {\n                    pending: count('pending'),\n                    inProgress: count('in_progress'),\n                    completed: count('completed'),\n                },\n            })"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-tool-todo",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-tool-todo/lib/types/invariant.js",
+    "sha256": "da9f8f9914a61a385cd3fa5eaf53913d106f4f6ccea4a80dc01f64ff5bada903",
+    "excerpts": [
+      {
+        "offset": 968,
+        "text": "oyment tightens the policy, so tying the invariant to the current config\n * would reject history that was valid when it was written.\n */\nfunction validateTodos(value, fail) {\n    if (!Array.isArray(value))\n        fail('todo/write todos must be an array');\n    const seen = new Set();\n    for (const item of value) {\n        if (typeof item !== 'object' || item === null)\n            fail('todo/write entries must be objects');\n        const { content, status } = item;\n        if (typeof content !== 'string' || content.length === 0 || content.trim() !== content) {\n            fail('todo/write content must be non-empty and already trimmed');\n        }\n        if (see"
+      },
+      {
+        "offset": 1138,
+        "text": "l) {\n    if (!Array.isArray(value))\n        fail('todo/write todos must be an array');\n    const seen = new Set();\n    for (const item of value) {\n        if (typeof item !== 'object' || item === null)\n            fail('todo/write entries must be objects');\n        const { content, status } = item;\n        if (typeof content !== 'string' || content.length === 0 || content.trim() !== content) {\n            fail('todo/write content must be non-empty and already trimmed');\n        }\n        if (seen.has(content))\n            fail(`todo/write repeats content ${JSON.stringify(content)}`);\n        seen.add(content);\n        if (typeof status !== 'string' || !TODO_STAT"
+      },
+      {
+        "offset": 1333,
+        "text": " null)\n            fail('todo/write entries must be objects');\n        const { content, status } = item;\n        if (typeof content !== 'string' || content.length === 0 || content.trim() !== content) {\n            fail('todo/write content must be non-empty and already trimmed');\n        }\n        if (seen.has(content))\n            fail(`todo/write repeats content ${JSON.stringify(content)}`);\n        seen.add(content);\n        if (typeof status !== 'string' || !TODO_STATUSES.has(status)) {\n            fail(`todo/write carries unknown status ${JSON.stringify(status)}`);\n        }\n    }\n}\n/** Advance the trace after one event has committed. */\nfunction advanceTrac"
+      },
+      {
+        "offset": 1452,
+        "text": "peof content !== 'string' || content.length === 0 || content.trim() !== content) {\n            fail('todo/write content must be non-empty and already trimmed');\n        }\n        if (seen.has(content))\n            fail(`todo/write repeats content ${JSON.stringify(content)}`);\n        seen.add(content);\n        if (typeof status !== 'string' || !TODO_STATUSES.has(status)) {\n            fail(`todo/write carries unknown status ${JSON.stringify(status)}`);\n        }\n    }\n}\n/** Advance the trace after one event has committed. */\nfunction advanceTrace(trace, event) {\n    if (event.type === 'turn/start')\n        trace.open = true;\n    if (event.type === 'turn/end')\n  "
+      },
+      {
+        "offset": 1626,
+        "text": "     if (seen.has(content))\n            fail(`todo/write repeats content ${JSON.stringify(content)}`);\n        seen.add(content);\n        if (typeof status !== 'string' || !TODO_STATUSES.has(status)) {\n            fail(`todo/write carries unknown status ${JSON.stringify(status)}`);\n        }\n    }\n}\n/** Advance the trace after one event has committed. */\nfunction advanceTrace(trace, event) {\n    if (event.type === 'turn/start')\n        trace.open = true;\n    if (event.type === 'turn/end')\n        trace.open = false;\n}\n/** Validate one package-owned event against the preceding committed trace. */\nfunction validateEvent(event, trace, fail) {\n    if (event.type !=="
+      },
+      {
+        "offset": 2078,
+        "text": " true;\n    if (event.type === 'turn/end')\n        trace.open = false;\n}\n/** Validate one package-owned event against the preceding committed trace. */\nfunction validateEvent(event, trace, fail) {\n    if (event.type !== 'todo/write')\n        return;\n    validateTodos(event.data.todos, fail);\n    if (!trace.open)\n        fail('todo/write appended outside any open turn');\n}\n/** Validate one existing log in a single pass and return its tail trace. */\nfunction seedTrace(session, fail) {\n    const trace = { open: false };\n    // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.\n    for (const event of session.snaps"
+      },
+      {
+        "offset": 2185,
+        "text": "t against the preceding committed trace. */\nfunction validateEvent(event, trace, fail) {\n    if (event.type !== 'todo/write')\n        return;\n    validateTodos(event.data.todos, fail);\n    if (!trace.open)\n        fail('todo/write appended outside any open turn');\n}\n/** Validate one existing log in a single pass and return its tail trace. */\nfunction seedTrace(session, fail) {\n    const trace = { open: false };\n    // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.\n    for (const event of session.snapshotEvents()) {\n        validateEvent(event, trace, fail);\n        advanceTrace(trace, event);\n    }\n    ret"
+      },
+      {
+        "offset": 3384,
+        "text": "n of ctx.sessions.list())\n        seed(session);\n    ctx.on('session/created', (session) => { seed(session); }, { global: true });\n    ctx.on('internal/dispatch', (_mode, eventName, args) => {\n        if (eventName !== 'session/event')\n            return;\n        const [session, event] = args;\n        validateEvent(event, traceFor(session), fail);\n    }, { global: true });\n    ctx.on('session/event', (session, event) => {\n        advanceTrace(traceFor(session), event);\n    }, { global: true });\n}, { inject: ['sessions'] });\n/* jscpd:ignore-end */\n/**\n * Register the todo invariant companion.\n * @param ctx - Cordis context carrying the invariant service.\n * @retu"
+      },
+      {
+        "offset": 3552,
+        "text": "e, eventName, args) => {\n        if (eventName !== 'session/event')\n            return;\n        const [session, event] = args;\n        validateEvent(event, traceFor(session), fail);\n    }, { global: true });\n    ctx.on('session/event', (session, event) => {\n        advanceTrace(traceFor(session), event);\n    }, { global: true });\n}, { inject: ['sessions'] });\n/* jscpd:ignore-end */\n/**\n * Register the todo invariant companion.\n * @param ctx - Cordis context carrying the invariant service.\n * @returns the installed registration's disposer after setup succeeds.\n */\nexport const apply = (ctx) => Promise.resolve(ctx.invariants.register(PACKAGE_NAME, install));\n//# s"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-user-questions",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-user-questions/lib/index.js",
+    "sha256": "e1c51afac2e31be8593c6426976e5f31dbe2a709b85ae1ea43ed406146f54265",
+    "excerpts": [
+      {
+        "offset": 19246,
+        "text": "ox/discarded\", ({ agent, message }) => {\n\t\t\t\tconst source = message.source;\n\t\t\t\tif (source.kind === \"user-question-reply\") this.releaseReply(agent.session, source.callId, message.id);\n\t\t\t}, { global: true });\n\t\t\tctx.on(\"session/event\", (session, event) => {\n\t\t\t\tif (event.type === \"user/message\") {\n\t\t\t\t\tconst source = event.data.source;\n\t\t\t\t\tif (source.kind === \"user-question-reply\") this.releaseReply(session, source.callId, event.data.id);\n\t\t\t\t} else if (event.type === \"turn/end\") {\n\t\t\t\t\tconst calls = this.queuedReplies.get(session);\n\t\t\t\t\tif (calls === void 0) return;\n\t\t\t\t\tfor (const [callId, reply] of calls) if (reply.claimedTurn === event.data.turn) calls.dele"
+      },
+      {
+        "offset": 27572,
+        "text": " \"BAD_INTENT\");\n\t\t\t}\n\t\t\tconst noAnswerer = () => Promise.reject(new UserQuestionError(\"no user-questions answerer accepted the request\", \"NO_PROVIDER\"));\n\t\t\ttry {\n\t\t\t\treturn await (agent === void 0 ? this.ctx.waterfall(\"user-questions/request\", request, noAnswerer) : this.ctx.waterfall(scopeTarget(agent, agent), \"user-questions/request\", {\n\t\t\t\t\t...request,\n\t\t\t\t\tagent\n\t\t\t\t}, noAnswerer));\n\t\t\t} catch (error) {\n\t\t\t\tconst restored = restoreUserQuestionError(error);\n\t\t\t\tif (restored instanceof UserQuestionError) throw restored;\n\t\t\t\tif (request.signal?.aborted) throw abortedQuestion(error);\n\t\t\t\tthrow restored;\n\t\t\t}\n\t\t}\n\t};\n})();\n//#endregion\nexport { TIMED_WAIT_PARAME"
+      },
+      {
+        "offset": 27667,
+        "text": "questions answerer accepted the request\", \"NO_PROVIDER\"));\n\t\t\ttry {\n\t\t\t\treturn await (agent === void 0 ? this.ctx.waterfall(\"user-questions/request\", request, noAnswerer) : this.ctx.waterfall(scopeTarget(agent, agent), \"user-questions/request\", {\n\t\t\t\t\t...request,\n\t\t\t\t\tagent\n\t\t\t\t}, noAnswerer));\n\t\t\t} catch (error) {\n\t\t\t\tconst restored = restoreUserQuestionError(error);\n\t\t\t\tif (restored instanceof UserQuestionError) throw restored;\n\t\t\t\tif (request.signal?.aborted) throw abortedQuestion(error);\n\t\t\t\tthrow restored;\n\t\t\t}\n\t\t}\n\t};\n})();\n//#endregion\nexport { TIMED_WAIT_PARAMETER, UserQuestionError, UserQuestionService, UserQuestionService as default, isTimedAskUserQues"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-user-questions",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-user-questions/lib/typert.host.js",
+    "sha256": "101a19abc47de51f91c9f60e10ef329e98875b86ad5d7ac14040ed3b1fe5f88e",
+    "excerpts": [
+      {
+        "offset": 37769,
+        "text": ": 'success' | 'error'; text?: string; sourceEventSeq?: import('@deepseek-ai/dsh-session/types').SessionSeq; };\\n    'image/offload': { targets: ImageOffloadTarget[]; };\\n    'session/title': SessionTitleEventData;\\n    'todo/write': { todos: TodoItem[]; };\\n    'model/selection': ModelSelection;\\n    'subagent/descriptor': SubagentDescriptorData;\\n    'permission/preset': { preset: string; };\\n    'subagent/catalog': SubagentCatalogEvent;\\n    'compaction/start': { compactionId: CompactionId; sourceCommandId?: CommandId; turn: number | null; };\\n    'compaction/summary': { compactionId: CompactionId; sourceCommandId?: CommandId; summary: ContentBlock[]; shadowed"
+      },
+      {
+        "offset": 49948,
+        "text": "ext()` to delegate. Scope-filtered dispatch\\n * (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.\\n * @param request - pending user-question request.\\n * @mode waterfall\\n */\",\n        \"name\": \"user-questions/request\",\n        \"mode\": \"waterfall\",\n        \"signature\": \"'user-questions/request'(this: Scoped<Agent>, request: AskUserQuestionRequestEvent, next: () => Promise<AskUserQuestionAnswer>): Promise<AskUserQuestionAnswer>\"\n      }\n    ],\n    \"objects\": []\n  },\n}\n"
+      },
+      {
+        "offset": 50025,
+        "text": "gent-scoped listeners receive only that agent.\\n * @param request - pending user-question request.\\n * @mode waterfall\\n */\",\n        \"name\": \"user-questions/request\",\n        \"mode\": \"waterfall\",\n        \"signature\": \"'user-questions/request'(this: Scoped<Agent>, request: AskUserQuestionRequestEvent, next: () => Promise<AskUserQuestionAnswer>): Promise<AskUserQuestionAnswer>\"\n      }\n    ],\n    \"objects\": []\n  },\n}\n"
+      }
+    ]
+  },
+  {
+    "package": "@deepseek-ai/dsh-user-questions",
+    "version": "0.2.0-rc.2",
+    "file": "D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-user-questions/lib/types/index.js",
+    "sha256": "5c3f0120b6c6774c393661bf7f5810706c09d45438ff9f72ce6d5ada459cb76f",
+    "excerpts": [
+      {
+        "offset": 6867,
+        "text": " source = message.source;\n                if (source.kind === 'user-question-reply')\n                    this.releaseReply(agent.session, source.callId, message.id);\n            }, { global: true });\n            ctx.on('session/event', (session, event) => {\n                if (event.type === 'user/message') {\n                    const source = event.data.source;\n                    if (source.kind === 'user-question-reply')\n                        this.releaseReply(session, source.callId, event.data.id);\n                }\n                else if (event.type === 'turn/end') {\n                    const calls = this.queuedReplies.get(session);\n                    i"
+      },
+      {
+        "offset": 18129,
+        "text": ") => Promise.reject(new UserQuestionError('no user-questions answerer accepted the request', 'NO_PROVIDER'));\n            try {\n                return await (agent === undefined\n                    ? this.ctx.waterfall('user-questions/request', request, noAnswerer)\n                    : this.ctx.waterfall(scopeTarget(agent, agent), 'user-questions/request', { ...request, agent }, noAnswerer));\n            }\n            catch (error) {\n                const restored = restoreUserQuestionError(error);\n                if (restored instanceof UserQuestionError)\n                    throw restored;\n                if (request.signal?.aborted) {\n                    thr"
+      },
+      {
+        "offset": 18244,
+        "text": "       try {\n                return await (agent === undefined\n                    ? this.ctx.waterfall('user-questions/request', request, noAnswerer)\n                    : this.ctx.waterfall(scopeTarget(agent, agent), 'user-questions/request', { ...request, agent }, noAnswerer));\n            }\n            catch (error) {\n                const restored = restoreUserQuestionError(error);\n                if (restored instanceof UserQuestionError)\n                    throw restored;\n                if (request.signal?.aborted) {\n                    throw abortedQuestion(error);\n                }\n                throw restored;\n            }\n        }\n    };\n})();\ne"
+      }
+    ]
+  }
+]

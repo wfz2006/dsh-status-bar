@@ -1,0 +1,11 @@
+[dsh-glass-probe] loaded (observe only)
+(node:26796) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(Use `DeepSeek Harness --trace-deprecation ...` to show where the warning was created)
+dsh web: [local URL redacted]
+[dsh-glass-probe] event {"type":"permission/preset","seq":0,"hasSessionIdentity":true}
+[dsh-glass-probe] event {"type":"sandbox/mode","seq":1,"hasSessionIdentity":true}
+[dsh-glass-probe] event {"type":"approval/policy","seq":2,"hasSessionIdentity":true}
+[dsh-glass-probe] event {"type":"turn/start","seq":3,"hasSessionIdentity":true}
+[dsh-glass-probe] event {"type":"todo/write","seq":4,"hasSessionIdentity":true,"todoCount":3}
+[dsh-glass-probe] event {"type":"todo/write","seq":5,"hasSessionIdentity":true,"todoCount":2}
+[dsh-glass-probe] fixture appended; not a model-driven Agent session

@@ -45,22 +45,22 @@
 ## 5. 目标运行环境核验（Codex 本地填写）
 
 ```text
-检查日期：TODO
-OS + Build：TODO
-Node：TODO
-pnpm：TODO
-Glass Electron：TODO
-DSH CLI 版本：TODO / not installed
-DSH Desktop 版本：TODO / not installed
-DSH Git SHA / tag：TODO
-运行模式：Web / Official Desktop / Third-party fork / none
-Profile：TODO
-核心源码签名校验：TODO
-真实 todo 事件：PASS / FAIL / BLOCKED
-Desktop 插件装载：PASS / FAIL / BLOCKED
-Approval ownership：PASS / FAIL / BLOCKED
-Structured question ownership：PASS / FAIL / BLOCKED
-备注/复现步骤：TODO
+检查日期：2026-10-17
+OS + Build：Windows 11 家庭版 中文版 x64 / 26300
+Node：PATH=24.15.0 (D:/node)；DSH bundled=24.18.1
+pnpm：PATH=12.4.1；DSH bundled metadata=11.7.0
+Glass Electron：44.8.0，实际启动与自动化测试通过
+DSH CLI 版本：0.2.0-rc.2，随 Desktop 捆绑，不在当前 PATH
+DSH Desktop 版本：0.2.0-rc.2，D:/DSH
+DSH Git SHA / tag：安装包 commit 未知；参考公开 master=1517a4dbca0a2789ff1d41ba439600f8547d23fa
+运行模式：官方 Desktop 已安装；本轮使用 bundled CLI 隔离 Web Profile 测试
+Profile：项目 .local-dsh-probe/profiles/web（独立 DSH_HOME，不改用户原 Profile）
+核心源码签名校验：PASS，安装包 JS 行为+哈希；未提供 .d.ts，本机 Session 回调实测
+真实 todo 事件：PASS，官方 Runtime 的人工夹具 3→2；非模型任务，Glass 尚未接入该流
+Desktop 插件装载：BLOCKED / 未实测
+Approval ownership：BLOCKED / 未注册回答者
+Structured question ownership：BLOCKED / 未注册回答者
+备注/复现步骤：见 integration-matrix.md、local-source-signatures.md、evidence/dsh-web-probe.txt
 ```
 
 请按可复现证据填写，不可从网页最近版本号推定用户当前的安装版本。
