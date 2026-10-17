@@ -87,7 +87,8 @@
 - [ ] M5-04 用户配置、开机启动（默认关闭）、卸载清理。
 - [ ] M5-05 构建未签名本地测试安装包，明确 Windows 安全提示。
 - [ ] M5-06 用户使用文档、已知限制、安全说明、日志脱敏审核。
-- [x] M5-07 本地 DSH bundle（`packages/dsh-plugin`）：`dsh.bundle.patch` + profile `link:` 依赖 + `dsh.profile.bundles` 挂载，隔离 Web Profile 启动实测打印 `[dsh-glass-plugin] loaded`（2026-10-18）；desktop profile 已同样接线，待重启后市场「已安装」确认。插件入口目前为空载占位，未启动桌面伴侣。
+- [x] M5-07 本地 DSH bundle（`packages/dsh-plugin`）：`dsh.bundle.patch` + profile `link:` 依赖 + `dsh.profile.bundles` 挂载，隔离 Web Profile 启动实测打印 `[dsh-glass-plugin] loaded`（2026-10-18）；desktop profile 已同样接线。
+- [x] M5-08 启动器钩子（2026-10-18）：Host 启动后插件用 `connection.authenticatedUrl(origin)` 取认证链接，`spawn` Glass 并传 `--dsh-link`；Glass 启动即自动连接，第二实例聚焦并重连。隔离 Host 实测 PASS（`node autolaunch-check.mjs`，脚本仓库外），认证链接不写日志。
 
 ## 后续扩展（P2）
 - [ ] 多 Agent 统一抽象与插件接口。

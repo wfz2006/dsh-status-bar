@@ -65,3 +65,18 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 | 截图 | 保留在仓库外（真实会话标题属私有数据），不随仓库分发 |
 
 限制：这是真实数据快照，不是对运行中 Desktop 进程的实时接管（该进程的认证 token 只在内存中，无法在不干扰用户应用的前提下取得）；未触发真实审批/提问投递，不能替代 M4-08 的官方 Desktop 决议验收。
+
+## 启动器钩子（2026-10-18）
+
+`packages/dsh-plugin` 从空载占位改为启动器：等待 `webServer.getOrigin()` 后向 `connection.authenticatedUrl(origin)` 取认证链接，`spawn` Electron 运行 `apps/desktop` 并传 `--dsh-link=<url>`。Glass 启动后由 `dshLinkFromArgs` 校验（仅 loopback http(s) 根链接，无凭据/hash/子路径，≤4096 字符）再自动连接；第二实例由单实例锁聚焦并重连。
+
+| 检查 | 结果 |
+|---|---|
+| 链接解析单测 | `tests/launch.test.ts` 4 项：正常链接、重复参数取最后一次、缺失/空值、跨域/凭据/hash/子路径/file/超长全部拒绝 |
+| 自动连接 | 隔离 Host（空 Profile）+ Playwright 以 `--dsh-link` 启动构建产物，无需任何界面操作即 `mode=dsh`、`connection=connected`，`endpoint` 为不带 token 的 origin |
+| 第二实例 | 再启动一个进程携带新链接：第二进程立即退出，第一窗口保持 connected（单实例交接） |
+| 插件实际拉起 | 隔离 Web Profile 启动 Host，stdout 打印 `[dsh-glass-plugin] Glass desktop companion launched`，进程表出现带 `--dsh-link` 的 Electron；结束后清理 |
+| 脱敏 | 插件日志不含链接；`--dsh-link` 只出现在进程参数中；证据不含 token |
+
+限制：本验证用隔离 Profile（非 desktop profile），未自动验证市场「已安装」条目在用户 Desktop 重启后的实际加载；插件拉起的是开发态 `apps/desktop`，不是安装包。
+
