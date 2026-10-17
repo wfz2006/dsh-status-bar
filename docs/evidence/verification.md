@@ -49,3 +49,19 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 | 截图 | [connected.png](live-dsh/connected.png)（设置面板「DSH 已连接 / 会话已同步」）；机器可读结果 [result.json](live-dsh/result.json) |
 
 未覆盖：真实模型任务、真实审批投递/决议（fixture 只写 turn/todo，无 `$events` 审批事件）、官方 Desktop 当前任务、多会话并发；本机 DSH 安装版本为 `0.2.1-rc.2`（`dsh.cmd` 包装器仍报 `0.2.0-rc.2`，文件属性未复核）。
+
+## 真实本机会话人工验收（2026-10-18，只读快照）
+
+把本机真实 DSH home 的 `sessions/` 与 `storages/` 复制到仓库外的隔离目录（不写回用户 profile，不含 `credentials`），用同一捆绑 Host 启动该快照，再由 Playwright 启动构建后的 Electron 应用，在设置面板粘贴真实认证链接完成连接。
+
+| 检查 | 结果 |
+|---|---|
+| 真实会话规模 | 82 个会话，79 个有标题；0 个 running；1 个带 5 条 Todo（含 in_progress） |
+| 当前会话 | 本工作会话标题正确显示，phase/agentStatus `finished/idle` |
+| 会话切换 | 展开视图会话选择器 82 项；切到真实 Todo 会话后 5 行 Todo 与 Host 数据一致 |
+| 能力位 / 凭据 | 连接级能力全 true；token 未进入 renderer 投影与证据文件 |
+| 断开 | `connection=disconnected`、sessions=0 |
+| 崩溃修复 | 首轮暴露主进程崩溃：连接发生在 Mock bridge 握手前，`adapter!` 未赋值；改为 `adapter?.welcome() ?? mockWelcome()` / `snapshot` 兜底后复跑 3 次全部 PASS |
+| 截图 | 保留在仓库外（真实会话标题属私有数据），不随仓库分发 |
+
+限制：这是真实数据快照，不是对运行中 Desktop 进程的实时接管（该进程的认证 token 只在内存中，无法在不干扰用户应用的前提下取得）；未触发真实审批/提问投递，不能替代 M4-08 的官方 Desktop 决议验收。
