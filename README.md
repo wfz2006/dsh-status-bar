@@ -6,6 +6,8 @@
 
 原始输入是开发规格包。2026-10-17 已实现首轮 **Mock 开发预览**（协议、鉴权桥、Electron 自适应窗口），并完成独立 DSH Web 插件探测。**尚未连接官方 Desktop 的当前任务，真实审批不可用**。运行方式见 [RUNNING.md](docs/RUNNING.md)，实测范围见 [支持矩阵](docs/integration-matrix.md)。原始完整规格保留在下文及 MASTER_SPEC。
 
+2026-10-17 按 [Liquid UI 重设计规范](DSH_Glass_Liquid_UI_Redesign_Spec.md) 完成四形态 UI 重构：任务胶囊、速览、紧凑详情与独立审批，移除常驻品牌/连接底栏，功能迁至菜单/设置；新增偏好持久化、自动行为与手动尺寸保护。实际验证与尚未覆盖项见 [分阶段记录](docs/redesign-audit.md)。
+
 ## 推荐阅读顺序
 
 1. [AGENTS.md](AGENTS.md)：Codex 必须遵守的工程规则。

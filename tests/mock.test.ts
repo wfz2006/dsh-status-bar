@@ -2,6 +2,25 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { createMockAdapter } from '../packages/adapters/mock/src/index';
 import type { Frame } from '../packages/protocol/src/index';
 afterEach(() => vi.useRealTimers());
+it('completed fixture reconnects to a genuine finished phase, independent of Todo counts', () => {
+  vi.useFakeTimers();
+  const adapter = createMockAdapter(() => {}, () => {}, 'completed');
+  adapter.start(); vi.advanceTimersByTime(10000);
+  const snapshot = adapter.snapshot();
+  if (snapshot.kind !== 'glass.snapshot') throw new Error('fixture');
+  expect(snapshot.payload.sessions[0]?.phase).toBe('finished');
+  expect(snapshot.payload.approvals).toHaveLength(0);
+  adapter.stop();
+});
+it('retains concurrent approval identities in authoritative reconnect snapshots', () => {
+  vi.useFakeTimers();
+  const adapter = createMockAdapter(() => {}, () => {}, 'approval-queue');
+  adapter.start(); vi.advanceTimersByTime(10000);
+  const snapshot = adapter.snapshot();
+  if (snapshot.kind !== 'glass.snapshot') throw new Error('fixture');
+  expect(snapshot.payload.approvals.map(a => a.requestId)).toEqual(['mock-approval-1', 'mock-approval-2']);
+  adapter.stop();
+});
 it('reconnect snapshot retains the latest whole Todo list and pending set', () => {
   vi.useFakeTimers();
   const received: Frame[] = [];

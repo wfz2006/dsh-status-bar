@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:desktop": "node scripts/desktop-smoke.mjs",
+    "test:preferences": "node scripts/preferences-acceptance.mjs",
     "test:liquid": "node scripts/liquid-acceptance.mjs"
   },
   "devDependencies": {

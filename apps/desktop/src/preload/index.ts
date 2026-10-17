@@ -16,6 +16,10 @@ const api: GlassAPI = {
   },
   windowAction: (action, reduceMotion) => ipcRenderer.invoke('glass:window', action, reduceMotion),
   resizeWindow: bounds => ipcRenderer.invoke('glass:resize', bounds),
+  moveWindow: position => ipcRenderer.invoke('glass:move', position),
+  setSettings: settings => ipcRenderer.invoke('glass:settings', settings),
+  selectSession: id => ipcRenderer.invoke('glass:select-session', id),
+  copyApproval: identity => ipcRenderer.invoke('glass:copy-approval', identity),
   mockAction: action => ipcRenderer.invoke('glass:mock', action),
 };
 contextBridge.exposeInMainWorld('glass', api);

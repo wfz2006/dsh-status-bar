@@ -29,25 +29,35 @@ export function mockDeltas(): Frame[] {
 }
 export function mockFrames(): Frame[] { return [mockWelcome(), mockSnapshot(), ...mockDeltas()]; }
 
-export type MockScenario = 'normal' | 'out-of-order' | 'disconnect';
+export type MockScenario = 'normal' | 'out-of-order' | 'disconnect' | 'approval-queue' | 'edge-cases' | 'completed';
 export function createMockAdapter(publish: (f: Frame) => void, disconnect: () => void, scenario: MockScenario = 'normal') {
   let timers: ReturnType<typeof setTimeout>[] = [];
   let snapshot = mockSnapshot();
   function stop() { timers.forEach(clearTimeout); timers = []; }
   function start() {
     stop(); snapshot = mockSnapshot();
-    const frames = mockDeltas();
+    const frames = scenario === 'edge-cases' ? [] : mockDeltas();
+    if (scenario === 'completed') {
+      frames.splice(3);
+      frames.push({ ...base, messageId: 'finished-6', kind: 'session.updated', payload: { sessionId: 'demo-main', sourceSeq: 6, fields: { agentStatus: 'idle', phase: 'finished' } } });
+    }
+    if (scenario === 'edge-cases' && snapshot.kind === 'glass.snapshot') snapshot = { ...snapshot, payload: { ...snapshot.payload, sessions: snapshot.payload.sessions.map(s => ({ ...s, title: '长中文任务：验证不同显示缩放、窄窗口、没有 Todo 以及复杂背景下的可读性。'.repeat(5), todos: [] })) } };
+    if (scenario === 'approval-queue') {
+      const approval = frames.find(f => f.kind === 'approval.requested');
+      if (approval?.kind === 'approval.requested') frames.push({ ...approval, messageId: 'approval-6', payload: { ...approval.payload, requestId: 'mock-approval-2', callId: 'mock-call-3', commandPreview: 'echo "Second independent Mock request"' } });
+    }
     if (scenario === 'out-of-order') frames.push(frames[0]!);
     frames.forEach((f, i) => timers.push(setTimeout(() => {
-      if (snapshot.kind === 'glass.snapshot' && (f.kind === 'session.todo.snapshot' || f.kind === 'session.tool.activity')) {
+      if (snapshot.kind === 'glass.snapshot' && (f.kind === 'session.todo.snapshot' || f.kind === 'session.tool.activity' || f.kind === 'session.updated')) {
         snapshot = { ...snapshot, payload: { ...snapshot.payload, sessions: snapshot.payload.sessions.map(s => {
           if (!('sessionId' in f.payload) || f.payload.sessionId !== s.sessionId || f.payload.sourceSeq <= s.lastSourceSeq) return s;
           if (f.kind === 'session.todo.snapshot') return { ...s, todos: f.payload.todos, lastSourceSeq: f.payload.sourceSeq };
           if (f.kind === 'session.tool.activity') return { ...s, activities: [f.payload, ...s.activities].slice(0, 100), lastSourceSeq: f.payload.sourceSeq };
+          if (f.kind === 'session.updated') return { ...s, ...f.payload.fields, lastSourceSeq: f.payload.sourceSeq };
           return s;
         }) } };
       }
-      if (snapshot.kind === 'glass.snapshot' && f.kind === 'approval.requested') snapshot = { ...snapshot, payload: { ...snapshot.payload, approvals: [f.payload] } };
+      if (snapshot.kind === 'glass.snapshot' && f.kind === 'approval.requested') snapshot = { ...snapshot, payload: { ...snapshot.payload, approvals: [...snapshot.payload.approvals.filter(a => a.sessionId !== f.payload.sessionId || a.requestId !== f.payload.requestId), f.payload] } };
       publish(f);
     }, (i + 1) * 1800)));
     if (scenario === 'disconnect') timers.push(setTimeout(disconnect, 8500));

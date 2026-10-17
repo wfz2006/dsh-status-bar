@@ -1,14 +1,14 @@
-import { systemPreferences, type BrowserWindow } from 'electron';
+import { nativeTheme, systemPreferences, type BrowserWindow } from 'electron';
 import { morphBounds, roundedRegion, type Bounds } from '../shared/window';
-import type { WindowState } from '../shared/api';
+import type { PresentationState } from '../shared/api';
 
-export function createPresentation(win: BrowserWindow) {
-  let material: WindowState['material'] = 'acrylic';
-  let morphing: WindowState['morphing'] = null;
+export function createPresentation(win: BrowserWindow, changed: () => void) {
+  let material: PresentationState['material'] = 'acrylic';
+  let morphing: PresentationState['morphing'] = null;
   let timer: ReturnType<typeof setInterval> | undefined;
   let target: Bounds | undefined;
-  const state = (): WindowState => ({ pinned: !win.isDestroyed() && win.isAlwaysOnTop(), material, morphing });
-  function publish() { if (!win.isDestroyed()) win.webContents.send('glass:window-update', state()); }
+  const state = (): PresentationState => ({ material, morphing });
+  function publish() { if (!win.isDestroyed()) changed(); }
   function applyShape() {
     if (process.platform === 'win32' && !win.isDestroyed()) {
       const { width, height } = win.getBounds();
@@ -18,27 +18,26 @@ export function createPresentation(win: BrowserWindow) {
   function applyMaterial() {
     try { win.setBackgroundMaterial(material === 'acrylic' ? 'acrylic' : 'none'); }
     catch { material = 'clear'; }
-    win.setBackgroundColor(material === 'solid' ? '#172131' : '#00000000');
+    win.setBackgroundColor(material === 'solid' ? nativeTheme.shouldUseDarkColors ? '#26384c' : '#e7f1fa' : '#00000000');
     applyShape(); publish();
   }
   function stop() { clearInterval(timer); timer = undefined; morphing = null; target = undefined; publish(); }
   function finish() { if (target && !win.isDestroyed()) win.setBounds(target); stop(); }
-  function morphTo(bounds: Bounds, reducedMotion = false) {
+  function morphTo(bounds: Bounds, reducedMotion = false, duration = 320) {
     const start = win.getBounds(); stop(); target = bounds;
     if (reducedMotion || systemPreferences.getAnimationSettings().prefersReducedMotion) { finish(); return; }
     morphing = bounds.height > start.height ? 'expanding' : 'collapsing'; publish();
     const began = performance.now();
     timer = setInterval(() => {
       if (win.isDestroyed()) { clearInterval(timer); return; }
-      const t = Math.min(1, (performance.now() - began) / 420);
+      const t = Math.min(1, (performance.now() - began) / duration);
       win.setBounds(morphBounds(start, bounds, t));
       if (t === 1) finish();
     }, 16);
   }
   win.on('resize', applyShape);
   win.on('closed', () => clearInterval(timer));
-  applyMaterial();
   return { state, publish, morphTo, stop, applyShape,
-    cycleMaterial: () => { material = material === 'acrylic' ? 'clear' : material === 'clear' ? 'solid' : 'acrylic'; applyMaterial(); },
+    setMaterial: (value: PresentationState['material']) => { material = value; applyMaterial(); },
   };
 }

@@ -1,0 +1,49 @@
+import { expect, it } from 'vitest';
+import { initialProjection, reduceProjection } from '../packages/protocol/src/index';
+import { mockFrames } from '../packages/adapters/mock/src/index';
+import { DEFAULT_SETTINGS, normalizeSettings, deriveTask, initialView, observeFacts, manualView, viewForSize, viewSize } from '../apps/desktop/src/shared/view-model';
+
+it('defaults to a calm task capsule and validates persisted preferences', () => {
+  expect(initialView().mode).toBe('capsule');
+  expect(DEFAULT_SETTINGS.autoApproval).toBe(false);
+  expect(normalizeSettings({ animation: 'invalid', theme: 'light', autoApproval: true }).theme).toBe('light');
+  expect(normalizeSettings({ animation: 'invalid' }).animation).toBe('full');
+  expect(viewSize('capsule')).toEqual({ width: 300, height: 56 });
+  expect(viewForSize(330, 180, 'expanded')).toBe('peek');
+  expect(viewForSize(400, 320, 'approval')).toBe('approval');
+});
+it('derives status and progress from source facts, not Todo completion', () => {
+  let p = initialProjection();
+  for (const f of mockFrames().slice(0, 2)) p = reduceProjection(p, f);
+  const task = deriveTask(p, 'demo-main');
+  expect(task.total).toBe(3); expect(task.completed).toBe(1); expect(task.status).toBe('running');
+  const s = p.sessions['demo-main']!;
+  p = { ...p, sessions: { ...p.sessions, 'demo-main': { ...s, todos: [{ content: 'a', status: 'completed' }] } } };
+  expect(deriveTask(p, 'demo-main').status).toBe('running');
+  p = { ...p, sessions: { ...p.sessions, 'demo-main': { ...s, todos: [] } } };
+  expect(deriveTask(p, 'demo-main').total).toBe(0);
+  expect(deriveTask({ ...p, connection: 'disconnected', stale: true }, 'demo-main').status).toBe('disconnected');
+});
+it('keeps business approval facts independent of user-selected form', () => {
+  const facts = { pending: ['r/s/a'], completed: null };
+  expect(observeFacts(initialView(), facts, DEFAULT_SETTINGS).mode).toBe('capsule');
+  const automatic = observeFacts(initialView(), facts, { ...DEFAULT_SETTINGS, autoApproval: true });
+  expect(automatic.mode).toBe('approval'); expect(automatic.returnMode).toBe('capsule');
+  expect(observeFacts(automatic, { pending: [], completed: null }, DEFAULT_SETTINGS).mode).toBe('capsule');
+  const manual = manualView(initialView(), 'expanded');
+  expect(observeFacts(manual, facts, { ...DEFAULT_SETTINGS, autoApproval: true }).mode).toBe('expanded');
+});
+it('a user shrinking an approval cancels automatic return and expansion', () => {
+  const automatic = observeFacts(initialView(), { pending: ['a'], completed: null }, { ...DEFAULT_SETTINGS, autoApproval: true });
+  const manual = manualView(automatic, 'peek');
+  expect(manual.returnMode).toBe(null);
+  expect(observeFacts(manual, { pending: ['a', 'b'], completed: null }, { ...DEFAULT_SETTINGS, autoApproval: true }).mode).toBe('peek');
+});
+it('preserves every selected-session request and hides stale actionable assumptions', () => {
+  let p = initialProjection(); for (const f of mockFrames()) p = reduceProjection(p, f);
+  const a = p.approvals[0]!;
+  p = { ...p, approvals: [a, { ...a, requestId: 'second' }, { ...a, sessionId: 'demo-other', requestId: 'other' }] };
+  expect(deriveTask(p, 'demo-main').pending.map(a => a.requestId)).toEqual(['mock-approval-1', 'second']);
+  expect(deriveTask(p, 'demo-other').pending.map(a => a.requestId)).toEqual(['other']);
+  expect(deriveTask({ ...p, stale: true }, 'demo-main').status).toBe('disconnected');
+});
