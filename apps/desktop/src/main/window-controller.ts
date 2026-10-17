@@ -6,7 +6,7 @@ import { clampBounds, type Bounds } from '../shared/window';
 import { DEFAULT_SETTINGS, initialView, manualView, normalizeSettings, observeFacts, viewForSize, viewSize, type GlassViewMode, type AttentionFacts } from '../shared/view-model';
 import type { WindowAction, WindowState, MockAction } from '../shared/api';
 
-type Hooks = { reconnect: () => void; mock: (action: MockAction) => void; openDSH: () => void; canOpenDSH: boolean; quit: () => void; menuChanged: (menu: Menu) => void };
+type Hooks = { sourceName?: () => string; position:(x:number,y:number)=>Promise<void>; reconnect: () => void; mock: (action: MockAction) => void; openDSH: () => void; canOpenDSH: boolean; quit: () => void; menuChanged: (menu: Menu) => void };
 export function createWindowController(win: BrowserWindow, directory: string, smoke: boolean, hooks: Hooks) {
   const preferencePath = join(directory, 'glass-ui.json');
   let settings = { ...DEFAULT_SETTINGS };
@@ -96,7 +96,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   }
   function menu() {
     const items: MenuItemConstructorOptions[] = [
-      { label: '数据源：Mock 演示 · 真实 DSH 未接入', enabled: false, id: 'source-label' },
+      { label: hooks.sourceName?.() ?? '数据源：Mock 演示 · 真实 DSH 未接入', enabled: false, id: 'source-label' },
       { type: 'separator' },
       { label: '胶囊', id: 'view-capsule', click: () => showMode('capsule') },
       { label: '速览', id: 'view-peek', click: () => showMode('peek') },
@@ -157,7 +157,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
       if (!panel) view = manualView(view, viewForSize(safe.width, safe.height, view.mode));
       win.setBounds(safe); publish(); saveSoon();
     },
-    move: (x: number, y: number) => { presentation?.stop(); win.setBounds(safeBounds({ ...win.getBounds(), x, y })); saveSoon(); },
+    move: async (x: number, y: number) => { presentation?.stop(); const safe=safeBounds({ ...win.getBounds(),x,y });await hooks.position(safe.x,safe.y);saveSoon(); },
     stop: () => { persist(); presentation?.stop(); clearTimeout(completionTimer); clearTimeout(persistenceTimer); },
   };
 }

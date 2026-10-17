@@ -1,11 +1,27 @@
 import type { Projection } from '@glass/protocol';
 import type { Bounds } from './window';
 import type { GlassViewMode, GlassSettings } from './view-model';
+import type { DesktopOpticsState, DesktopOpticsFrame,DesktopOpticsBounds } from './desktop-optics';
 export type WindowAction = 'expand' | 'collapse' | 'hide' | 'quit' | 'pin' | 'settings' | 'activity' | 'back' | 'approval' | 'menu' | 'open-dsh' | 'reconnect';
 export type MockAction = 'restart' | 'disconnect' | 'reconnect' | 'out-of-order' | 'approval-queue' | 'edge-cases' | 'completed' | 'long-approval';
 export type PresentationState = { material: 'acrylic' | 'clear' | 'solid'; morphing: 'expanding' | 'collapsing' | null };
 export type WindowState = PresentationState & { pinned: boolean; viewMode: GlassViewMode; manualSize: boolean; panel: 'settings' | 'activity' | null; settings: GlassSettings; completionFeedback: boolean };
+export type SourceState = { mode: 'mock' | 'dsh'; connection: 'disconnected' | 'connecting' | 'connected'; endpoint: string | null; error: string | null };
+export type RequestIdentity = { runtimeId: string; sourceEpoch: string; sessionId: string; requestId: string };
+export type QuestionAnswers = Array<{ questionId: string; values: string[] }>;
 export interface GlassAPI {
+  getSourceState(): Promise<SourceState>;
+  subscribeSourceState(callback: (state: SourceState) => void): () => void;
+  connectDSH(url: string): Promise<void>;
+  disconnectDSH(): Promise<void>;
+  useMock(): Promise<void>;
+  respondApproval(identity: RequestIdentity, outcome: 'allowed-once' | 'rejected'): Promise<void>;
+  respondQuestion(identity: RequestIdentity, answers: QuestionAnswers): Promise<void>;
+  getOpticsState(): Promise<DesktopOpticsState>;
+  setOpticsEnabled(enabled:boolean): Promise<DesktopOpticsState>;
+  subscribeOpticsState(callback:(state:DesktopOpticsState)=>void):()=>void;
+  subscribeOpticsFrame(callback:(frame:DesktopOpticsFrame)=>void):()=>void;
+  subscribeOpticsPosition(callback:(bounds:DesktopOpticsBounds)=>void):()=>void;
   getState(): Promise<Projection>;
   subscribe(callback: (state: Projection) => void): () => void;
   getWindowState(): Promise<WindowState>;

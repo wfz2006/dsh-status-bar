@@ -20,6 +20,15 @@ it('clips the native backdrop outside the rounded surface, retaining center and 
   expect(contains(90, 0)).toBe(true); expect(contains(0, 27)).toBe(true);
   expect(contains(179, 27)).toBe(true); expect(contains(90, 53)).toBe(true);
 });
+it('keeps a short capsule slightly squarer while clamping tiny-window corners', () => {
+  const capsule = roundedRegion(300, 56);
+  // These edge pixels are inside the new corners, outside the previous 24/26px curves.
+  expect(capsule.some(r => r.x === 0 && r.y <= 16 && r.y + r.height > 16)).toBe(true);
+  const panel = roundedRegion(400, 340);
+  expect(panel.some(r => r.x === 0 && r.y <= 18 && r.y + r.height > 18)).toBe(true);
+  const tiny = roundedRegion(30, 20);
+  expect(tiny.every(r => r.x >= 0 && r.y >= 0 && r.x + r.width <= 30 && r.y + r.height <= 20)).toBe(true);
+});
 it('custom resizing respects minimum size while anchoring the opposite edge', () => {
   expect(resizeBounds({ x: 500, y: 100, width: 340, height: 360 }, 'w', 300, 0)).toEqual({ x: 660, y: 100, width: 180, height: 360 });
   expect(resizeBounds({ x: 500, y: 100, width: 340, height: 360 }, 'se', 40, -500)).toEqual({ x: 500, y: 100, width: 380, height: 54 });

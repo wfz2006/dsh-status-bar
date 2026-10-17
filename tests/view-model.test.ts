@@ -12,6 +12,11 @@ it('defaults to a calm task capsule and validates persisted preferences', () => 
   expect(viewForSize(330, 180, 'expanded')).toBe('peek');
   expect(viewForSize(400, 320, 'approval')).toBe('approval');
 });
+it('migrates the retired native acrylic comparison without resetting other preferences',()=>{
+  const migrated=normalizeSettings({theme:'dark',material:'acrylic',autoApproval:true,pin:'always'});
+  expect(migrated.material).toBe('transparent');
+  expect(migrated.theme).toBe('dark');expect(migrated.autoApproval).toBe(true);expect(migrated.pin).toBe('always');
+});
 it('derives status and progress from source facts, not Todo completion', () => {
   let p = initialProjection();
   for (const f of mockFrames().slice(0, 2)) p = reduceProjection(p, f);
@@ -46,4 +51,25 @@ it('preserves every selected-session request and hides stale actionable assumpti
   expect(deriveTask(p, 'demo-main').pending.map(a => a.requestId)).toEqual(['mock-approval-1', 'second']);
   expect(deriveTask(p, 'demo-other').pending.map(a => a.requestId)).toEqual(['other']);
   expect(deriveTask({ ...p, stale: true }, 'demo-main').status).toBe('disconnected');
+});
+it('distinguishes empty, idle, unknown, starting, stopping and terminal states', () => {
+  let p = initialProjection(); for (const f of mockFrames()) p = reduceProjection(p, f);
+  expect(deriveTask(p, 'missing').status).toBe('empty');
+  const original = p.sessions['demo-main']!;
+  for (const agentStatus of ['idle', 'unknown', 'starting', 'stopping'] as const) {
+    expect(deriveTask({ ...p, approvals: [], sessions: { ...p.sessions, 'demo-main': { ...original, agentStatus } } }, 'demo-main').status).toBe(agentStatus);
+  }
+  for (const [phase, expected] of [['finished', 'completed'], ['error', 'error'], ['cancelled', 'cancelled'], ['archived', 'archived']] as const) {
+    const task = deriveTask({ ...p, sessions: { ...p.sessions, 'demo-main': { ...original, phase } } }, 'demo-main');
+    expect(task.status).toBe(expected); expect(task.pending).toEqual([]); expect(task.attentionCount).toBe(0);
+  }
+});
+it('includes only current runtime and session questions in the shared attention count', () => {
+  let p = initialProjection(); for (const f of mockFrames()) p = reduceProjection(p, f);
+  const q = { requestId: 'q', runtimeId: p.runtimeId!, sourceEpoch: p.epoch!, sessionId: 'demo-main', createdAt: '2026-10-18T00:00:00.000Z',
+    status: 'pending' as const, actionable: false, questions: [{ id: 'q1', question: '选择方案', type: 'freeText' as const }] };
+  p = { ...p, questions: [q, { ...q, sessionId: 'demo-other' }, { ...q, sourceEpoch: 'old' }, { ...q, status: 'answered' }] };
+  const task = deriveTask(p, 'demo-main');
+  expect(task.questions).toHaveLength(1); expect(task.attentionCount).toBe(2);
+  expect(deriveTask({ ...p, approvals: [] }, 'demo-main').status).toBe('waiting_answer');
 });

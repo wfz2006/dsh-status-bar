@@ -18,7 +18,7 @@ export function createPresentation(win: BrowserWindow, changed: () => void) {
   function applyMaterial() {
     try { win.setBackgroundMaterial(material === 'acrylic' ? 'acrylic' : 'none'); }
     catch { material = 'clear'; }
-    win.setBackgroundColor(material === 'solid' ? nativeTheme.shouldUseDarkColors ? '#26384c' : '#e7f1fa' : '#00000000');
+    win.setBackgroundColor(material === 'solid' ? nativeTheme.shouldUseDarkColors ? '#292929' : '#f0f0f0' : '#00000000');
     applyShape(); publish();
   }
   function stop(notify = true) { clearInterval(timer); timer = undefined; morphing = null; target = undefined; if (notify) publish(); }

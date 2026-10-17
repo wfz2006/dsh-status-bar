@@ -6,11 +6,15 @@ import { randomUUID } from 'node:crypto';
 import WebSocket from 'ws';
 import { createBridge } from '@glass/bridge';
 import { createMockAdapter, type MockScenario } from '@glass/mock';
+import { createDshAdapter } from '@glass/dsh';
 import { frameSchema, initialProjection, reduceProjection, type Frame, type LocalEvent } from '@glass/protocol';
 import { clampBounds, type Bounds } from '../shared/window';
 import { deriveTask } from '../shared/view-model';
-import type { MockAction, WindowAction } from '../shared/api';
+import type { MockAction, WindowAction, SourceState } from '../shared/api';
+import { assertApprovalResponse, assertQuestionResponse } from './request-gate';
 import { createWindowController } from './window-controller';
+import { createDesktopOptics } from './desktop-optics';
+import {createWindowPositioner} from './window-positioner';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const rendererFile = join(here, '../renderer/index.html');
@@ -24,6 +28,8 @@ const originalDSH = 'D:/DSH/DeepSeek Harness.exe';
 let win: BrowserWindow;
 let tray: Tray | undefined;
 let ui: ReturnType<typeof createWindowController> | undefined;
+let optics:ReturnType<typeof createDesktopOptics> | undefined;
+let positioner:ReturnType<typeof createWindowPositioner>|undefined;
 let quitting = false;
 let state = initialProjection();
 let selected = 'demo-main';
@@ -34,22 +40,81 @@ let retry: ReturnType<typeof setTimeout> | undefined;
 let watchdog: ReturnType<typeof setInterval> | undefined;
 let reconnectEnabled = true;
 let lastReceived = 0;
+let dsh: ReturnType<typeof createDshAdapter> | undefined;
+let source: SourceState = { mode: smoke ? 'mock' : 'dsh', connection: 'disconnected', endpoint: null, error: null };
+let sourceGeneration = 0;
+const responses = new Set<string>();
+
+function sourceName() { return source.mode === 'mock' ? '数据源：Mock 演示 · 非真实会话' : `数据源：DeepSeek Harness · ${source.connection === 'connected' ? '已连接' : source.connection === 'connecting' ? '连接中' : '未连接'}`; }
+function publishSource() {
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('glass:source-update', source);
+    win.setTitle('DSH Glass · ' + (source.mode === 'mock' ? 'Mock 开发预览' : 'DeepSeek Harness'));
+  }
+  tray?.setToolTip('DSH Glass · ' + sourceName()); ui?.publish();
+}
+function resetSource(mode: SourceState['mode']) {
+  sourceGeneration++; reconnectEnabled = false; clearTimeout(retry);
+  socket?.terminate(); socket = undefined; adapter?.stop(); adapter = undefined;
+  dsh?.stop(); dsh = undefined; responses.clear();
+  source = { mode, connection: 'disconnected', endpoint: null, error: null };
+  state = initialProjection(); update({ kind: 'transport.closed' }); publishSource();
+}
+async function connectDSH(value: unknown) {
+  if (typeof value !== 'string' || value.length > 4096) throw new Error('连接链接无效');
+  let endpoint: string;
+  try {
+    const url = new URL(value);
+    if (!['http:', 'https:'].includes(url.protocol) || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) || url.username || url.password) throw new Error();
+    endpoint = url.origin;
+  } catch { throw new Error('请输入 DSH 官方提供的本机连接链接'); }
+  resetSource('dsh'); const generation = sourceGeneration;
+  source = { ...source, connection: 'connecting', endpoint }; publishSource();
+  dsh = createDshAdapter({
+    publish: frame => { if (generation === sourceGeneration) update(frame); },
+    onConnection: connection => {
+      if (generation !== sourceGeneration) return;
+      source = { ...source, connection: connection === 'connected' ? 'connected' : connection === 'connecting' ? 'connecting' : 'disconnected', error: connection === 'disconnected' ? '连接已断开，请重新粘贴官方连接链接。' : null };
+      if (connection !== 'connected') update({ kind: connection === 'connecting' ? 'transport.connecting' : 'transport.closed' });
+      publishSource();
+    },
+  });
+  try { await dsh.connect(value); }
+  catch {
+    if (generation === sourceGeneration) {
+      dsh?.disconnect(); source = { ...source, connection: 'disconnected', error: '未能连接 DSH，请检查官方连接链接和本机服务。' };
+      update({ kind: 'transport.closed' }); publishSource();
+    }
+    throw new Error('DSH 连接失败，请检查官方连接链接和本机服务');
+  }
+}
+async function useMock() {
+  resetSource('mock'); const generation = sourceGeneration;
+  if (!bridge) bridge = await createBridge({ welcome: () => adapter!.welcome(), snapshot: () => adapter!.snapshot() });
+  if (generation !== sourceGeneration) return;
+  adapter = makeAdapter('normal'); adapter.start(); reconnectEnabled = true; connect(); publishSource();
+}
 
 function refreshFacts() {
   if (!Object.hasOwn(state.sessions, selected)) selected = Object.keys(state.sessions)[0] ?? '';
   const task = deriveTask(state, selected);
   ui?.observe({
-    pending: task.pending.map(a => [a.runtimeId, a.sourceEpoch, a.sessionId, a.requestId].join('/')),
+    pending: [...task.pending.map(a => ['approval', a.runtimeId, a.sourceEpoch, a.sessionId, a.requestId].join('/')),
+      ...task.questions.map(q => ['question', q.runtimeId, q.sourceEpoch, q.sessionId, q.requestId].join('/'))],
     completed: task.status === 'completed' ? [state.runtimeId, state.epoch, selected].join('/') : null,
   }, state.connection === 'connected' && !state.stale);
 }
 function update(event: Frame | LocalEvent) {
   state = reduceProjection(state, event);
+  if (source.mode === 'mock') {
+    const connection = state.connection === 'connected' ? 'connected' : state.connection === 'connecting' || state.connection === 'reconnecting' ? 'connecting' : 'disconnected';
+    if (source.connection !== connection) { source = { ...source, connection }; publishSource(); }
+  }
   if (win && !win.isDestroyed()) win.webContents.send('glass:update', state);
   refreshFacts();
 }
 function connect() {
-  if (!bridge || quitting) return;
+  if (!bridge || quitting || source.mode !== 'mock') return;
   clearTimeout(retry);
   const previous = socket; socket = undefined; previous?.terminate();
   update({ kind: 'transport.connecting' });
@@ -89,6 +154,7 @@ function assertSender(event: Electron.IpcMainInvokeEvent) {
 }
 function makeAdapter(scenario: MockScenario) { return createMockAdapter(f => bridge?.publish(f), () => bridge?.disconnect(), scenario); }
 function mockAction(action: unknown) {
+  if (source.mode !== 'mock') throw new Error('请先在设置中切换到演示模式');
   if (action === 'disconnect') { reconnectEnabled = false; socket?.close(); update({ kind: 'transport.closed' }); }
   else if (action === 'reconnect') { reconnectEnabled = true; connect(); }
   else if (action === 'restart' || action === 'out-of-order' || action === 'approval-queue' || action === 'edge-cases' || action === 'completed' || action === 'long-approval') {
@@ -109,24 +175,69 @@ else {
       resizable: true, show: false, backgroundColor: '#00000000', title: 'DSH Glass · Mock 开发预览',
       webPreferences: { preload: join(here, '../preload/index.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true },
     });
+    positioner=createWindowPositioner(win,join(here,'../../native/RegionCapture.exe'));
     ui = createWindowController(win, app.getPath('userData'), smoke, {
-      reconnect: () => mockAction('reconnect'), mock: action => mockAction(action), quit: () => app.quit(),
+      position:(x,y)=>positioner!.move(x,y),
+      sourceName,
+      reconnect: () => { if (source.mode === 'mock') mockAction('reconnect'); else ui?.request('settings'); },
+      mock: action => { if (source.mode === 'mock') mockAction(action); else void useMock().then(() => mockAction(action)); }, quit: () => app.quit(),
       canOpenDSH: existsSync(originalDSH), openDSH: () => { void shell.openPath(originalDSH); },
       menuChanged: menu => tray?.setContextMenu(menu),
     });
+    optics=createDesktopOptics(win,join(here,'../../native/RegionCapture.exe'));
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', event => event.preventDefault());
     win.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
     win.on('close', event => { if (!quitting) { event.preventDefault(); win.hide(); } });
-    win.on('ready-to-show', () => win.show());
+    win.once('ready-to-show', () => {
+      win.show();
+      // An explicit launch option is equivalent to opting in for this session.
+      // It is never persisted or enabled by ordinary startup.
+      if(process.argv.includes('--desktop-optics')) {
+        ui!.setSettings({material:'transparent'});ui!.request('collapse',true);ui!.request('expand',true);
+        optics!.enable(true);
+      }
+    });
     ipcMain.handle('glass:state', event => { assertSender(event); return state; });
+    ipcMain.handle('glass:source-state', event => { assertSender(event); return source; });
+    ipcMain.handle('glass:dsh-connect', (event, value: unknown) => { assertSender(event); return connectDSH(value); });
+    ipcMain.handle('glass:dsh-disconnect', event => { assertSender(event); resetSource('dsh'); });
+    ipcMain.handle('glass:use-mock', event => { assertSender(event); return useMock(); });
+    ipcMain.handle('glass:approval-response', async (event, identity: unknown, outcome: unknown) => {
+      assertSender(event); const checked = assertApprovalResponse(state, identity, outcome);
+      const key = JSON.stringify(['approval', checked.identity]);
+      if (!dsh || source.mode !== 'dsh' || responses.has(key)) throw new Error('请求已失效或正在提交');
+      responses.add(key); const active = dsh;
+      try { await active.respondApproval(checked.identity, checked.outcome); }
+      catch { throw new Error('审批未确认，请检查 DSH 中的当前请求'); }
+      finally { responses.delete(key); }
+    });
+    ipcMain.handle('glass:question-response', async (event, identity: unknown, answers: unknown) => {
+      assertSender(event); const checked = assertQuestionResponse(state, identity, answers);
+      const key = JSON.stringify(['question', checked.identity]);
+      if (!dsh || source.mode !== 'dsh' || responses.has(key)) throw new Error('请求已失效或正在提交');
+      responses.add(key); const active = dsh;
+      try { await active.respondQuestion(checked.identity, checked.answers); }
+      catch { throw new Error('回答未确认，请检查 DSH 中的当前问题'); }
+      finally { responses.delete(key); }
+    });
+    ipcMain.handle('glass:optics-state',event=>{assertSender(event);return optics!.state();});
+    ipcMain.handle('glass:optics-enable',(event,value:unknown)=>{
+      assertSender(event);if(typeof value!=='boolean')throw new Error('Invalid optics setting');
+      if(value)ui!.setSettings({material:'transparent'});
+      return optics!.enable(value);
+    });
     ipcMain.handle('glass:window-state', event => { assertSender(event); return ui!.state(); });
     ipcMain.handle('glass:window', (event, action: unknown, reduced: unknown) => {
       assertSender(event);
       if (typeof action !== 'string' || reduced !== undefined && typeof reduced !== 'boolean') throw new Error('Invalid window action');
       return ui!.request(action as WindowAction, reduced === true);
     });
-    ipcMain.handle('glass:settings', (event, value: unknown) => { assertSender(event); return ui!.setSettings(value); });
+    ipcMain.handle('glass:settings', (event, value: unknown) => {
+      assertSender(event);const next=ui!.setSettings(value);
+      if(optics!.state().enabled && (next.settings.material==='solid' || next.settings.material==='acrylic'))optics!.enable(false);
+      return next;
+    });
     ipcMain.handle('glass:resize', (event, value: unknown) => {
       assertSender(event);
       if (!finiteRecord(value, ['x', 'y', 'width', 'height'])) throw new Error('Invalid bounds');
@@ -134,7 +245,7 @@ else {
     });
     ipcMain.handle('glass:move', (event, value: unknown) => {
       assertSender(event); if (!finiteRecord(value, ['x', 'y'])) throw new Error('Invalid position');
-      ui!.move(Math.round(value.x!), Math.round(value.y!));
+      return ui!.move(Math.round(value.x!), Math.round(value.y!));
     });
     ipcMain.handle('glass:select-session', (event, id: unknown) => {
       assertSender(event); if (typeof id !== 'string' || !Object.hasOwn(state.sessions, id)) throw new Error('Unknown Session');
@@ -148,12 +259,11 @@ else {
       clipboard.writeText(a.commandPreview);
     });
     ipcMain.handle('glass:mock', (event, action: MockAction) => { assertSender(event); mockAction(action); });
-    adapter = makeAdapter('normal');
-    bridge = await createBridge({ welcome: () => adapter!.welcome(), snapshot: () => adapter!.snapshot() });
-    adapter.start(); connect();
+    if (smoke) await useMock();
+    else { update({ kind: 'transport.closed' }); publishSource(); }
     watchdog = setInterval(() => { if (socket && Date.now() - lastReceived > 9000) { update({ kind: 'transport.closed' }); socket.terminate(); } }, 1000);
     tray = new Tray(nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGElEQVQ4T2Nk+P+/HgMlgImBQjBqAAMAAGmDH/FHQwHAAAAAAElFTkSuQmCC'));
-    tray.setToolTip('DSH Glass · Mock 演示 · 未连接真实 DSH'); tray.setContextMenu(ui.menu());
+    tray.setToolTip('DSH Glass · ' + sourceName()); tray.setContextMenu(ui.menu());
     tray.on('double-click', () => win.show());
     globalShortcut.register('CommandOrControl+Shift+G', () => win.isVisible() ? win.hide() : win.show());
     screen.on('display-removed', () => win.setBounds(clampBounds(win.getBounds(), screen.getPrimaryDisplay().workArea)));
@@ -163,5 +273,7 @@ else {
 }
 app.on('before-quit', () => {
   quitting = true; reconnectEnabled = false; clearTimeout(retry); clearInterval(watchdog); ui?.stop();
-  adapter?.stop(); socket?.terminate(); void bridge?.close(); globalShortcut.unregisterAll(); tray?.destroy();
+  optics?.stop();
+  positioner?.stop();
+  sourceGeneration++; dsh?.stop(); adapter?.stop(); socket?.terminate(); void bridge?.close(); globalShortcut.unregisterAll(); tray?.destroy();
 });
