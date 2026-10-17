@@ -5,7 +5,7 @@ export type GlassSettings = GlassAppearance & {
   theme: 'auto' | 'light' | 'dark'; strength: 'clear' | 'balanced' | 'readable';
   defaultView: 'capsule' | 'peek' | 'remember-last'; autoApproval: boolean; autoCollapse: boolean;
   animation: 'full' | 'reduced' | 'off'; pin: 'always' | 'on-notification' | 'normal';
-  material: 'system' | 'transparent' | 'acrylic' | 'solid';
+  material: 'system' | 'transparent' | 'acrylic' | 'frosted' | 'solid';
 };
 export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, animation: 'full', pin: 'always', material: 'system' };
 export function normalizeSettings(value: unknown): GlassSettings {
@@ -14,7 +14,7 @@ export function normalizeSettings(value: unknown): GlassSettings {
   function choice<T extends string>(key: string, options: readonly T[], fallback: T): T { return options.includes(v[key] as T) ? v[key] as T : fallback; }
   return { ...normalizeGlassAppearance(v), theme: choice('theme', ['auto', 'light', 'dark'], 'auto'), strength: choice('strength', ['clear', 'balanced', 'readable'], 'balanced'),
     defaultView: choice('defaultView', ['capsule', 'peek', 'remember-last'], 'capsule'), autoApproval: v.autoApproval === true, autoCollapse: v.autoCollapse === true,
-    animation: choice('animation', ['full', 'reduced', 'off'], 'full'), pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'solid'], 'system') };
+    animation: choice('animation', ['full', 'reduced', 'off'], 'full'), pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], 'system') };
 }
 export function viewSize(mode: GlassViewMode) {
   return { capsule: { width: 300, height: 52 }, peek: { width: 340, height: 168 }, expanded: { width: 400, height: 280 }, approval: { width: 400, height: 340 } }[mode];

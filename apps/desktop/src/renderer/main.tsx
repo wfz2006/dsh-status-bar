@@ -46,13 +46,13 @@ function App() {
   const invoke = (value: WindowAction) => () => void action(value);
   return <main ref={root} {...drag} className="glass" data-mode={mode} data-panel={windowState.panel ?? 'none'}
     data-state={task.status} data-material={windowState.material} data-strength={windowState.settings.strength}
-    data-theme={windowState.settings.theme} data-morph={windowState.morphing ?? 'idle'}
+    data-theme={windowState.material === 'frosted' && windowState.settings.theme === 'auto' ? 'light' : windowState.settings.theme} data-morph={windowState.morphing ?? 'idle'}
     data-animation={windowState.settings.animation} data-completion={windowState.completionFeedback}
     onKeyDown={e => {
       if (e.key === 'Escape') { e.preventDefault(); void action(windowState.panel ? 'back' : 'collapse'); }
       if (e.key === 'ContextMenu' || e.key === 'F10' && e.shiftKey) { e.preventDefault(); void action('menu'); }
     }}>
-    <GlassMaterial strength={windowState.settings.strength} moving={!!windowState.morphing} solid={windowState.material === 'solid'} autoTheme={windowState.settings.theme==='auto'} appearance={windowState.settings} />
+    <GlassMaterial strength={windowState.settings.strength} moving={!!windowState.morphing} solid={windowState.material === 'solid'} frosted={windowState.material === 'frosted'} autoTheme={windowState.settings.theme==='auto'} appearance={windowState.settings} />
     {(mode !== 'capsule' || windowState.panel) && <div className="drag-strip">
       <div className="chrome-group" role="toolbar" aria-label="窗口操作">
         <button className="chrome-button" aria-label="收起窗口" title="收起窗口" onClick={invoke('collapse')}><Icon name="collapse"/></button>

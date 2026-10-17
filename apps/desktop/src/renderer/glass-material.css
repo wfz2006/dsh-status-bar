@@ -9,3 +9,26 @@
 .glass-rim { position:absolute; inset:0; z-index:3; border-radius:inherit; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.26),inset 0 1px 3px rgba(255,255,255,.52); }
 .glass-rim::before { content:""; position:absolute; inset:0; border-radius:inherit; padding:1.5px; background:linear-gradient(135deg,#fffffff0,#ffffff55 32%,#d8edff99 55%,#ffffff50 74%,#fff4d7cc); mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; }
 .glass[data-material=solid] .glass-material { background:transparent; }
+/* Frosted theme: soften the sampled desktop with a wide blur, then lay a milky
+   veil and a faint grain under the lens surface so refraction still reads. */
+.glass[data-material=frosted] .desktop-backdrop { filter:blur(34px) saturate(.72) brightness(1.08) contrast(.9); transform:scale(1.06); }
+.glass-frost { position:absolute; inset:0; z-index:0; border-radius:inherit; pointer-events:none;
+  background:
+    radial-gradient(120% 140% at 20% -10%, rgba(255,255,255,.62), rgba(255,255,255,.26) 42%, rgba(255,255,255,.10) 72%),
+    linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,.14) 34%, rgba(255,255,255,.24));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55); }
+.glass-frost::after { content:""; position:absolute; inset:0; border-radius:inherit; opacity:.22; mix-blend-mode:soft-light;
+  background-image:radial-gradient(rgba(255,255,255,.85) .5px, transparent .6px); background-size:3px 3px; }
+.glass[data-theme=dark] .glass-frost,
+.glass[data-theme=auto][data-backdrop-tone=dark] .glass-frost {
+  background:
+    radial-gradient(120% 140% at 20% -10%, rgba(52,62,78,.58), rgba(26,32,42,.30) 44%, rgba(16,20,28,.12) 72%),
+    linear-gradient(180deg, rgba(30,36,46,.30), rgba(18,22,30,.12) 34%, rgba(24,30,40,.20));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.26); }
+@media(prefers-color-scheme:dark) {
+  .glass[data-theme=auto]:not([data-backdrop-tone=light]) .glass-frost {
+    background:
+      radial-gradient(120% 140% at 20% -10%, rgba(52,62,78,.58), rgba(26,32,42,.30) 44%, rgba(16,20,28,.12) 72%),
+      linear-gradient(180deg, rgba(30,36,46,.30), rgba(18,22,30,.12) 34%, rgba(24,30,40,.20));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.26); }
+}

@@ -72,7 +72,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('Invalid settings');
     settings = normalizeSettings({ ...settings, ...patch });
     nativeTheme.themeSource = settings.theme === 'auto' ? 'system' : settings.theme;
-    presentation?.setMaterial(settings.material === 'solid' ? 'solid' : settings.material === 'acrylic' ? 'acrylic' : 'clear');
+    presentation?.setMaterial(settings.material === 'solid' ? 'solid' : settings.material === 'acrylic' ? 'acrylic' : settings.material === 'frosted' ? 'frosted' : 'clear');
     win.setAlwaysOnTop(settings.pin === 'always' || settings.pin === 'on-notification' && sourceConnected && view.pending.length > 0);
     // Settings changes must be saved even while the settings panel is open.
     if (!smoke) try { writeFileSync(preferencePath, JSON.stringify({ version: 2, settings, mode: panelReturn?.mode ?? view.mode, manual: panelReturn?.manual ?? view.manual, bounds: panelReturn?.bounds ?? win.getBounds() })); } catch { /* Optional persistence. */ }

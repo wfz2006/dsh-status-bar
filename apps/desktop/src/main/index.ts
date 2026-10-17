@@ -242,7 +242,7 @@ else {
     ipcMain.handle('glass:optics-state',event=>{assertSender(event);return optics!.state();});
     ipcMain.handle('glass:optics-enable',(event,value:unknown)=>{
       assertSender(event);if(typeof value!=='boolean')throw new Error('Invalid optics setting');
-      if(value)ui!.setSettings({material:'transparent'});
+      if(value && ui!.state().settings.material==='solid')ui!.setSettings({material:'transparent'});
       return optics!.enable(value);
     });
     ipcMain.handle('glass:window-state', event => { assertSender(event); return ui!.state(); });
@@ -254,6 +254,9 @@ else {
     ipcMain.handle('glass:settings', (event, value: unknown) => {
       assertSender(event);const next=ui!.setSettings(value);
       if(optics!.state().enabled && (next.settings.material==='solid' || next.settings.material==='acrylic'))optics!.enable(false);
+      // Frosted glass blurs the sampled desktop; start the worker when it is
+      // picked at runtime instead of waiting for the next launch.
+      if(next.settings.material==='frosted' && !smoke && !optics!.state().enabled && existsSync(join(here,'../../native/RegionCapture.exe')))void optics!.enable(true);
       return next;
     });
     ipcMain.handle('glass:resize', (event, value: unknown) => {

@@ -18,6 +18,11 @@ it('migrates the retired native acrylic comparison without resetting other prefe
   expect(migrated.material).toBe('transparent');
   expect(migrated.theme).toBe('dark');expect(migrated.autoApproval).toBe(true);expect(migrated.pin).toBe('always');
 });
+it('keeps the frosted glass theme as an explicit material',()=>{
+  expect(normalizeSettings({ material: 'frosted' }).material).toBe('frosted');
+  expect(normalizeSettings({ material: 'frosted', pin: 'normal', theme: 'light' })).toMatchObject({ material: 'frosted', pin: 'normal', theme: 'light' });
+  expect(normalizeSettings({ material: 'nonsense' }).material).toBe('system');
+});
 it('derives status and progress from source facts, not Todo completion', () => {
   let p = initialProjection();
   for (const f of mockFrames().slice(0, 2)) p = reduceProjection(p, f);

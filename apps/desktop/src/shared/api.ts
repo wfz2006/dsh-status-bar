@@ -4,7 +4,7 @@ import type { GlassViewMode, GlassSettings } from './view-model';
 import type { DesktopOpticsState, DesktopOpticsFrame,DesktopOpticsBounds } from './desktop-optics';
 export type WindowAction = 'expand' | 'collapse' | 'hide' | 'quit' | 'pin' | 'settings' | 'activity' | 'back' | 'approval' | 'menu' | 'open-dsh' | 'reconnect';
 export type MockAction = 'restart' | 'disconnect' | 'reconnect' | 'out-of-order' | 'approval-queue' | 'edge-cases' | 'completed' | 'long-approval';
-export type PresentationState = { material: 'acrylic' | 'clear' | 'solid'; morphing: 'expanding' | 'collapsing' | null };
+export type PresentationState = { material: 'acrylic' | 'clear' | 'solid' | 'frosted'; morphing: 'expanding' | 'collapsing' | null };
 export type WindowState = PresentationState & { pinned: boolean; viewMode: GlassViewMode; manualSize: boolean; panel: 'settings' | 'activity' | null; settings: GlassSettings; completionFeedback: boolean };
 export type SourceState = { mode: 'mock' | 'dsh'; connection: 'disconnected' | 'connecting' | 'connected'; endpoint: string | null; error: string | null };
 export type RequestIdentity = { runtimeId: string; sourceEpoch: string; sessionId: string; requestId: string };

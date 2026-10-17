@@ -136,6 +136,11 @@ button { transition:background-color 160ms ease; }button:active:not(.task-capsul
 .pending-count { color:var(--warning); font-size:10px; white-space:nowrap; flex:0 0 auto; text-shadow:none; }
 /* Keep renderer layers above the transparent optical surface. */
 .glass:not([data-material=solid]) { background:transparent; }
+/* Frosted fallback: without a running sampler the window still reads as milky
+   glass instead of fully clear; the sampled backdrop itself is blurred in CSS. */
+.glass[data-material=frosted] { background:rgba(255,255,255,.30); }
+.glass[data-theme=dark][data-material=frosted] { background:rgba(18,22,30,.32); }
+@media(prefers-color-scheme:dark) { .glass[data-theme=auto][data-material=frosted] { background:rgba(18,22,30,.32); } }
 .glass>.task-capsule,.glass>section,.glass>.inline-error,.glass>.drag-strip { position:relative; z-index:1; }
 .capsule-title,.task-heading h1,.current-step>span:last-child,.todo>span:last-child,.task-meta,.step-count,.request-session,.command-preview,.command-full,.request-heading,.request-details,.safety-note { -webkit-text-stroke:0; }
 .task-capsule,.task-peek,.task-expanded,.approval-view { text-shadow:none; }

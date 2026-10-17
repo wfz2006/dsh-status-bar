@@ -15,7 +15,7 @@ declare global {
   }
 }
 
-export function GlassMaterial({ strength, moving, solid,autoTheme,appearance }: { strength: GlassSettings['strength']; moving: boolean; solid: boolean;autoTheme:boolean;appearance:GlassAppearance }) {
+export function GlassMaterial({ strength, moving, solid, frosted, autoTheme, appearance }: { strength: GlassSettings['strength']; moving: boolean; solid: boolean; frosted: boolean; autoTheme:boolean;appearance:GlassAppearance }) {
   const surface = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => { document.documentElement.dataset.glassProfile = strength; }, [strength]);
   useLayoutEffect(() => {
@@ -41,6 +41,7 @@ export function GlassMaterial({ strength, moving, solid,autoTheme,appearance }: 
     <svg id="glass-defs" width="0" height="0" focusable="false" />
     <div className="glass-body" style={{filter:solid || appearance.brightness===100?'none':`brightness(${appearance.brightness / 100})`}}>
       <DesktopBackdrop paused={solid} autoTheme={autoTheme} appearance={appearance} />
+      {frosted && !solid && <div className="glass-frost" />}
       {!solid && <div ref={surface} className="lg-material-surface" data-glass data-lg-role="operation" />}
       {!solid && <div className="glass-tint" style={{backgroundColor:tintFill(appearance)}} />}
     </div>
