@@ -8,7 +8,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:desktop": "node scripts/desktop-smoke.mjs"
+    "test:desktop": "node scripts/desktop-smoke.mjs",
+    "test:liquid": "node scripts/liquid-acceptance.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.1", "eslint": "9.39.1", "typescript-eslint": "8.48.0",

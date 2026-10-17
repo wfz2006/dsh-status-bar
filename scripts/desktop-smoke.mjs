@@ -21,15 +21,19 @@ try {
   await page.screenshot({ path: `${output}/capsule.png` });
   await page.getByRole('button', { name: '展开工作台', exact: true }).click();
   await page.locator('[data-density=workspace]').waitFor();
+  await page.locator('[data-morph=idle]').waitFor();
   await page.getByText('Mock 已连接', { exact: true }).waitFor();
   await page.getByRole('region', { name: '模拟审批' }).waitFor({ timeout: 15000 });
   assert.equal(await page.locator('.todo').count(), 2);
+  assert.equal(await page.locator('.approval-details').getAttribute('open'), null);
+  await page.screenshot({ path: `${output}/liquid-workspace.png` });
+  await page.locator('.approval-details > summary').click();
   await page.getByRole('button', { name: '允许一次', exact: true }).isDisabled().then(v => assert.ok(v));
   await page.screenshot({ path: `${output}/workspace.png` });
   results.push('Actual Electron startup, 3→2 Todo replacement, read-only approval: PASS');
   const security = await page.evaluate(() => ({ node: typeof window.require, token: Object.keys(window.glass) }));
   assert.equal(security.node, 'undefined');
-  assert.deepEqual(security.token.sort(), ['getState', 'mockAction', 'subscribe', 'windowAction', 'getWindowState', 'subscribeWindow'].sort());
+  assert.deepEqual(security.token.sort(), ['getState', 'mockAction', 'subscribe', 'windowAction', 'getWindowState', 'subscribeWindow', 'resizeWindow'].sort());
   const preferences = await app.evaluate(({ BrowserWindow }) => {
     const prefs = BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences();
     return { sandbox: prefs.sandbox, nodeIntegration: prefs.nodeIntegration, contextIsolation: prefs.contextIsolation };
@@ -40,7 +44,8 @@ try {
   assert.equal(await page.locator('.todo').count(), 1);
   assert.equal(await page.locator('.approval').count(), 0);
   await page.getByLabel('选择会话').selectOption('demo-main');
-  await page.locator('summary').click();
+  await page.locator('.approval-details > summary').click();
+  await page.locator('.preview-controls > summary').click();
   await page.getByRole('button', { name: '模拟断线', exact: true }).click();
   await page.getByText('Mock 连接已断开', { exact: true }).first().waitFor();
   assert.ok(await page.getByRole('button', { name: '允许一次', exact: true }).isDisabled());

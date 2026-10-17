@@ -19,6 +19,7 @@
 - [x] M1-06 单测：重复消息、旧 epoch、错误 payload、Todo 整表替换。证据：pnpm test；含空 Todo、并行 Todo、原型键、迟到快照回归。
 
 ## M2 — 桌面窗口和自适应 UI（P0）
+2026-10-17 视觉修订：透明 Acrylic/清透/实色三档、移除系统与页面双框、420ms 原生形变（减少动画立即切换）、340×300 紧凑默认布局、审批/活动设置收起。证据：`docs/evidence/liquid/acceptance.json` 及原生合成截图；物理桌面像素折射未实现。单元测试现为 21 项。
 - [ ] M2-01 Electron 主进程：单实例、托盘、关闭行为、窗口尺寸记忆。已实现最小版本；跨重启展开尺寸/位置偏好与原生托盘操作尚待完整验收。
 - [x] M2-02 Preload 白名单 IPC（禁止在 renderer 开 Node）。证据：Playwright Electron 验证 sandbox/contextIsolation/nodeIntegration 与窄 API，无 token。
 - [ ] M2-03 可拖拽、可调整尺寸、磁性吸附、跨屏恢复。

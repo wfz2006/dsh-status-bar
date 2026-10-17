@@ -14,7 +14,8 @@ const api: GlassAPI = {
     ipcRenderer.on('glass:update', listener);
     return () => ipcRenderer.removeListener('glass:update', listener);
   },
-  windowAction: action => ipcRenderer.invoke('glass:window', action),
+  windowAction: (action, reduceMotion) => ipcRenderer.invoke('glass:window', action, reduceMotion),
+  resizeWindow: bounds => ipcRenderer.invoke('glass:resize', bounds),
   mockAction: action => ipcRenderer.invoke('glass:mock', action),
 };
 contextBridge.exposeInMainWorld('glass', api);

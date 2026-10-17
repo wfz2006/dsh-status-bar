@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, screen, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, nativeTheme, screen, globalShortcut } from 'electron';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,7 +7,8 @@ import WebSocket from 'ws';
 import { createBridge } from '@glass/bridge';
 import { createMockAdapter, type MockScenario } from '@glass/mock';
 import { frameSchema, initialProjection, reduceProjection, type Frame, type LocalEvent } from '@glass/protocol';
-import { clampBounds, type Bounds } from '../shared/window';
+import { clampBounds, migrateBounds, type Bounds } from '../shared/window';
+import { createPresentation } from './presentation';
 
 const here = dirname(fileURLToPath(import.meta.url));
 let win: BrowserWindow;
@@ -22,9 +23,9 @@ let watchdog: ReturnType<typeof setInterval> | undefined;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let reconnectEnabled = true;
 let lastReceived = 0;
-let largeSize = { width: 420, height: 560 };
+let largeSize = { width: 340, height: 300 };
 let lastExpanded: Bounds | undefined;
-let opaque = true;
+let presentation: ReturnType<typeof createPresentation>;
 const rendererFile = join(here, '../renderer/index.html');
 const devURL = process.env.ELECTRON_RENDERER_URL;
 const smoke = process.env.GLASS_SMOKE === '1';
@@ -66,7 +67,7 @@ function savedBounds(): Bounds {
     const value: unknown = JSON.parse(readFileSync(join(app.getPath('userData'), 'window.json'), 'utf8'));
     if (typeof value === 'object' && value !== null && 'x' in value && 'y' in value && 'width' in value && 'height' in value &&
       [value.x, value.y, value.width, value.height].every(v => typeof v === 'number' && Number.isFinite(v))) {
-      const bounds = value as Bounds;
+      const bounds = migrateBounds(value as Bounds, 'presentationVersion' in value ? value.presentationVersion : undefined);
       return clampBounds(bounds, screen.getDisplayMatching(bounds).workArea);
     }
   } catch { /* Missing/invalid geometry falls back to visible coordinates. */ }
@@ -75,25 +76,20 @@ function savedBounds(): Bounds {
 function saveBounds() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    if (win.isDestroyed() || smoke) return;
+    if (win.isDestroyed() || smoke || presentation.state().morphing) return;
     const bounds = win.getBounds();
     if (bounds.width >= 340 && bounds.height >= 250) { largeSize = { width: bounds.width, height: bounds.height }; lastExpanded = bounds; }
-    try { writeFileSync(join(app.getPath('userData'), 'window.json'), JSON.stringify(bounds)); } catch { /* Geometry persistence is optional. */ }
+    try { writeFileSync(join(app.getPath('userData'), 'window.json'), JSON.stringify({ ...bounds, presentationVersion: 2 })); } catch { /* Geometry persistence is optional. */ }
   }, 200);
 }
-function expand() {
+function expand(reducedMotion = false) {
   const current = win.getBounds();
-  win.setBounds(clampBounds({ ...current, ...largeSize }, screen.getDisplayMatching(current).workArea));
+  presentation.morphTo(clampBounds({ ...current, ...largeSize }, screen.getDisplayMatching(current).workArea), reducedMotion);
 }
-function collapse() {
+function collapse(reducedMotion = false) {
   const current = win.getBounds();
-  if (current.width >= 340 && current.height >= 250) { largeSize = { width: current.width, height: current.height }; lastExpanded = current; }
-  win.setBounds({ x: lastExpanded?.x ?? current.x, y: lastExpanded?.y ?? current.y, width: 180, height: 54 });
-}
-function setMaterial() {
-  // Opaque fallback is default; native acrylic is opt-in until wallpaper acceptance.
-  try { win.setBackgroundMaterial(opaque ? 'none' : 'acrylic'); } catch { opaque = true; }
-  win.setBackgroundColor(opaque ? '#151d2c' : '#00000000');
+  if (!presentation.state().morphing && current.width >= 340 && current.height >= 250) { largeSize = { width: current.width, height: current.height }; lastExpanded = current; }
+  presentation.morphTo({ x: lastExpanded?.x ?? current.x, y: lastExpanded?.y ?? current.y, width: 180, height: 54 }, reducedMotion);
 }
 function refreshTrayMenu() {
   tray?.setContextMenu(Menu.buildFromTemplate([
@@ -115,10 +111,13 @@ else {
   app.on('second-instance', () => { if (win) { win.show(); win.focus(); } });
   app.whenReady().then(async () => {
     app.setAppUserModelId('local.dsh-glass.preview');
+    nativeTheme.themeSource = 'dark';
     win = new BrowserWindow({ ...savedBounds(), minWidth: 180, minHeight: 54, maxWidth: 900, maxHeight: 1000,
-      frame: false, resizable: true, show: false, backgroundColor: '#151d2c', title: 'DSH Glass · Mock 开发预览',
+      frame: false, thickFrame: false, hasShadow: false, roundedCorners: false,
+      transparent: true, resizable: true, show: false, backgroundColor: '#00000000', title: 'DSH Glass · Mock 开发预览',
       webPreferences: { preload: join(here, '../preload/index.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true },
     });
+    presentation = createPresentation(win);
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', event => event.preventDefault());
     win.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
@@ -126,23 +125,35 @@ else {
     win.on('close', event => { if (!quitting) { event.preventDefault(); win.hide(); } });
     win.on('ready-to-show', () => win.show());
     ipcMain.handle('glass:state', event => { assertSender(event); return state; });
-    ipcMain.handle('glass:window-state', event => { assertSender(event); return { pinned: win.isAlwaysOnTop() }; });
+    ipcMain.handle('glass:window-state', event => { assertSender(event); return presentation.state(); });
     win.on('always-on-top-changed', () => {
-      win.webContents.send('glass:window-update', { pinned: win.isAlwaysOnTop() });
+      presentation.publish();
       refreshTrayMenu();
     });
-    ipcMain.handle('glass:window', (event, action: unknown) => {
+    ipcMain.handle('glass:window', (event, action: unknown, reduceMotion: unknown) => {
       assertSender(event);
+      if (reduceMotion !== undefined && typeof reduceMotion !== 'boolean') throw new Error('Invalid motion preference');
       switch (action) {
-        case 'expand': expand(); break;
-        case 'collapse': collapse(); break;
+        case 'expand': expand(reduceMotion === true); break;
+        case 'collapse': collapse(reduceMotion === true); break;
         case 'hide': win.hide(); break;
         case 'quit': app.quit(); break;
         case 'pin': win.setAlwaysOnTop(!win.isAlwaysOnTop()); break;
-        case 'material': opaque = !opaque; setMaterial(); break;
+        case 'material': presentation.cycleMaterial(); break;
+        case 'theme-system': nativeTheme.themeSource = 'system'; break;
+        case 'theme-dark': nativeTheme.themeSource = 'dark'; break;
+        case 'theme-light': nativeTheme.themeSource = 'light'; break;
         default: throw new Error('Unsupported window action');
       }
-      return { pinned: !win.isDestroyed() && win.isAlwaysOnTop() };
+      return presentation.state();
+    });
+    ipcMain.handle('glass:resize', (event, value: unknown) => {
+      assertSender(event);
+      if (typeof value !== 'object' || value === null || !('x' in value && 'y' in value && 'width' in value && 'height' in value) ||
+        ![value.x, value.y, value.width, value.height].every(v => typeof v === 'number' && Number.isFinite(v))) throw new Error('Invalid window bounds');
+      const bounds = value as Bounds;
+      presentation.stop();
+      win.setBounds(clampBounds({ x: Math.round(bounds.x), y: Math.round(bounds.y), width: Math.min(900, Math.round(bounds.width)), height: Math.min(1000, Math.round(bounds.height)) }, screen.getDisplayMatching(win.getBounds()).workArea));
     });
     ipcMain.handle('glass:mock', (event, action: unknown) => {
       assertSender(event);
@@ -174,7 +185,7 @@ else {
 }
 app.on('before-quit', () => {
   quitting = true; reconnectEnabled = false;
-  clearTimeout(retry); clearTimeout(saveTimer); clearInterval(watchdog);
+  clearTimeout(retry); clearTimeout(saveTimer); clearInterval(watchdog); presentation?.stop();
   adapter?.stop(); socket?.terminate(); void bridge?.close();
   globalShortcut.unregisterAll(); tray?.destroy();
 });
