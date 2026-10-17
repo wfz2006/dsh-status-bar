@@ -12,7 +12,8 @@
     "test:preferences": "node scripts/preferences-acceptance.mjs",
     "test:approval-layout": "node scripts/approval-layout.mjs",
     "test:native-redesign": "node scripts/native-redesign.mjs",
-    "test:liquid": "node scripts/liquid-acceptance.mjs"
+    "test:liquid": "node scripts/liquid-acceptance.mjs",
+    "test:live": "node scripts/live-dsh-integration.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.1", "eslint": "9.39.1", "typescript-eslint": "8.48.0",
