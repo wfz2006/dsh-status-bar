@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import WebSocket from 'ws';
 import { createBridge } from '@glass/bridge';
-import { createMockAdapter, type MockScenario } from '@glass/mock';
+import { createMockAdapter, mockSnapshot, mockWelcome, type MockScenario } from '@glass/mock';
 import { createDshAdapter } from '@glass/dsh';
 import { frameSchema, initialProjection, reduceProjection, type Frame, type LocalEvent } from '@glass/protocol';
 import { clampBounds, type Bounds } from '../shared/window';
@@ -90,7 +90,13 @@ async function connectDSH(value: unknown) {
 }
 async function useMock() {
   resetSource('mock'); const generation = sourceGeneration;
-  if (!bridge) bridge = await createBridge({ welcome: () => adapter!.welcome(), snapshot: () => adapter!.snapshot() });
+  // The bridge answers hello/requests on timers that can fire while this function is still awaiting
+  // createBridge (or after a later source switch cleared the adapter). Never dereference a stale or
+  // missing adapter here: fall back to the static demo frames instead of crashing the main process.
+  if (!bridge) bridge = await createBridge({
+    welcome: () => adapter?.welcome() ?? mockWelcome(),
+    snapshot: () => adapter?.snapshot() ?? mockSnapshot(),
+  });
   if (generation !== sourceGeneration) return;
   adapter = makeAdapter('normal'); adapter.start(); reconnectEnabled = true; connect(); publishSource();
 }
