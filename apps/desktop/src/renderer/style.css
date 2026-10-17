@@ -27,6 +27,10 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 .task-capsule:active { cursor:grabbing; }
 .capsule-title { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
 .step-count { margin-left:auto; flex:0 0 auto; font-variant-numeric:tabular-nums; font-size:12px; color:var(--muted); white-space:nowrap; }
+.capsule-metrics { flex:0 0 auto; font-size:10.5px; font-weight:600; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.peek-stats { display:flex; flex-direction:column; gap:2px; margin-top:6px; font-size:10.5px; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.task-metrics { display:flex; flex-wrap:wrap; gap:2px 10px; margin:0 0 6px; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.task-metrics b { color:var(--fg); font-weight:600; }
 .capsule-state { flex:0 0 auto; padding:2px 8px; border-radius:999px; background:rgba(52,199,89,.18); color:#1d7f47; font-size:11px; font-weight:600; white-space:nowrap; }
 .glass[data-theme=dark] .capsule-state { color:#8ff0b3; background:rgba(80,220,130,.2); }
 /* A finished task tints the whole glass body green instead of only the orb. */

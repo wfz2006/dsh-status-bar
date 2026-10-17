@@ -10,6 +10,7 @@ type Args = Record<string, unknown>;
 type Seed = {
   sessionId: string; cwd?: string; running?: boolean; title?: string;
   todos?: { content: string; status: 'pending' | 'in_progress' | 'completed' }[];
+  stats?: Args;
 };
 type AuthMode = 'ok' | 'not-found' | 'foreign' | 'no-cookie';
 const TOKEN = 'host-token';
@@ -121,7 +122,7 @@ class FakeHost {
     let result: Args = { ok: true, value: true };
     if (method === '$events/result' && this.rejectResults) result = { ok: false };
     else if (this.rpc) result = { ok: true, value: this.rpc(method, args) };
-    else if (method === 'session/list') result = { ok: true, value: { items: this.sessions.map(seed => ({ sessionId: seed.sessionId, cwd: seed.cwd ?? 'C:\\ws', running: seed.running ?? false, projections: { values: { title: seed.title ?? seed.sessionId } } })) } };
+    else if (method === 'session/list') result = { ok: true, value: { items: this.sessions.map(seed => ({ sessionId: seed.sessionId, cwd: seed.cwd ?? 'C:\\ws', running: seed.running ?? false, projections: { values: { title: seed.title ?? seed.sessionId, ...(seed.stats ?? {}) } } })) } };
     response.writeHead(200, { 'Content-Type': 'application/json' });
     response.end(JSON.stringify({ type: 'server-response', rpcId: String(body.rpcId ?? ''), result }));
   }
@@ -212,6 +213,20 @@ describe('dsh host contract', () => {
     h.host.audit('s1', { type: 'turn/end', data: { reason: { kind: 'completed' } } });
     await expect.poll(() => h.state().sessions['s1']?.phase, { timeout: 3000 }).toBe('finished');
     expect(h.state().sessions['s1']?.agentStatus).toBe('idle');
+  });
+
+  it('derives compact usage stats from cached session projections', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', stats: {
+      sessionStats: { turns: 5, steps: 137, decodeMs: 625876, decodeTokens: 159154 },
+      tokenUsage: { uncachedInputTokens: 404103, outputTokens: 159154, cacheReadTokens: 8790912, cacheWriteTokens: 0 },
+      contextPressure: { projectedTokens: 103981, contextWindow: 1048576 },
+    } }] });
+    await h.adapter.connect(h.host.link());
+    await expect.poll(() => h.state().sessions['s1']?.stats?.turns, { timeout: 3000 }).toBe(5);
+    expect(h.state().sessions['s1']?.stats).toEqual({
+      turns: 5, steps: 137, tokensPerSecond: 254, cacheHitPercent: 95.6, contextPercent: 9.9,
+      tokens: { input: 404103, cacheRead: 8790912, cacheWrite: 0, output: 159154, total: 9354169 },
+    });
   });
 
   it('only actionables complete approvals and submits through the live delivery identity', async () => {

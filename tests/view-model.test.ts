@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { initialProjection, reduceProjection } from '../packages/protocol/src/index';
 import { mockFrames } from '../packages/adapters/mock/src/index';
-import { DEFAULT_SETTINGS, normalizeSettings, deriveTask, initialView, observeFacts, manualView, viewForSize, viewSize } from '../apps/desktop/src/shared/view-model';
+import { DEFAULT_SETTINGS, normalizeSettings, deriveTask, initialView, observeFacts, manualView, viewForSize, viewSize, formatTokens, taskMetrics } from '../apps/desktop/src/shared/view-model';
 
 it('defaults to a calm task capsule and validates persisted preferences', () => {
   expect(initialView().mode).toBe('capsule');
@@ -29,6 +29,17 @@ it('derives status and progress from source facts, not Todo completion', () => {
   p = { ...p, sessions: { ...p.sessions, 'demo-main': { ...s, todos: [] } } };
   expect(deriveTask(p, 'demo-main').total).toBe(0);
   expect(deriveTask({ ...p, connection: 'disconnected', stale: true }, 'demo-main').status).toBe('disconnected');
+});
+it('summarises usage stats for the compact and detailed task views', () => {
+  let p = initialProjection(); for (const f of mockFrames().slice(0, 2)) p = reduceProjection(p, f);
+  const task = deriveTask(p, 'demo-main');
+  expect(taskMetrics(task.session)).toEqual({ turns: 3, steps: 42, tokensPerSecond: 218, cacheHitPercent: 96.4, contextPercent: 7.2,
+    totalTokens: 1_280_200, inputTokens: 18_400, cacheTokens: 1_240_000, outputTokens: 21_800 });
+  expect(formatTokens(1_280_200)).toBe('1.3M');
+  expect(formatTokens(432_200)).toBe('432K');
+  expect(formatTokens(9800)).toBe('9.8K');
+  expect(formatTokens(0)).toBe('0');
+  expect(taskMetrics(undefined)).toBeUndefined();
 });
 it('keeps business approval facts independent of user-selected form', () => {
   const facts = { pending: ['r/s/a'], completed: null };

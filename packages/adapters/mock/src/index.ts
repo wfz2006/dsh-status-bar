@@ -5,9 +5,11 @@ export const MOCK_EPOCH = 'mock-epoch-1';
 const base = { protocolVersion: 1 as const, runtimeId: MOCK_RUNTIME, epoch: MOCK_EPOCH, sentAt: '2026-10-17T01:00:00.000Z' };
 const initialSessions: Session[] = [
   { runtimeId: MOCK_RUNTIME, sessionId: 'demo-main', title: '构建 DSH Glass 悬浮伴侣', workspaceLabel: 'dsh-glass / 开发预览', agentStatus: 'running', phase: 'working', lastSourceSeq: 1,
-    todos: [{ content: '梳理项目与接口边界', status: 'completed' }, { content: '搭建本地通信桥', status: 'in_progress' }, { content: '验证悬浮窗与状态同步', status: 'pending' }], activities: [] },
+    todos: [{ content: '梳理项目与接口边界', status: 'completed' }, { content: '搭建本地通信桥', status: 'in_progress' }, { content: '验证悬浮窗与状态同步', status: 'pending' }], activities: [],
+    stats: { turns: 3, steps: 42, tokensPerSecond: 218, cacheHitPercent: 96.4, contextPercent: 7.2, tokens: { input: 18_400, cacheRead: 1_240_000, cacheWrite: 0, output: 21_800, total: 1_280_200 } } },
   { runtimeId: MOCK_RUNTIME, sessionId: 'demo-other', title: '视觉探索', workspaceLabel: 'design / Mock', agentStatus: 'idle', phase: 'unknown', lastSourceSeq: 1,
-    todos: [{ content: '整理设计参考', status: 'pending' }], activities: [] },
+    todos: [{ content: '整理设计参考', status: 'pending' }], activities: [],
+    stats: { turns: 2, steps: 11, tokensPerSecond: 154, cacheHitPercent: 91.3, contextPercent: 4.1, tokens: { input: 9_800, cacheRead: 410_000, cacheWrite: 0, output: 12_400, total: 432_200 } } },
 ];
 export function mockWelcome(): Frame {
   return { ...base, messageId: 'welcome', kind: 'glass.welcome', payload: { source: 'mock', capabilities: {

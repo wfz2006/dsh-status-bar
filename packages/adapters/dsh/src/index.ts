@@ -17,6 +17,26 @@ function questionItems(value: unknown): QuestionItem[] {
     return { id: bounded(q.id, '', 200), question: bounded(q.question), type: options?.length ? q.multiSelect === true ? 'multiple' : 'single' : 'freeText', options, allowCustom: true };
   });
 }
+const statNumber = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+const round = (value: number, digits: number) => Math.round(value * 10 ** digits) / 10 ** digits;
+/** Derive the compact usage line DSH shows from cached session projections; anything unparsable is omitted. */
+function sessionStats(stats: RecordValue, tokens: RecordValue, pressure: RecordValue): Session['stats'] {
+  const turns = statNumber(stats.turns); const steps = statNumber(stats.steps);
+  const input = statNumber(tokens.uncachedInputTokens); const cacheRead = statNumber(tokens.cacheReadTokens);
+  const cacheWrite = statNumber(tokens.cacheWriteTokens); const output = statNumber(tokens.outputTokens);
+  const decodeMs = statNumber(stats.decodeMs); const decodeTokens = statNumber(stats.decodeTokens);
+  const projected = statNumber(pressure.projectedTokens); const contextWindow = statNumber(pressure.contextWindow);
+  if (turns === undefined && steps === undefined && input === undefined && cacheRead === undefined) return undefined;
+  const tokenTotal = (input ?? 0) + (cacheRead ?? 0) + (cacheWrite ?? 0) + (output ?? 0);
+  const cacheHit = cacheRead !== undefined && input !== undefined && cacheRead + input > 0 ? round(cacheRead / (cacheRead + input) * 100, 1) : undefined;
+  return {
+    turns: Math.floor(turns ?? 0), steps: Math.floor(steps ?? 0),
+    ...(decodeMs !== undefined && decodeMs > 0 && decodeTokens !== undefined ? { tokensPerSecond: round(decodeTokens / decodeMs * 1000, 0) } : {}),
+    ...(cacheHit !== undefined ? { cacheHitPercent: cacheHit } : {}),
+    ...(projected !== undefined && contextWindow !== undefined && contextWindow > 0 ? { contextPercent: round(projected / contextWindow * 100, 1) } : {}),
+    ...(tokenTotal > 0 ? { tokens: { input: input ?? 0, cacheRead: cacheRead ?? 0, cacheWrite: cacheWrite ?? 0, output: output ?? 0, total: tokenTotal } } : {}),
+  };
+}
 
 /** All Host credentials and delivery IDs remain in this main-process adapter. */
 export function createDshAdapter(options: Options) {
@@ -59,6 +79,8 @@ export function createDshAdapter(options: Options) {
     const session = ensureSession(id); if (!session) return;
     const p = record(values);
     if ('title' in p) session.title = bounded(p.title, '未命名会话');
+    const stats = sessionStats(record(p.sessionStats), record(p.tokenUsage), record(p.contextPressure));
+    if (stats) session.stats = stats;
     if ('todos' in p) session.todos = Array.isArray(p.todos) ? p.todos.slice(0, 1000).map(record).filter(t => typeof t.content === 'string' && ['pending', 'in_progress', 'completed'].includes(String(t.status))).map(t => ({ content: bounded(t.content), status: t.status as 'pending' | 'in_progress' | 'completed' })) : [];
     const userQuestions = record(p.userQuestions);
     if (Array.isArray(userQuestions.active)) {

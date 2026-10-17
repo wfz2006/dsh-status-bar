@@ -1,4 +1,4 @@
-import type { Projection } from '@glass/protocol';
+import type { Projection, Session } from '@glass/protocol';
 import { DEFAULT_GLASS_APPEARANCE, normalizeGlassAppearance, type GlassAppearance } from './glass-appearance';
 export type GlassViewMode = 'capsule' | 'peek' | 'expanded' | 'approval';
 export type GlassSettings = GlassAppearance & {
@@ -51,4 +51,19 @@ export function deriveTask(p: Projection, selected: string) {
     idle: '空闲', unknown: '状态待同步', empty: '尚无会话', cancelled: '已取消', archived: '已归档' };
   return { session, title: session?.title || '尚无任务', todos, current: todos.filter(t => t.status === 'in_progress'), completed: todos.filter(t => t.status === 'completed').length,
     total: todos.length, pending, questions, attentionCount: pending.length + questions.length, status, label: labels[status] };
+}
+/** Compact token counts in the same 1.3M / 432K shape DSH's own status bar uses. */
+export function formatTokens(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '0';
+  if (value >= 1_000_000) return (value / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (value >= 1000) return (value / 1000).toFixed(value >= 100_000 ? 0 : 1).replace(/\.0$/, '') + 'K';
+  return String(Math.round(value));
+}
+/** Summarise the usage stats the adapter derived from DSH projections, if any are known. */
+export function taskMetrics(session: Session | undefined) {
+  const stats = session?.stats;
+  if (!stats) return undefined;
+  return { turns: stats.turns, steps: stats.steps, tokensPerSecond: stats.tokensPerSecond, cacheHitPercent: stats.cacheHitPercent,
+    contextPercent: stats.contextPercent, totalTokens: stats.tokens?.total, inputTokens: stats.tokens?.input,
+    cacheTokens: stats.tokens?.cacheRead, outputTokens: stats.tokens?.output };
 }

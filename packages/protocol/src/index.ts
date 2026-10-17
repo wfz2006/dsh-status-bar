@@ -4,6 +4,13 @@ const id = z.string().min(1).max(200);
 const text = z.string().max(4096);
 const seq = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 export const todoSchema = z.object({ content: text, status: z.enum(['pending', 'in_progress', 'completed']) }).strict();
+export const sessionStatsSchema = z.object({
+  turns: seq, steps: seq,
+  tokensPerSecond: z.number().nonnegative().max(1_000_000).optional(),
+  cacheHitPercent: z.number().min(0).max(100).optional(),
+  contextPercent: z.number().min(0).max(100).optional(),
+  tokens: z.object({ input: seq, cacheRead: seq, cacheWrite: seq, output: seq, total: seq }).strict().optional(),
+}).strict();
 export const capabilitiesSchema = z.object({
   observeSessions: z.boolean(), observeTodos: z.boolean(), observeTools: z.boolean(),
   respondApproval: z.boolean(), respondQuestion: z.boolean(),
@@ -16,6 +23,7 @@ export const sessionSchema = z.object({
   phase: z.enum(['working', 'waiting-approval', 'waiting-question', 'finished', 'error', 'cancelled', 'archived', 'unknown']),
   todos: z.array(todoSchema).max(1000), lastSourceSeq: seq,
   activities: z.array(activitySchema).max(100),
+  stats: sessionStatsSchema.optional(),
 });
 export const approvalSchema = z.object({
   requestId: id, runtimeId: id, sessionId: id, toolName: id, callId: id.optional(),
@@ -56,6 +64,7 @@ export const clientSchema = z.discriminatedUnion('kind', [
 // Input types keep pre-existing producers compatible; the schema supplies defaults at the boundary.
 export type Frame = z.input<typeof frameSchema>;
 export type Session = z.input<typeof sessionSchema>;
+export type SessionStats = z.infer<typeof sessionStatsSchema>;
 export type Approval = z.infer<typeof approvalSchema>;
 export type Question = z.input<typeof questionSchema>;
 export type Activity = z.input<typeof activitySchema>;
