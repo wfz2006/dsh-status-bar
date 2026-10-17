@@ -26,12 +26,13 @@ export async function fixture(extraEnv = {}, extraArgs = []) {
     await expect.poll(async () => (await page.evaluate(() => window.glass.getWindowState())).morphing).toBe(null);
   }
   async function backdrop(color = backgrounds.busy) {
-    await app.evaluate(async ({ BrowserWindow }, { mainId, color }) => {
+    await app.evaluate(async ({ BrowserWindow,screen }, { mainId, color }) => {
       let bg = BrowserWindow.getAllWindows().find(w => w.id !== mainId);
       if (!bg) bg = new BrowserWindow({ x:150,y:100,width:620,height:620,frame:false,show:false,webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false} });
+      bg.setBounds(screen.getPrimaryDisplay().bounds);
       await bg.loadURL('data:text/html,' + encodeURIComponent('<style>body{margin:0;height:100vh;background:'+color+'}</style>'));
-      bg.setAlwaysOnTop(true); bg.showInactive();
-      const main = BrowserWindow.fromId(mainId); main.setAlwaysOnTop(true,'screen-saver'); main.show(); main.focus(); main.moveTop();
+      bg.setAlwaysOnTop(false); bg.setAlwaysOnTop(true); bg.showInactive(); bg.moveTop();
+      const main = BrowserWindow.fromId(mainId); main.setAlwaysOnTop(false); main.setAlwaysOnTop(true,'screen-saver'); main.show(); main.focus(); main.moveTop();
     }, { mainId, color });
     await page.waitForTimeout(600);
   }
