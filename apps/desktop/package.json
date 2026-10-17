@@ -2,6 +2,6 @@
   "name": "@glass/desktop", "version": "0.1.0", "private": true, "type": "module",
   "main": "out/main/index.js",
   "scripts": { "dev": "electron-vite dev", "build": "electron-vite build", "start": "electron-vite preview" },
-  "dependencies": { "@glass/protocol": "workspace:*", "@glass/bridge": "workspace:*", "@glass/mock": "workspace:*", "react": "19.3.1", "react-dom": "19.3.1", "zustand": "5.0.15" },
+  "dependencies": { "@glass/protocol": "workspace:*", "@glass/bridge": "workspace:*", "@glass/mock": "workspace:*", "@glass/dsh": "workspace:*", "react": "19.3.1", "react-dom": "19.3.1", "zustand": "5.0.15" },
   "devDependencies": { "electron": "44.8.0", "electron-vite": "6.0.0", "vite": "8.3.4", "@vitejs/plugin-react": "6.1.2", "@types/react": "19.2.2", "@types/react-dom": "19.2.2" }
 }

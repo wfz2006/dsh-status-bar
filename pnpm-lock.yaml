@@ -202,6 +202,9 @@ importers:
       '@glass/bridge':
         specifier: workspace:*
         version: link:../../packages/bridge
+      '@glass/dsh':
+        specifier: workspace:*
+        version: link:../../packages/adapters/dsh
       '@glass/mock':
         specifier: workspace:*
         version: link:../../packages/adapters/mock
@@ -242,6 +245,9 @@ importers:
       '@glass/protocol':
         specifier: workspace:*
         version: link:../../protocol
+      ws:
+        specifier: 8.18.3
+        version: 8.18.3
 
   packages/adapters/mock:
     dependencies:
