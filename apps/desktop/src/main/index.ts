@@ -47,11 +47,15 @@ const responses = new Set<string>();
 
 function sourceName() { return source.mode === 'mock' ? '数据源：Mock 演示 · 非真实会话' : `数据源：DeepSeek Harness · ${source.connection === 'connected' ? '已连接' : source.connection === 'connecting' ? '连接中' : '未连接'}`; }
 function publishSource() {
+  // Quit tears the tray down while transport close events are still draining; never publish
+  // into destroyed UI from those late callbacks.
+  if (quitting) return;
   if (win && !win.isDestroyed()) {
     win.webContents.send('glass:source-update', source);
     win.setTitle('DSH Glass · ' + (source.mode === 'mock' ? 'Mock 开发预览' : 'DeepSeek Harness'));
   }
-  tray?.setToolTip('DSH Glass · ' + sourceName()); ui?.publish();
+  if (tray && !tray.isDestroyed()) tray.setToolTip('DSH Glass · ' + sourceName());
+  ui?.publish();
 }
 function resetSource(mode: SourceState['mode']) {
   sourceGeneration++; reconnectEnabled = false; clearTimeout(retry);
@@ -188,7 +192,7 @@ else {
       reconnect: () => { if (source.mode === 'mock') mockAction('reconnect'); else ui?.request('settings'); },
       mock: action => { if (source.mode === 'mock') mockAction(action); else void useMock().then(() => mockAction(action)); }, quit: () => app.quit(),
       canOpenDSH: existsSync(originalDSH), openDSH: () => { void shell.openPath(originalDSH); },
-      menuChanged: menu => tray?.setContextMenu(menu),
+      menuChanged: menu => { if (tray && !tray.isDestroyed()) tray.setContextMenu(menu); },
     });
     optics=createDesktopOptics(win,join(here,'../../native/RegionCapture.exe'));
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
