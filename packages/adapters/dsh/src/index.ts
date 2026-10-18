@@ -126,11 +126,16 @@ export function createDshAdapter(options: Options) {
         const items = questionItems(q.questions); if (!items.length) continue;
         const previous = questions.get(`${id}:${requestId}`);
         if (previous && !isPending(previous.status)) continue;
-        if (!previous || ![...deliveries.values()].some(d => d.identity.sessionId === id && d.identity.requestId === requestId)) {
-          const canContinue = q.state === 'continued' && live.has(id);
-          if (canContinue) continuedQuestions.set(`${id}:${requestId}`, callId);
+        const delivered = [...deliveries.values()].some(d => d.identity.sessionId === id && d.identity.requestId === requestId);
+        if (!delivered) {
+          // A projection-only question still has its durable callId, and the host
+          // answers it through userQuestions/answer. The live session is the gate:
+          // without it the request can no longer be attributed to a running runtime.
+          const canAnswer = live.has(id);
+          if (canAnswer) continuedQuestions.set(`${id}:${requestId}`, callId);
           else continuedQuestions.delete(`${id}:${requestId}`);
-          questions.set(`${id}:${requestId}`, { requestId, runtimeId, sessionId: id, sourceEpoch: epoch, createdAt: previous?.createdAt ?? new Date().toISOString(), status: 'pending', actionable: canContinue, revision: revision(id), questions: items });
+          if (!previous) questions.set(`${id}:${requestId}`, { requestId, runtimeId, sessionId: id, sourceEpoch: epoch, createdAt: new Date().toISOString(), status: 'pending', actionable: canAnswer, revision: revision(id), questions: items });
+          else if (previous.status === 'pending' && previous.actionable !== canAnswer) { previous.actionable = canAnswer; previous.revision = revision(id); questions.set(`${id}:${requestId}`, previous); }
         }
       }
       const settled = new Set(Array.isArray(userQuestions.settled) ? userQuestions.settled.map(s => bounded(record(s).callId, '', 180)) : []);

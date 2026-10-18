@@ -73,6 +73,7 @@ class FakeHost {
     return this.send('gateway', { type: 'waterfall', ...event });
   }
   gateway(value: Args) { return this.send('gateway', value); }
+  control(value: Args) { return this.send('control', value); }
   audit(sessionId: string, event: Args) { return this.send(`audit:${sessionId}`, { type: 'event', event }); }
   snapshot(sessionId: string, projections: Args) { return this.send(`audit:${sessionId}`, { type: 'snapshot', projections: { values: projections }, records: [] }); }
 
@@ -469,6 +470,18 @@ describe('dsh host contract', () => {
     await h.adapter.respondQuestion(q, [{ questionId: 'q1', values: ['乙'] }]);
     expect(h.host.requests.find(r => r.method === 'userQuestions/answer')?.args).toEqual({ agentId: 's1', callId: 'c1', answer: { answers: [{ id: 'q1', selected: ['乙'] }] } });
     expect(h.host.requests.some(r => r.method === '$events/result')).toBe(false);
+    expect(h.state().questions[0]?.status).toBe('answered');
+  });
+
+  it('answers a projection-only open question through userQuestions/answer', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    const items = [{ id: 'q1', question: '确认方案?', options: [{ label: '甲' }, { label: '乙' }] }];
+    h.host.control({ type: 'projection', sessionId: 's1', key: 'userQuestions', value: { active: [{ callId: 'c1', questions: items, state: 'open' }], settled: [] } });
+    await expect.poll(() => h.state().questions[0]?.actionable).toBe(true);
+    const q = h.state().questions[0]!;
+    await h.adapter.respondQuestion(q, [{ questionId: 'q1', values: ['甲'] }]);
+    expect(h.host.requests.find(r => r.method === 'userQuestions/answer')?.args).toEqual({ agentId: 's1', callId: 'c1', answer: { answers: [{ id: 'q1', selected: ['甲'] }] } });
     expect(h.state().questions[0]?.status).toBe('answered');
   });
 
