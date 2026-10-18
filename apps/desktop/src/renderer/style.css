@@ -13,7 +13,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 .glass[data-material=solid] { background:#f0f0f0; }
 .glass[data-theme=dark][data-material=solid] { background:#292929; }
 @media(prefers-color-scheme:dark) { .glass[data-theme=auto][data-material=solid] { background:#292929; } }
-.glass[data-mode=capsule][data-panel=none] { --radius:16px; }
+.glass[data-mode=capsule][data-panel=none] { --radius:15px; }
 .glass-optics { position:absolute; inset:0; pointer-events:none; z-index:5; border-radius:inherit; box-shadow:inset 0 1px 1px #fff6,inset 0 -1px 1px #a9d4ed30; }
 .glass-optics::before { content:""; position:absolute; inset:0; border-radius:inherit; padding:1px; background:linear-gradient(135deg,#fff8,#e0f8ff10 36%,#fff2 65%,#b8e6ff50); -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; opacity:.45; transition:opacity 160ms; }
 .glass:hover .glass-optics::before { opacity:.8; }
