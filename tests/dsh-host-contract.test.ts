@@ -593,13 +593,18 @@ describe('dsh host contract', () => {
     expect(h.host.requests.filter(r => r.method === 'session/page').every(r => object(r.args.request).throughSeq === 42 && object(r.args.request).maxMessages === 1)).toBe(true);
   });
 
-  it('keeps legacy questions without a durable result identity read-only', async () => {
+  it('answers delivered questions through $events/result even without a wait call id', async () => {
     const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
     await h.adapter.connect(h.host.link());
     h.host.waterfall({ eventId: 'legacy', agentId: 's1', event: 'user-questions/request', request: { questions: [{ id: 'q1', question: '说明你的想法' }] } });
     await expect.poll(() => h.state().questions.length).toBe(1);
-    expect(h.state().questions[0]?.actionable).toBe(false);
-    await expect(h.adapter.respondQuestion(h.state().questions[0]!, [{ questionId: 'q1', values: ['示例'] }])).rejects.toThrow('问题已失效');
-    expect(h.host.requests.some(r => r.method === '$events/result')).toBe(false);
+    const question = h.state().questions[0]!;
+    expect(question.actionable).toBe(true);
+    await h.adapter.respondQuestion(question, [{ questionId: 'q1', values: ['示例'] }]);
+    const result = h.host.requests.find(r => r.method === '$events/result');
+    expect(result).toBeTruthy();
+    expect(object(result!.args).eventId).toBe('legacy');
+    expect(JSON.stringify(object(result!.args).outcome)).toContain('示例');
+    await expect.poll(() => h.state().questions[0]?.status).toBe('answered');
   });
 });

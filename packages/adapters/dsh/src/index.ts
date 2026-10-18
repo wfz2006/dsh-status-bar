@@ -287,7 +287,9 @@ export function createDshAdapter(options: Options) {
       terminal.delete(sessionId); continuedQuestions.delete(`${sessionId}:${requestId}`);
       const identity = { runtimeId, sourceEpoch: epoch, sessionId, requestId };
       // Legacy ask() has no durable call identity or authoritative answer receipt: observe only.
-      const q: Question = { ...identity, createdAt, revision: revision(sessionId), status: 'pending', actionable: !!callId, questions: items };
+      // The waterfall delivery itself is the answer channel ($events/result), so a
+      // delivered question is answerable even when the host omits wait.callId.
+      const q: Question = { ...identity, createdAt, revision: revision(sessionId), status: 'pending', actionable: true, questions: items };
       questions.set(`${sessionId}:${requestId}`, q); deliveries.set(eventId, { eventId, clientId, identity, kind: 'question', submitting: false, ...(callId ? { durableCallId: callId } : {}) });
       if (connected) options.publish(frame('question.requested', structuredClone(q))); emitSession(sessionId);
     }
@@ -408,8 +410,13 @@ export function createDshAdapter(options: Options) {
         const accepted = await transport!.request('userQuestions/answer', { agentId: identity.sessionId, callId: continued, answer: { answers: mapped } });
         if (accepted !== true) throw new Error('DSH 未接收此答案。');
         continuedQuestions.delete(key); q.status = 'answered'; q.actionable = false; q.revision = revision(identity.sessionId); options.publish(frame('question.resolved', structuredClone(q))); emitSession(identity.sessionId);
-      } else if (d) { const accepted = await transport!.request('$events/result', { clientId: d.clientId, eventId: d.eventId, outcome: { kind: 'result', value: { answers: mapped } } });
-        if (accepted !== undefined || await decision.promise !== 'answered') throw new Error('没有收到匹配的 DSH 答案确认。');
+      } else if (d) {
+        const accepted = await transport!.request('$events/result', { clientId: d.clientId, eventId: d.eventId, outcome: { kind: 'result', value: { answers: mapped } } });
+        if (accepted !== undefined) throw new Error('没有收到匹配的 DSH 答案确认。');
+        if (!d.durableCallId) {
+          q.status = 'answered'; q.actionable = false; q.revision = revision(identity.sessionId);
+          options.publish(frame('question.resolved', structuredClone(q))); emitSession(identity.sessionId);
+        } else if (await decision.promise !== 'answered') throw new Error('没有收到匹配的 DSH 答案确认。');
       }
     } catch { if (d && deliveries.has(d.eventId)) finalizeDelivery(d, 'unavailable'); else { q.status = 'unavailable'; q.actionable = false; q.revision = revision(identity.sessionId); options.publish(frame('question.resolved', structuredClone(q))); emitSession(identity.sessionId); } throw new Error('答案提交失败，请回到 DSH 确认状态。'); }
     finally { decision.stop(); }
