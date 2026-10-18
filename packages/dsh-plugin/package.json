@@ -2,6 +2,7 @@
   "name": "dsh-glass-plugin",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "DSH bundle wrapper that lists the DSH Glass desktop companion in the plugin market.",
   "type": "module",
   "main": "lib/index.js",

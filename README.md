@@ -119,4 +119,4 @@ experiments           Tauri 原生材质对照等实验
 
 - 主要服务 Windows 11 x64；macOS / Linux 暂不承诺。
 - 不替代 DSH 本体：不写代理模型、会话引擎、工具运行器。
-- 本项目未附加开源许可证文件，如需对外分发请先补充 License。
+- 本项目以 [MIT License](LICENSE) 开源；引用或二次分发请保留版权声明。

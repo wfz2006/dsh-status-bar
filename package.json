@@ -1,5 +1,5 @@
 {
-  "name": "dsh-glass", "version": "0.1.0", "private": true, "type": "module",
+  "name": "dsh-glass", "version": "0.1.0", "private": true, "type": "module", "license": "MIT",
   "packageManager": "pnpm@12.4.1",
   "scripts": {
     "dev": "node scripts/build-region-capture.mjs && pnpm --filter @glass/desktop dev",
