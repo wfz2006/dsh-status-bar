@@ -1,0 +1,167 @@
+{
+  "result": "PASS",
+  "scope": "synthetic official-format Host -> real Electron adapter/IPC/React; DOM + animation-frame opportunity, not GPU paint or user DSH timing",
+  "errors": [],
+  "samples": [
+    {
+      "sequence": 1,
+      "domMs": 27,
+      "frameMs": 28,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 2,
+      "domMs": 21,
+      "frameMs": 27,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 3,
+      "domMs": 29,
+      "frameMs": 32,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 4,
+      "domMs": 23,
+      "frameMs": 25,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 5,
+      "domMs": 19,
+      "frameMs": 21,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 6,
+      "domMs": 26,
+      "frameMs": 27,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 7,
+      "domMs": 23,
+      "frameMs": 24,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 8,
+      "domMs": 20,
+      "frameMs": 22,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 9,
+      "domMs": 27,
+      "frameMs": 40,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 10,
+      "domMs": 28,
+      "frameMs": 29,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 11,
+      "domMs": 24,
+      "frameMs": 25,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 12,
+      "domMs": 18,
+      "frameMs": 18,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 13,
+      "domMs": 24,
+      "frameMs": 32,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 14,
+      "domMs": 33,
+      "frameMs": 33,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 15,
+      "domMs": 20,
+      "frameMs": 22,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 16,
+      "domMs": 25,
+      "frameMs": 28,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 17,
+      "domMs": 21,
+      "frameMs": 23,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 18,
+      "domMs": 19,
+      "frameMs": 20,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 19,
+      "domMs": 26,
+      "frameMs": 31,
+      "animation": "none",
+      "opacity": "1"
+    },
+    {
+      "sequence": 20,
+      "domMs": 21,
+      "frameMs": 31,
+      "animation": "none",
+      "opacity": "1"
+    }
+  ],
+  "frameLatencyMs": {
+    "median": 27,
+    "p95": 33,
+    "max": 40
+  },
+  "windowFocused": true,
+  "burst": {
+    "chunks": 200,
+    "elapsedUntilAssertMs": 120,
+    "lostCharacters": 0
+  },
+  "checks": [
+    "20 prefixes visible before durable commit",
+    "live row has no entrance delay",
+    "stable key on every update and settlement",
+    "opened detail remains open",
+    "one final row with authoritative completion",
+    "200-chunk burst preserves every character; abandonment removes only preview",
+    "no renderer errors"
+  ]
+}

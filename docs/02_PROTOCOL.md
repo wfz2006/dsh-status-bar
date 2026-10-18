@@ -172,6 +172,8 @@ type UserQuestionView = {
 
 ## 9. 当前实际实现子集（更新于 2026-10-18）
 
+`SessionNote.streaming?: boolean` 是向前兼容的显示标记：`true` 表示本次连接收到的实时生成前缀；`false` 表示该行已由权威 `assistant/message` 替换，保留本地行 ID 防止详情折叠和重复入场；缺省为普通持久记录。实时前缀仍限制2000字符、每会话最多60行，不持久化，不用于工具参数、审批或问答授权。前缀的 `sourceSeq=startedAfterSeq+1` 只用于相对排序，不是持久事件的序号声明；正式消息替换时改用实际事件seq。官方 `assistant-stream.revision/index` 与本地投影版本独立处理；序列缺口丢弃前缀，重连使用官方快照恢复，不拼接不完整后缀。
+
 `packages/protocol/src/index.ts` 的 Zod 是运行时定义。实现 welcome/snapshot/heartbeat、session.updated/todo.snapshot/tool.activity/note、approval.requested/resolved、question.requested/resolved 与用户回答请求。会话阶段区分运行、等待审批/问题、完成、达到输出上限、失败、取消、归档和未知；idle 或未知终止原因不推断成功。Mock Adapter 保持回答能力关闭；DSH 的连接能力也不使任意请求可操作，Main 与 Adapter 还会校验 runtime/epoch/session/request、参数完整性、当前 owner delivery 和重复提交。
 
 客户端握手使用受认证 WS 的精简控制帧 `{kind:'glass.hello',protocolVersion:1,clientNonce}`；快照请求为 `{kind:'glass.snapshot.request',reason}`。这些**控制帧没有服务端事件 envelope**；token 仅在 Main 的 Authorization header，renderer 无 WS/凭据。服务端事件使用本文标准 envelope。

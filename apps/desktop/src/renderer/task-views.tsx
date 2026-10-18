@@ -144,16 +144,16 @@ function ProcessList({ task }: { task: Task }) {
     ...(notes ?? []).map(note => ({ kind: 'note' as const, key: note.id, sourceSeq: note.sourceSeq, note })),
     ...(activities ?? []).map(activity => ({ kind: 'tool' as const, key: activity.callId, sourceSeq: activity.sourceSeq ?? 0, activity })),
   ].sort((a, b) => b.sourceSeq - a.sourceSeq), [notes, activities]);
-  useEffect(() => { syncFade(); }, [rows.length]);
+  useEffect(() => { syncFade(); }, [rows]);
   if (!rows.length) return <WhaleEmpty>此会话尚无过程；开始工作后，这里会按时间出现思考与工具调用。</WhaleEmpty>;
   return <div ref={listRef} onScroll={syncFade} data-fade-top={fade.top ? 'true' : undefined} data-fade-bottom={fade.bottom ? 'true' : undefined} className="activity-list process-list" role="tabpanel" aria-label="AI 工作过程">
     {rows.map((row, index) => row.kind === 'note'
-      ? <details className="process-entry" data-kind={row.note.kind} key={row.key} style={{ animationDelay: `${Math.min(index, 10) * 16}ms` }}>
+      ? <details className="process-entry" data-kind={row.note.kind} data-streaming={row.note.streaming} key={row.key} style={{ animationDelay: `${Math.min(index, 10) * 16}ms` }}>
         <summary>
           <span className="entry-icon" aria-hidden="true"><Icon name={noteIcons[row.note.kind]} /></span>
           <span className="entry-title">{noteLabels[row.note.kind]}</span>
           <span className="entry-preview">{row.note.text}</span>
-          <span className={row.note.kind === 'user' ? 'entry-status entry-status-quiet' : 'entry-status entry-status-done'}>{row.note.kind === 'user' ? '已发送' : '已完成'}</span>
+          <span className={row.note.streaming ? 'entry-status' : row.note.kind === 'user' ? 'entry-status entry-status-quiet' : 'entry-status entry-status-done'}>{row.note.streaming ? '生成中' : row.note.kind === 'user' ? '已发送' : '已完成'}</span>
           <Icon name="chevron" />
         </summary>
         <p className="entry-body">{row.note.text}</p>

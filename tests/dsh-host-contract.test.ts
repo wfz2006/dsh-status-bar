@@ -1,158 +1,8 @@
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
-import { WebSocketServer, type WebSocket } from 'ws';
 import { assertApprovalResponse, assertQuestionResponse } from '../apps/desktop/src/main/request-gate';
 import { createDshAdapter } from '../packages/adapters/dsh/src/index';
 import { initialProjection, reduceProjection, type Frame, type Projection } from '../packages/protocol/src/index';
-
-type Args = Record<string, unknown>;
-type Seed = {
-  sessionId: string; cwd?: string; running?: boolean; agentAvailable?: boolean; title?: string;
-  todos?: { content: string; status: 'pending' | 'in_progress' | 'completed' }[];
-  stats?: Args;
-};
-type AuthMode = 'ok' | 'not-found' | 'foreign' | 'no-cookie';
-const TOKEN = 'host-token';
-const COOKIE = `glass_host=${TOKEN}`;
-const object = (value: unknown): Args => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Args : {};
-
-/** Minimal stand-in for the official DSH Host: cookie handshake, unary JSON-RPC and the remote.mux socket. */
-class FakeHost {
-  sessions: Seed[] = [];
-  auth: AuthMode = 'ok';
-  rejectResults = false;
-  suppressDecision = false;
-  rpc?: (method: string, args: Args) => unknown;
-  readonly requests: { method: string; args: Args }[] = [];
-  readonly openStreams: string[] = [];
-  readonly auditEvents = new Map<string, Args[]>();
-  readonly pending = new Map<string, { agentId: string; event: string; request: Args }>();
-  authAttempts = 0;
-  origin = '';
-  private server?: Server;
-  private wss?: WebSocketServer;
-  private readonly sockets = new Set<WebSocket>();
-  private readonly streams = new Map<string, WebSocket>();
-
-  async start() {
-    this.server = createServer((request, response) => { this.http(request, response).catch(() => { if (!response.headersSent) response.writeHead(500).end(); else response.destroy(); }); });
-    this.wss = new WebSocketServer({ noServer: true });
-    this.wss.on('connection', socket => this.attach(socket));
-    this.server.on('upgrade', (request, socket, head) => {
-      const url = new URL(request.url ?? '/', 'http://127.0.0.1');
-      if (url.pathname !== '/api/remote.mux' || !request.headers.cookie?.includes(COOKIE)) { socket.destroy(); return; }
-      this.wss?.handleUpgrade(request, socket, head, client => { this.sockets.add(client); this.wss?.emit('connection', client, request); });
-    });
-    await new Promise<void>(resolve => { this.server?.listen(0, '127.0.0.1', resolve); });
-    this.origin = `http://127.0.0.1:${(this.server.address() as AddressInfo).port}`;
-    return this;
-  }
-
-  link(token = TOKEN) { return `${this.origin}/?token=${token}`; }
-
-  async stop() {
-    if (!this.server) return;
-    for (const socket of [...this.sockets]) socket.terminate();
-    const wss = this.wss; const server = this.server;
-    this.server = undefined; this.wss = undefined; this.streams.clear(); this.sockets.clear();
-    await new Promise<void>(resolve => { if (wss) wss.close(() => resolve()); else resolve(); });
-    await new Promise<void>(resolve => { server.close(() => resolve()); server.closeAllConnections(); });
-  }
-
-  send(stream: string, value: unknown) {
-    const socket = this.streams.get(stream);
-    if (!socket || socket.readyState !== socket.OPEN) return false;
-    socket.send(JSON.stringify({ type: 'item', streamId: stream, value }));
-    return true;
-  }
-
-  waterfall(event: { eventId: string; agentId: string; event: string; request: Args }) {
-    this.pending.set(event.eventId, event);
-    if (event.event === 'approval/request') this.audit(event.agentId, { type: 'approval/asked', data: { id: `asked:${event.eventId}`, ...event.request } });
-    return this.send('gateway', { type: 'waterfall', ...event });
-  }
-  gateway(value: Args) { return this.send('gateway', value); }
-  control(value: Args) { return this.send('control', value); }
-  audit(sessionId: string, event: Args) { return this.send(`audit:${sessionId}`, { type: 'event', event }); }
-  snapshot(sessionId: string, projections: Args) { return this.send(`audit:${sessionId}`, { type: 'snapshot', projections: { values: projections }, records: [] }); }
-
-  private attach(socket: WebSocket) {
-    socket.on('message', raw => {
-      let message: Args;
-      try { message = object(JSON.parse(raw.toString())); } catch { return; }
-      if (message.type !== 'open') return;
-      const stream = String(message.streamId ?? '');
-      if (!stream) return;
-      this.openStreams.push(stream);
-      this.streams.set(stream, socket);
-      this.reply(stream);
-    });
-    socket.on('error', () => {});
-    socket.on('close', () => {
-      this.sockets.delete(socket);
-      for (const [stream, current] of this.streams) if (current === socket) this.streams.delete(stream);
-    });
-  }
-
-  private reply(stream: string) {
-    if (stream === 'control') {
-      const projections = Object.fromEntries(this.sessions.map(seed => [seed.sessionId, { values: { title: seed.title ?? seed.sessionId, ...(seed.todos ? { todos: seed.todos } : {}) } }]));
-      this.send('control', { type: 'baseline', value: { projections } });
-      return;
-    }
-    if (stream === 'gateway') { this.send('gateway', { type: 'ready', clientId: 'client-1' }); return; }
-    if (stream === 'workspace') { this.send('workspace', { type: 'baseline', value: { archivedSessionIds: [] } }); return; }
-    if (stream.startsWith('audit:')) {
-      const records = (this.auditEvents.get(stream.slice(6)) ?? []).map(event => ({ type: 'event', event }));
-      this.send(stream, { type: 'snapshot', projections: { values: {} }, records });
-    }
-  }
-
-  private async http(request: IncomingMessage, response: ServerResponse) {
-    const url = new URL(request.url ?? '/', 'http://127.0.0.1');
-    if (request.method === 'GET' && url.pathname === '/connect') {
-      this.authAttempts += 1;
-      if (this.auth !== 'ok') { this.failAuth(response); return; }
-      if (url.searchParams.getAll('token').length !== 1 || url.searchParams.get('token') !== TOKEN || url.searchParams.get('interactions') !== 'answer') { response.writeHead(200).end(); return; }
-      response.writeHead(302, { Location: './api/remote.mux', 'Set-Cookie': `${COOKIE}; Path=/; HttpOnly; SameSite=Strict` }).end();
-      return;
-    }
-    if (request.method !== 'POST' || !url.pathname.startsWith('/api/')) { response.writeHead(404).end(); return; }
-    if (!request.headers.cookie?.includes(COOKIE)) { response.writeHead(401).end(); return; }
-    let raw = '';
-    for await (const chunk of request) raw += chunk;
-    let body: Args;
-    try { body = object(JSON.parse(raw)); } catch { response.writeHead(400).end(); return; }
-    const method = decodeURIComponent(url.pathname.slice(5));
-    const args = object(object(body.payload).args);
-    this.requests.push({ method, args });
-    let result: Args = { ok: true, value: method === '$events/result' ? undefined : true };
-    if (method === '$events/result' && this.rejectResults) result = { ok: false };
-    else if (this.rpc) result = { ok: true, value: this.rpc(method, args) };
-    else if (method === 'session/list') result = { ok: true, value: { items: this.sessions.map(seed => ({ sessionId: seed.sessionId, cwd: seed.cwd ?? 'C:\\ws', running: seed.running ?? false, agentAvailable: seed.agentAvailable ?? seed.running ?? false, projections: { values: { title: seed.title ?? seed.sessionId, ...(seed.stats ?? {}) } } })) } };
-    if (method === '$events/result' && result.ok === true && result.value === undefined && !this.suppressDecision) {
-      const id = String(args.eventId); const delivery = this.pending.get(id);
-      if (delivery) {
-        this.gateway({ type: 'cancel', eventId: id });
-        if (delivery.event === 'approval/request') this.audit(delivery.agentId, { type: 'approval/decided', data: { id: `asked:${id}`, outcome: object(args.outcome).value } });
-        else {
-          const callId = object(delivery.request.wait).callId;
-          this.send('control', { type: 'projection', sessionId: delivery.agentId, key: 'userQuestions', value: { active: [], settled: [{ callId, answers: object(object(args.outcome).value).answers }] } });
-        }
-        this.pending.delete(id);
-      }
-    }
-    response.writeHead(200, { 'Content-Type': 'application/json' });
-    response.end(JSON.stringify({ type: 'server-response', rpcId: String(body.rpcId ?? ''), result }));
-  }
-
-  private failAuth(response: ServerResponse) {
-    if (this.auth === 'not-found') { response.writeHead(200).end(); return; }
-    if (this.auth === 'foreign') { response.writeHead(302, { Location: 'http://203.0.113.5/', 'Set-Cookie': `${COOKIE}; Path=/` }).end(); return; }
-    response.writeHead(302, { Location: './api/remote.mux' }).end();
-  }
-}
+import { FakeHost, TOKEN, object, type Seed, type AuthMode } from './helpers/dsh-host';
 
 const cleanups: (() => Promise<void> | void)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
@@ -233,6 +83,69 @@ describe('dsh host contract', () => {
     h.host.audit('s1', { type: 'turn/end', data: { reason: { kind: 'completed' } } });
     await expect.poll(() => h.state().sessions['s1']?.phase, { timeout: 3000 }).toBe('finished');
     expect(h.state().sessions['s1']?.agentStatus).toBe('idle');
+  });
+
+  it('shows live reasoning before the durable assistant message exists, then replaces it without duplicates', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.assistant('s1', { type: 'start', attemptId: 's1:1', revision: 1, turn: 1, step: 1, startedAfterSeq: 4 });
+    const started = performance.now();
+    h.host.assistant('s1', { type: 'chunk', attemptId: 's1:1', revision: 2, index: 0, time: Date.now(), chunk: { type: 'reasoning-delta', index: 0, text: '先检查' } });
+    await expect.poll(() => h.state().sessions['s1']?.notes?.[0]?.text, { timeout: 500, interval: 5 }).toBe('先检查');
+    const first = h.state().sessions['s1']?.notes?.[0];
+    expect(performance.now() - started).toBeLessThan(500);
+    h.host.assistant('s1', { type: 'chunk', attemptId: 's1:1', revision: 3, index: 1, time: Date.now(), chunk: { type: 'reasoning-delta', index: 0, text: '代码。' } });
+    await expect.poll(() => h.state().sessions['s1']?.notes?.[0]?.text).toBe('先检查代码。');
+    expect(h.state().sessions['s1']?.notes?.[0]?.id).toBe(first?.id);
+    expect(h.host.followRequests.get('s1')?.assistantStream).toBe(true);
+    h.host.audit('s1', { type: 'assistant/message', seq: 5, data: { turn: 1, step: 1, message: { content: [{ type: 'reasoning', text: '先检查代码。' }] } } });
+    h.host.assistant('s1', { type: 'end', attemptId: 's1:1', revision: 4, index: 2, outcome: { kind: 'committed', eventType: 'assistant/message', seq: 5 } });
+    await expect.poll(() => h.state().sessions['s1']?.notes?.[0]?.streaming ?? false).toBe(false);
+    expect(h.state().sessions['s1']?.notes?.[0]).toMatchObject({ id: first?.id, sourceSeq: 5, text: '先检查代码。' });
+    expect(h.state().sessions['s1']?.notes).toHaveLength(1);
+  });
+
+  it('restores an active stream baseline and separates simultaneous sessions before clearing on disconnect', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }, { sessionId: 's2', running: true }] });
+    h.host.assistantBaselines.set('s1', { revision: 3, activeAttempt: { attemptId: 's1:1', turn: 1, step: 1, startedAfterSeq: 4, nextIndex: 2,
+      stream: [{ type: 'text-chunks', index: 0, time0: 100, dt: [1], texts: ['重连', '前缀'] }] } });
+    await h.adapter.connect(h.host.link());
+    await expect.poll(() => h.state().sessions['s1']?.notes?.[0]?.text).toBe('重连前缀');
+    h.host.assistant('s1', { type: 'chunk', revision: 4, attemptId: 's1:1', index: 2, chunk: { type: 'text-delta', index: 0, text: '继续' } });
+    h.host.assistant('s2', { type: 'start', revision: 1, attemptId: 's2:1', turn: 1, step: 1, startedAfterSeq: 2 });
+    h.host.assistant('s2', { type: 'chunk', revision: 2, attemptId: 's2:1', index: 0, chunk: { type: 'text-delta', index: 0, text: '另一会话' } });
+    await expect.poll(() => h.state().sessions['s1']?.notes?.[0]?.text).toBe('重连前缀继续');
+    await expect.poll(() => h.state().sessions['s2']?.notes?.[0]?.text).toBe('另一会话');
+    h.adapter.disconnect();
+    const snapshot = h.adapter.snapshot() as Extract<Frame, { kind: 'glass.snapshot' }>;
+    expect(snapshot.payload.sessions.every(s => !s.notes?.some(n => n.streaming))).toBe(true);
+    await h.adapter.connect(h.host.link());
+    await expect.poll(() => h.state().sessions['s1']?.notes?.[0]?.text).toBe('重连前缀');
+    expect(h.state().sessions['s2']?.notes ?? []).toEqual([]);
+  });
+
+  it('starts following newly available agents immediately without waiting for list polling', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', agentAvailable: false }] });
+    await h.adapter.connect(h.host.link());
+    expect(h.host.openStreams).not.toContain('audit:s1');
+    h.host.gateway({ type: 'emit', event: 'api-session/added', args: [{ sessionId: 's1', agentAvailable: true, running: true }] });
+    await expect.poll(() => h.host.followRequests.get('s1')?.assistantStream, { timeout: 500, interval: 5 }).toBe(true);
+    expect(h.host.requests.filter(r => r.method === 'session/list')).toHaveLength(1);
+  });
+
+  it('continues streaming across turn boundaries in the same Agent lifecycle', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.assistant('s1', { type: 'start', attemptId: 's1:1', revision: 1, turn: 1, step: 1, startedAfterSeq: 4 });
+    h.host.assistant('s1', { type: 'chunk', attemptId: 's1:1', revision: 2, index: 0, chunk: { type: 'text-delta', index: 0, text: '第一轮' } });
+    await expect.poll(() => h.state().sessions['s1']?.notes?.[0]?.text).toBe('第一轮');
+    h.host.audit('s1', { type: 'assistant/message', seq: 5, data: { turn: 1, step: 1, message: { content: [{ type: 'text', text: '第一轮' }] } } });
+    h.host.assistant('s1', { type: 'end', attemptId: 's1:1', revision: 3, index: 1, outcome: { kind: 'committed', eventType: 'assistant/message', seq: 5 } });
+    h.host.audit('s1', { type: 'turn/end', seq: 6, data: { reason: { kind: 'completed' } } });
+    h.host.audit('s1', { type: 'turn/start', seq: 7, data: { turn: 2 } });
+    h.host.assistant('s1', { type: 'start', attemptId: 's1:2', revision: 4, turn: 2, step: 1, startedAfterSeq: 7 });
+    h.host.assistant('s1', { type: 'chunk', attemptId: 's1:2', revision: 5, index: 0, chunk: { type: 'text-delta', index: 0, text: '第二轮实时内容' } });
+    await expect.poll(() => h.state().sessions['s1']?.notes?.[0]?.text, { timeout: 500, interval: 5 }).toBe('第二轮实时内容');
   });
 
   it('projects assistant transcript notes with reasoning and message kinds', async () => {

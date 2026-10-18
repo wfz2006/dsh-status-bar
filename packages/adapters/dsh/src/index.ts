@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Approval, Frame, Question, Session, SessionNote } from '@glass/protocol';
 import { HostTransport, bounded, record, type RecordValue } from './transport';
+import { AssistantPreview } from './assistant-preview';
 
 export const dshIntegration = Object.freeze({ status: 'AVAILABLE', mode: 'authenticated-host', respondApproval: true, respondQuestion: true,
   reason: '通过用户提供的本机 Host 认证链接连接；具体答复能力仅由本次连接的有效请求授予。' });
@@ -52,6 +53,16 @@ export function createDshAdapter(options: Options) {
   const auditApprovals = new Map<string, string>(); const continuedQuestions = new Map<string, string>();
   const decisions = new Map<string, (status: string) => void>();
   const coldRead = new Set<string>();
+  const previews = new Map<string, AssistantPreview>();
+  function preview(id: string) {
+    let value = previews.get(id);
+    if (!value) { value = new AssistantPreview(); previews.set(id, value); }
+    return value;
+  }
+  function displaySession(session: Session): Session {
+    const notes = previews.get(session.sessionId)?.notes() ?? [];
+    return notes.length ? { ...session, notes: [...notes, ...(session.notes ?? [])].slice(0, 60) } : session;
+  }
   function watchDecision(key: string) {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const promise = new Promise<string>(resolve => { decisions.set(key, resolve); timer = setTimeout(() => resolve('unavailable'), 10000); });
@@ -66,7 +77,7 @@ export function createDshAdapter(options: Options) {
   function welcome(): Frame { return frame('glass.welcome', { source: 'dsh', capabilities: { observeSessions: connected, observeTodos: connected, observeTools: connected,
     // Connection-level support only: each concrete decision still requires a matching live delivery (see deliveryFor).
     respondApproval: connected, respondQuestion: connected } }); }
-  function snapshot(): Frame { return frame('glass.snapshot', { sessions: [...sessions.values()].slice(-100), approvals: [...approvals.values()].slice(-100), questions: [...questions.values()].slice(-100) }); }
+  function snapshot(): Frame { return frame('glass.snapshot', { sessions: [...sessions.values()].slice(-100).map(displaySession), approvals: [...approvals.values()].slice(-100), questions: [...questions.values()].slice(-100) }); }
   function emitSession(id: string) {
     const session = sessions.get(id); if (!session) return;
     const waitingApproval = [...approvals.values()].some(a => a.sessionId === id && isPending(a.status));
@@ -75,11 +86,12 @@ export function createDshAdapter(options: Options) {
     // The 10s session list poll re-projects every known session. Skip publishes
     // that would not change the projection, so an idle dashboard stops paying
     // for 80+ identical renders every tick.
-    const fingerprint = JSON.stringify(session, (key, value) => key === 'lastSourceSeq' ? undefined : value);
+    const displayed = displaySession(session);
+    const fingerprint = JSON.stringify(displayed, (key, value) => key === 'lastSourceSeq' ? undefined : value);
     if (emittedSessions.get(id) === fingerprint) return;
     emittedSessions.set(id, fingerprint);
     session.lastSourceSeq = revision(id);
-    if (connected) options.publish(frame('session.upserted', structuredClone(session)));
+    if (connected) options.publish(frame('session.upserted', structuredClone({ ...displayed, lastSourceSeq: session.lastSourceSeq })));
   }
   function ensureSession(id: string, row: RecordValue = {}): Session | undefined {
     if (!id || id.length > 200) return;
@@ -155,11 +167,13 @@ export function createDshAdapter(options: Options) {
   }
   function follow(id: string) {
     if (followed.has(id) || !live.has(id)) return;
-    followed.add(id); transport?.subscribe(`audit:${id}`, 'session/follow', { request: { address: { kind: 'session', sessionId: id }, maxMessages: 80 } });
+    followed.add(id); transport?.subscribe(`audit:${id}`, 'session/follow', { request: { address: { kind: 'session', sessionId: id }, maxMessages: 80, assistantStream: true } });
   }
   function event(id: string, value: unknown) {
     const session = ensureSession(id); if (!session) return;
     const e = record(value); const data = record(e.data); const type = bounded(e.type);
+    const settledNotes = previews.get(id)?.settle(e);
+    if (type === 'turn/start' || type === 'turn/end') previews.get(id)?.clear();
     const eventSeq = typeof e.seq === 'number' && Number.isInteger(e.seq) && e.seq >= 0 ? e.seq : revision(id);
     if (type === 'turn/start') {
       terminal.delete(id); session.agentStatus = 'running';
@@ -180,7 +194,8 @@ export function createDshAdapter(options: Options) {
       blocks.forEach((block, index) => {
         const b = record(block); const kind = b.type === 'reasoning' ? 'reasoning' as const : b.type === 'text' ? 'message' as const : undefined;
         if (!kind || typeof b.text !== 'string' || !b.text.trim()) return;
-        addNote(id, { id: `${id}:${eventSeq}:${index}`, kind, text: b.text, sourceSeq: eventSeq }); added = true;
+        addNote(id, { id: settledNotes?.get(index) ?? `${id}:${eventSeq}:${index}`, kind, text: b.text, sourceSeq: eventSeq,
+          ...(settledNotes?.has(index) ? { streaming: false } : {}) }); added = true;
       });
       if (added) emitSession(id);
     }
@@ -267,7 +282,7 @@ export function createDshAdapter(options: Options) {
         for (const d of [...deliveries.values()]) if (d.identity.sessionId === id) finalizeDelivery(d, 'unavailable');
         for (const [key, a] of approvals) if (a.sessionId === id) approvals.delete(key);
         for (const [key, q] of questions) if (q.sessionId === id) { questions.delete(key); continuedQuestions.delete(key); }
-        const sourceSeq = revision(id); sessions.delete(id); projectionValues.delete(id); terminal.delete(id); live.delete(id); emittedSessions.delete(id);
+        const sourceSeq = revision(id); sessions.delete(id); projectionValues.delete(id); terminal.delete(id); live.delete(id); emittedSessions.delete(id); previews.delete(id);
         if (connected) options.publish(frame('session.removed', { sessionId: id, sourceSeq }));
       }
       if (g.event === 'api-session/status' && ensureSession(id)) { sessions.get(id)!.agentStatus = args[1] === true ? 'running' : 'idle'; if (args[1] === true) { terminal.delete(id); follow(id); } emitSession(id); }
@@ -316,12 +331,14 @@ export function createDshAdapter(options: Options) {
     if (stream.startsWith('audit:')) {
       const id = stream.slice(6);
       if (v.type === 'snapshot') {
+        if ('assistantStream' in v) preview(id).restore(v.assistantStream);
         if (Array.isArray(v.records)) for (const entry of v.records) { const row = record(entry); if (row.type === 'event') event(id, row.event); }
         const projection = record(v.projections); applyProjections(id, projection.values, typeof projection.asOfSeq === 'number' ? projection.asOfSeq : undefined);
         const boundary = record(record(projection.values).turnBoundary);
         if (typeof boundary.openTurnStartSeq === 'number') { terminal.delete(id); const session = sessions.get(id); if (session) session.agentStatus = 'running'; emitSession(id); }
       }
       if (v.type === 'event') event(id, v.event);
+      if (v.type === 'assistant-stream' && sessions.has(id)) { preview(id).accept(v.frame); emitSession(id); }
     }
   }
   function disconnected() {
@@ -331,7 +348,7 @@ export function createDshAdapter(options: Options) {
     for (const a of approvals.values()) a.actionable = false;
     for (const q of questions.values()) q.actionable = false; continuedQuestions.clear();
     for (const resolve of decisions.values()) resolve('unavailable');
-    emittedSessions.clear();
+    emittedSessions.clear(); previews.clear();
     readyReject?.(new Error('DSH 实时连接已断开。')); options.onConnection('disconnected');
   }
   async function refreshList() {
@@ -369,7 +386,7 @@ export function createDshAdapter(options: Options) {
       await current.authenticate(link); await refreshList(); await current.open();
       const ready = new Promise<void>((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
       current.subscribe('control', 'session/control'); current.subscribe('gateway', '$events'); current.subscribe('workspace', 'workspace/follow');
-      for (const id of followed) current.subscribe(`audit:${id}`, 'session/follow', { request: { address: { kind: 'session', sessionId: id }, maxMessages: 80 } });
+      for (const id of followed) current.subscribe(`audit:${id}`, 'session/follow', { request: { address: { kind: 'session', sessionId: id }, maxMessages: 80, assistantStream: true } });
       const timeout = setTimeout(() => readyReject?.(new Error('DSH 实时通道没有返回完整基线。')), 10000);
       try { await ready; } finally { clearTimeout(timeout); readyResolve = undefined; readyReject = undefined; }
       if (attempt !== generation || current !== transport) throw new Error('DSH 连接已取消。');

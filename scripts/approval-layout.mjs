@@ -6,7 +6,9 @@ try{
   const {page,app,mainId,menu}=f;
   await page.evaluate(()=>window.glass.setSettings({animation:'off'}));
   await menu('mock-approval-queue');await menu('view-approval');
-  await expect.poll(async()=>(await page.evaluate(()=>window.glass.getState())).approvals.length,{timeout:15000}).toBe(2);
+  // The queued fixture appends its second approval at 8 * 1800 = 14400ms.
+  // Leave headroom for IPC and poll scheduling instead of racing a 15s cutoff.
+  await expect.poll(async()=>(await page.evaluate(()=>window.glass.getState())).approvals.length,{timeout:20000,intervals:[100]}).toBe(2);
   for(const height of [250,320,340]){
     await page.evaluate(height=>window.glass.resizeWindow({x:200,y:150,width:400,height}),height);
     const before=await page.locator('.decision-buttons').first().boundingBox();
