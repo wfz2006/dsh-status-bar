@@ -17,8 +17,8 @@
 .question-field { border:0; padding:0; margin:0; min-width:0; }
 .question-field legend { padding:0; margin-bottom:8px; line-height:1.5; color:var(--fg); }
 .question-number { color:var(--muted); }
-.question-options { display:flex; flex-direction:column; gap:6px; }
-.question-option { display:flex; align-items:flex-start; gap:8px; border:1px solid var(--surface-edge); border-radius:9px; padding:8px 10px; cursor:pointer; background:var(--neutral-fill); }
+.question-options { display:flex; flex-direction:column; gap:5px; }
+.question-option { display:flex; align-items:flex-start; gap:8px; border:1px solid var(--surface-edge); border-radius:8px; padding:6px 9px; cursor:pointer; background:var(--neutral-fill); font-size:inherit; line-height:1.45; }
 .question-option:has(input:checked) { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 10%,transparent); }
 .question-option input { accent-color:var(--accent); margin:3px 0 0; flex:0 0 auto; }
 .question-option span { min-width:0; overflow-wrap:anywhere; }
@@ -37,5 +37,6 @@
 .activity-result { border-left:2px solid var(--surface-edge); padding-left:9px; overflow-wrap:anywhere; }
 .glass .status-orb:is(.idle,.unknown,.empty,.archived) { background:var(--muted); opacity:.7; }
 .glass .status-orb:is(.starting,.stopping) { background:var(--accent); }
+.glass .status-orb.limit_reached { color:var(--warning); }
 .glass .status-orb.cancelled { color:var(--muted); }
 @media(max-width:300px) { .source-connect { grid-template-columns:minmax(0,1fr); }.source-connect>label { grid-column:1; }.request-kind { padding-right:0; margin-top:38px; } }

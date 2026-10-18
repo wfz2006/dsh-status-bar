@@ -448,7 +448,7 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 
 /* Peek: flow the content instead of leaving hollow bands above and below the rows. */
 .task-peek{padding-top:8px;padding-bottom:6px;}
-.task-peek .task-progress{margin:5px 0;}
+.task-peek .task-progress{margin:8px 0 2px;}
 .task-peek .peek-process{margin-top:10px;margin-bottom:0;}
 .task-peek .current-step{margin-top:6px;}
 .task-peek .peek-usage{margin-top:3px;}
