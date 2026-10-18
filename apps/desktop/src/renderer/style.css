@@ -310,12 +310,13 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .context-ring .ring-track{stroke:color-mix(in srgb,var(--fg) 12%,transparent);}
 .context-ring .ring-value{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .3s ease;}
 .context-ring b{font-weight:600;}
-.task-expanded .process-list .process-entry>summary{padding:5px 0;gap:7px;grid-template-columns:20px auto minmax(0,1fr) auto 14px;}
-.process-entry .entry-icon{width:20px;height:20px;border-radius:6px;}
-.process-entry .entry-icon .ui-icon{width:13px;height:13px;}
-.process-entry .entry-title{font-size:10.5px;}
-.process-entry .entry-preview{font-size:11px;}
-.process-entry .entry-status{font-size:10px;}
-.process-entry .entry-body{margin:0 0 7px 27px;font-size:11.5px;line-height:1.55;}
+.task-expanded .process-list .process-entry>summary{padding:2px 0;gap:6px;grid-template-columns:18px auto minmax(0,1fr) auto 12px;}
+.process-entry .entry-icon{width:18px;height:18px;border-radius:5px;}
+.process-entry .entry-icon .ui-icon{width:12px;height:12px;}
+.task-expanded .process-list .process-entry>summary>.ui-icon{width:12px;height:12px;}
+.process-entry .entry-title{font-size:10px;letter-spacing:.02em;}
+.process-entry .entry-preview{font-size:10.5px;}
+.process-entry .entry-status{font-size:9.5px;}
+.process-entry .entry-body{margin:0 0 5px 24px;font-size:11px;line-height:1.5;}
 .chrome-button{outline:none;}
 .chrome-button:focus-visible{outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 42%,transparent);}

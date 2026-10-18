@@ -67,6 +67,8 @@ export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; ex
     {failure ? <button className="attention-link" onClick={reconnect}><span className="control-label">重新连接</span> <span aria-hidden="true">↗</span></button> : task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}
   </section>;
 }
+const noteLabels = { reasoning: '思考', message: 'DSH', user: '你' } as const;
+const noteIcons = { reasoning: 'brain', message: 'chat', user: 'user' } as const;
 const activityLabels = { pending: '等待执行', running: '执行中', success: '已完成', error: '执行失败', cancelled: '已取消' } as const;
 function toolIcon(name: string): IconName {
   const value = name.toLowerCase();
@@ -92,8 +94,8 @@ function ProcessList({ task }: { task: Task }) {
     {rows.map(row => row.kind === 'note'
       ? <details className="process-entry" data-kind={row.note.kind} key={row.key}>
         <summary>
-          <span className="entry-icon" aria-hidden="true"><Icon name={row.note.kind === 'reasoning' ? 'brain' : 'chat'} /></span>
-          <span className="entry-title">{row.note.kind === 'reasoning' ? '思考' : 'DSH'}</span>
+          <span className="entry-icon" aria-hidden="true"><Icon name={noteIcons[row.note.kind]} /></span>
+          <span className="entry-title">{noteLabels[row.note.kind]}</span>
           <span className="entry-preview">{row.note.text}</span>
           <span className="entry-status" />
           <Icon name="chevron" />

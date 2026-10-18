@@ -1,4 +1,4 @@
-export type IconName = 'collapse' | 'more' | 'back' | 'chevron' | 'chevron-right' | 'code' | 'external' | 'file' | 'image' | 'terminal' | 'pencil' | 'search' | 'globe' | 'list' | 'wrench' | 'brain' | 'chat';
+export type IconName = 'collapse' | 'more' | 'back' | 'chevron' | 'chevron-right' | 'code' | 'external' | 'file' | 'image' | 'terminal' | 'pencil' | 'search' | 'globe' | 'list' | 'wrench' | 'brain' | 'chat' | 'user';
 const paths: Record<Exclude<IconName, 'more'>, React.ReactNode> = {
   collapse: <path d="m7 10 5 5 5-5" />,
   chevron: <path d="m7 10 5 5 5-5" />,
@@ -16,6 +16,7 @@ const paths: Record<Exclude<IconName, 'more'>, React.ReactNode> = {
   wrench: <path d="M14.5 6.5a3.5 3.5 0 0 0 4.7 4.6L21 13a4 4 0 0 1-5.6 5.6l-8.5-8.5a4 4 0 0 1 5.6-5.6Z" />,
   brain: <><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-1 5.8V15a3 3 0 0 0 4 2.8V20" /><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 1 5.8V15a3 3 0 0 1-4 2.8V20" /><path d="M9 9.5c1.2 0 2 .8 2 2M15 9.5c-1.2 0-2 .8-2 2" /></>,
   chat: <path d="M4 5h16v11H9l-5 4V5Z" />,
+  user: <><circle cx="12" cy="8" r="3.5" /><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6" /></>,
 };
 export function Icon({ name }: { name: IconName }) {
   return <svg className="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">

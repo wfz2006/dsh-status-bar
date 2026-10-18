@@ -194,7 +194,7 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 | 胶囊紧凑 | viewSize 300×52→288×50；`.task-capsule` padding 18→13px、gap 12→8px | 隔离 Electron 断言 bounds 290×50（含 2px 阴影）、computed padding 13px/gap 8px，截图 `shot-seven-capsule.png` |
 | 不在任务栏/托盘 | BrowserWindow `skipTaskbar: true`；删除 Tray/nativeImage 及 tooltip；菜单「隐藏到托盘」改「隐藏窗口」 | 代码路径 + 启动无托盘图标；菜单退出仍可用 |
 | 完成态 | 去掉整块绿色渐变；5% success 底 + 1px 内描边 + 细成功小签「已完成」 | 断言 `data-state=completed`、chip 文本、`backgroundImage=none`，截图 `shot-seven-completed.png` |
-| 过程紧凑 | summary padding 8→5px、icon 22→20px、正文 12→11.5px、隐藏横向滚动 | 断言两条 summary paddingTop=5px、row 高 30px |
+| 过程紧凑 | summary padding 8→5→2px、icon 22→20→18px、标题 10px、预览 10.5px、隐藏横向滚动 | 断言两条 summary paddingTop=2px、row 高 22px，截图 `shot-frost-expanded.png` |
 | 统计闪烁 | 适配器新增 `projectionValues` 按会话合并投影 key，再计算 stats；单 key 快照不再覆盖为 0 | Fake Host 单 key snapshot 后 stats 仍为 5 轮/137 步/254 tok/s（13 文件 98 测试） |
 | 上下文圆环 | 速览新增 20px SVG 圆环（aria-label「上下文占用 N%」） | 断言圆环存在、label 7.2%，截图 `shot-seven-peek.png` |
 | 选择器 | 自绘 `SessionPicker`（触发器显示「会话 N」+ listbox 弹层，onBlur 关闭），替换原生 select；弹层左对齐、宽度自适应（≤240px）、限高 150px，避免出窗遮挡 | 断言无原生 select、弹层 2 项、圆角 12px、rect(18,82,152,64) 完全在 400×360 视口内，截图 `shot-seven-picker.png` |
@@ -202,3 +202,10 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 检查：`pnpm lint` 0、`pnpm typecheck` 0、13 文件 98 测试全过、`pnpm --filter @glass/desktop build` 成功（renderer index-CBk6rsPg.js 845.51 kB）。隔离脚本 `ui-seven-check.mjs` 七项断言 PASS；截图在仓库外 `evidence-real/shot-seven-*.png`。
 
 限制：任务栏/托盘效果无法在无头断言中读取系统状态，按代码路径与启动表现确认；多屏/DPI 实机矩阵仍未覆盖。
+
+### 转录同步与过程行紧凑化（2026-10-18 晚）
+
+- 过程行内边距 5→2px、图标 20→18px、标题 10px、预览 10.5px，行高 30→22px；展开正文 11px。
+- 适配器新增 `user/message` → note kind `user`（UI 标签「你」）；note 与工具活动改用真实事件 `seq` 排序（工具活动此前用 revision，导致与 DSH 转录顺序不一致）；`tool/result` 到达时把行状态从 running 改为 success/error，并为缺失 call 的 result 补一条已完成行。
+- Mock 会话新增一条用户输入与 `read_file` 成功结果帧；Fake Host 新增用户消息排序与工具状态完成两个合同用例。
+- 验证：lint 0、typecheck 0、13 文件 100 测试；隔离 Electron 断言 6 行过程（含「你」）、工具行状态「已完成」、行高 22px，截图 `evidence-real/shot-frost-expanded.png`。

@@ -9,6 +9,7 @@ const initialSessions: Session[] = [
     notes: [
       { id: 'mock-note-1', kind: 'message', text: '先把协议里的活动数据梳理清楚，再决定过程视图复用哪些字段。', sourceSeq: 1 },
       { id: 'mock-note-2', kind: 'reasoning', text: '过程页要像 DSH 的转录一样按时间排列：先思考，再调用工具，最后给出结果。', sourceSeq: 2 },
+      { id: 'mock-note-0', kind: 'user', text: '帮我梳理一下这个仓库的结构，并说明过程视图该怎么设计。', sourceSeq: 0 },
     ],
     stats: { turns: 3, steps: 42, tokensPerSecond: 218, cacheHitPercent: 96.4, contextPercent: 7.2, tokens: { input: 18_400, cacheRead: 1_240_000, cacheWrite: 0, output: 21_800, total: 1_280_200 } } },
   { runtimeId: MOCK_RUNTIME, sessionId: 'demo-other', title: '视觉探索', workspaceLabel: 'design / Mock', agentStatus: 'idle', phase: 'unknown', lastSourceSeq: 1,
@@ -33,6 +34,7 @@ export function mockDeltas(): Frame[] {
     { ...base, messageId: 'approval-5', kind: 'approval.requested', payload: { requestId: 'mock-approval-1', runtimeId: MOCK_RUNTIME, sessionId: 'demo-main', toolName: 'bash', callId: 'mock-call-2', reason: '这是只读的模拟审批卡片，没有连接 DSH。', commandPreview: 'echo "DSH Glass preview"', displayDetails: 'partial', status: 'pending', actionable: false, createdAt: base.sentAt, sourceEpoch: MOCK_EPOCH } },
     { ...base, messageId: 'note-6', kind: 'session.note', payload: { sessionId: 'demo-main', note: { id: 'mock-note-6', kind: 'reasoning', text: '过程视图需要同时展示思考与工具调用，才能还原 DSH 的工作节奏。', sourceSeq: 6 } } },
     { ...base, messageId: 'note-7', kind: 'session.note', payload: { sessionId: 'demo-main', note: { id: 'mock-note-7', kind: 'message', text: '已确认协议里可以携带活动与说明，接下来补齐过程页的图标与展开详情。', sourceSeq: 7 } } },
+    { ...base, messageId: 'result-8', kind: 'session.tool.activity', payload: { sessionId: 'demo-main', sourceSeq: 8, callId: 'mock-call-1', toolName: 'read_file', summary: 'packages/protocol/src/index.ts', status: 'success', resultSummary: '工具执行完成' } },
   ];
 }
 export function mockFrames(): Frame[] { return [mockWelcome(), mockSnapshot(), ...mockDeltas()]; }
@@ -66,7 +68,7 @@ export function createMockAdapter(publish: (f: Frame) => void, disconnect: () =>
           const seq = f.kind === 'session.note' ? f.payload.note.sourceSeq : f.payload.sourceSeq;
           if (!('sessionId' in f.payload) || f.payload.sessionId !== s.sessionId || seq <= s.lastSourceSeq) return s;
           if (f.kind === 'session.todo.snapshot') return { ...s, todos: f.payload.todos, lastSourceSeq: seq };
-          if (f.kind === 'session.tool.activity') return { ...s, activities: [f.payload, ...s.activities].slice(0, 100), lastSourceSeq: seq };
+          if (f.kind === 'session.tool.activity') return { ...s, activities: [f.payload, ...s.activities.filter(a => a.callId !== f.payload.callId)].slice(0, 100), lastSourceSeq: seq };
           if (f.kind === 'session.note') return { ...s, notes: [f.payload.note, ...(s.notes ?? [])].slice(0, 60), lastSourceSeq: seq };
           if (f.kind === 'session.updated') return { ...s, ...f.payload.fields, lastSourceSeq: seq };
           return s;

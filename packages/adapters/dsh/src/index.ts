@@ -123,6 +123,7 @@ export function createDshAdapter(options: Options) {
   function event(id: string, value: unknown) {
     const session = ensureSession(id); if (!session) return;
     const e = record(value); const data = record(e.data); const type = bounded(e.type);
+    const eventSeq = typeof e.seq === 'number' && Number.isInteger(e.seq) && e.seq >= 0 ? e.seq : revision(id);
     if (type === 'turn/start') { terminal.delete(id); session.agentStatus = 'running'; }
     if (type === 'turn/end') {
       session.agentStatus = 'idle'; const reason = bounded(record(data.reason).kind);
@@ -132,12 +133,21 @@ export function createDshAdapter(options: Options) {
     if (type === 'todo/write') applyProjections(id, { todos: data.todos });
     if (type === 'assistant/message') {
       const message = record(data.message); const blocks = Array.isArray(message.content) ? message.content : [];
-      const sourceSeq = typeof e.seq === 'number' && Number.isInteger(e.seq) && e.seq >= 0 ? e.seq : revision(id);
       let added = false;
       blocks.forEach((block, index) => {
         const b = record(block); const kind = b.type === 'reasoning' ? 'reasoning' as const : b.type === 'text' ? 'message' as const : undefined;
         if (!kind || typeof b.text !== 'string' || !b.text.trim()) return;
-        addNote(id, { id: `${id}:${sourceSeq}:${index}`, kind, text: b.text, sourceSeq }); added = true;
+        addNote(id, { id: `${id}:${eventSeq}:${index}`, kind, text: b.text, sourceSeq: eventSeq }); added = true;
+      });
+      if (added) emitSession(id);
+    }
+    if (type === 'user/message') {
+      const message = record(data.message); const blocks = Array.isArray(message.content) ? message.content : [];
+      let added = false;
+      blocks.forEach((block, index) => {
+        const b = record(block);
+        if (b.type !== 'text' || typeof b.text !== 'string' || !b.text.trim()) return;
+        addNote(id, { id: `${id}:${eventSeq}:u:${index}`, kind: 'user', text: b.text, sourceSeq: eventSeq }); added = true;
       });
       if (added) emitSession(id);
     }
@@ -148,7 +158,7 @@ export function createDshAdapter(options: Options) {
         const containsSensitive = (v: unknown): boolean => Array.isArray(v) ? v.some(containsSensitive) : Object.entries(record(v)).some(([key, nested]) => /(?:secret|password|token|authorization|api.?key|^env$)/i.test(key) || containsSensitive(nested));
         const args = record(parsed); const encoded = JSON.stringify(args); const complete = parsed !== undefined && Object.keys(args).length > 0 && !containsSensitive(parsed) && encoded.length <= 4096;
         toolArguments.set(`${id}:${callId}`, { name, preview: complete ? bounded(args.command, encoded) : '参数包含敏感字段、过长或格式不可验证，请在 DSH 中确认。', complete });
-        session.activities = [{ callId, toolName: name, summary: complete ? bounded(args.command ?? encoded, name, 400) : name, sourceSeq: revision(id), status: 'running' as const }, ...session.activities.filter(a => a.callId !== callId)].slice(0, 100);
+        session.activities = [{ callId, toolName: name, summary: complete ? bounded(args.command ?? encoded, name, 400) : name, sourceSeq: eventSeq, status: 'running' as const }, ...session.activities.filter(a => a.callId !== callId)].slice(0, 100);
         for (const a of approvals.values()) if (a.sessionId === id && a.callId === callId && a.toolName === name && isPending(a.status)) {
           const tool = toolArguments.get(`${id}:${callId}`)!; a.commandPreview = tool.preview; a.displayDetails = tool.complete ? 'complete' : 'partial'; a.actionable = tool.complete && [...deliveries.values()].some(d => d.identity.requestId === a.requestId); a.revision = revision(id);
           if (connected) options.publish(frame('approval.requested', structuredClone(a)));
@@ -157,7 +167,12 @@ export function createDshAdapter(options: Options) {
     }
     if (type === 'tool/result') {
       const message = record(data.message); const callId = bounded(message.toolCallId, '', 200);
-      session.activities = session.activities.map(a => a.callId === callId ? { ...a, status: message.isError === true || data.error ? 'error' : 'success', resultSummary: message.isError === true || data.error ? '工具执行失败' : '工具执行完成', sourceSeq: revision(id) } : a);
+      const failed = message.isError === true || !!data.error;
+      const known = session.activities.some(a => a.callId === callId);
+      if (callId && !known) {
+        session.activities = [{ callId, toolName: toolArguments.get(`${id}:${callId}`)?.name ?? 'tool', summary: failed ? '工具执行失败' : '工具执行完成', sourceSeq: eventSeq, status: failed ? 'error' as const : 'success' as const, resultSummary: failed ? '工具执行失败' : '工具执行完成' }, ...session.activities].slice(0, 100);
+      }
+      session.activities = session.activities.map(a => a.callId === callId ? { ...a, status: failed ? 'error' : 'success', resultSummary: failed ? '工具执行失败' : '工具执行完成' } : a);
     }
     if (type === 'approval/asked') {
       const auditId = bounded(data.id, '', 200); const callId = bounded(data.callId, '', 200);

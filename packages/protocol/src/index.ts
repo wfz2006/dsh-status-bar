@@ -17,7 +17,7 @@ export const capabilitiesSchema = z.object({
 }).strict();
 export const activitySchema = z.object({ callId: id, toolName: id, summary: text, sourceSeq: seq,
   status: z.enum(['pending', 'running', 'success', 'error', 'cancelled']).default('running'), resultSummary: text.optional() });
-export const noteSchema = z.object({ id: id, kind: z.enum(['reasoning', 'message']), text: z.string().min(1).max(2000), sourceSeq: seq }).strict();
+export const noteSchema = z.object({ id: id, kind: z.enum(['reasoning', 'message', 'user']), text: z.string().min(1).max(2000), sourceSeq: seq }).strict();
 export const sessionSchema = z.object({
   runtimeId: id, sessionId: id, title: text, workspaceLabel: text,
   agentStatus: z.enum(['starting', 'running', 'stopping', 'idle', 'unknown']),

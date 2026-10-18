@@ -152,10 +152,10 @@ describe('session and tool lifecycle projection', () => {
     p = reduceProjection(p, frame('session.note', { sessionId: 'demo-main', note: { id: 'n1', kind: 'message', text: '第一段', sourceSeq: 2 } }));
     p = reduceProjection(p, frame('session.note', { sessionId: 'demo-main', note: { id: 'n2', kind: 'reasoning', text: '第二段', sourceSeq: 3 } }));
     expect(p.sessions['demo-main']?.notes?.slice(0, 2).map(n => n.text)).toEqual(['第二段', '第一段']);
-    expect(p.sessions['demo-main']?.notes).toHaveLength(4);
+    expect(p.sessions['demo-main']?.notes).toHaveLength(5);
     expect(reduceProjection(p, frame('session.note', { sessionId: 'demo-main', note: { id: 'n0', kind: 'message', text: '过期', sourceSeq: 2 } }))).toBe(p);
     const updated = reduceProjection(p, frame('session.note', { sessionId: 'demo-main', note: { id: 'n2', kind: 'reasoning', text: '第二段（更新）', sourceSeq: 4 } }));
     expect(updated.sessions['demo-main']?.notes?.[0]).toMatchObject({ id: 'n2', text: '第二段（更新）' });
-    expect(updated.sessions['demo-main']?.notes).toHaveLength(4);
+    expect(updated.sessions['demo-main']?.notes).toHaveLength(5);
   });
 });

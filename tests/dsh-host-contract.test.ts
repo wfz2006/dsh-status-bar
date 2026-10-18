@@ -233,6 +233,27 @@ describe('dsh host contract', () => {
     expect(h.state().sessions['s1']?.notes?.[0]?.sourceSeq).toEqual(expect.any(Number));
   });
 
+  it('projects user prompts into the transcript and orders by session seq', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.audit('s1', { type: 'user/message', seq: 4, data: { message: { content: [{ type: 'text', text: '  帮我看下这个目录  ' }] } } });
+    h.host.audit('s1', { type: 'assistant/message', seq: 5, data: { message: { content: [{ type: 'text', text: '好的。' }] } } });
+    await expect.poll(() => h.state().sessions['s1']?.notes?.length, { timeout: 3000 }).toBe(2);
+    const notes = h.state().sessions['s1']?.notes ?? [];
+    expect(notes[0]).toMatchObject({ kind: 'message', text: '好的。', sourceSeq: 5 });
+    expect(notes[1]).toMatchObject({ kind: 'user', text: '帮我看下这个目录', sourceSeq: 4 });
+  });
+
+  it('marks a tool activity complete when its result arrives', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.audit('s1', { type: 'tool/call', seq: 7, data: { callId: 'c9', name: 'pwsh', arguments: JSON.stringify({ command: 'Get-Date' }) } });
+    await expect.poll(() => h.state().sessions['s1']?.activities?.[0]?.status, { timeout: 3000 }).toBe('running');
+    h.host.audit('s1', { type: 'tool/result', seq: 8, data: { message: { toolCallId: 'c9', isError: false } } });
+    await expect.poll(() => h.state().sessions['s1']?.activities?.[0]?.status, { timeout: 3000 }).toBe('success');
+    expect(h.state().sessions['s1']?.activities?.[0]).toMatchObject({ toolName: 'pwsh', sourceSeq: 7, resultSummary: '工具执行完成' });
+  });
+
   it('derives compact usage stats from cached session projections', async () => {
     const h = await setup({ seeds: [{ sessionId: 's1', stats: {
       sessionStats: { turns: 5, steps: 137, decodeMs: 625876, decodeTokens: 159154 },
