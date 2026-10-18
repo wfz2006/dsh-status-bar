@@ -445,3 +445,11 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .peek-process{margin-top:20px;}
 .peek-process .peek-entry{min-height:14px;}
 .task-peek .peek-usage{margin-top:2px;}
+
+/* Peek: flow the content instead of leaving hollow bands above and below the rows. */
+.task-peek{padding-top:8px;padding-bottom:6px;}
+.task-peek .task-progress{margin:5px 0;}
+.task-peek .peek-process{margin-top:10px;margin-bottom:0;}
+.task-peek .current-step{margin-top:6px;}
+.task-peek .peek-usage{margin-top:3px;}
+.task-peek .task-heading h1{line-height:1.3;}
