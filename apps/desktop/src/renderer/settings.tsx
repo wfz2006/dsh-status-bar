@@ -6,6 +6,7 @@ import type { DesktopOpticsState } from '../shared/desktop-optics';
 import { Icon } from './icon';
 import { DEFAULT_GLASS_APPEARANCE } from '../shared/glass-appearance';
 import { DSHConnection } from './dsh-connection';
+declare const __GLASS_BUILD__: string;
 export function GlassSettingsPanel({ value, update, projection, mock, back }: { value: GlassSettings; update: (patch: Partial<GlassSettings>) => void; projection: Projection; mock: (action: MockAction) => void; back: () => void }) {
   const [optics,setOptics]=useState<DesktopOpticsState>({enabled:false,running:false,error:null});
   useEffect(()=>{void window.glass.getOpticsState().then(setOptics);return window.glass.subscribeOpticsState(setOptics);},[]);
@@ -37,6 +38,7 @@ export function GlassSettingsPanel({ value, update, projection, mock, back }: { 
         <p className="muted">连接状态：{projection.connection}{projection.stale ? ' · 旧数据' : ''}</p>
         <div className="debug-actions"><button disabled={projection.source!=='mock'} onClick={() => mock('restart')}><span className="control-label">重播演示</span></button><button disabled={projection.source!=='mock'} onClick={() => mock(projection.connection === 'connected' ? 'disconnect' : 'reconnect')}><span className="control-label">{projection.connection === 'connected' ? '模拟断线' : '重新连接'}</span></button><button disabled={projection.source!=='mock'} onClick={() => mock('out-of-order')}><span className="control-label">模拟乱序</span></button></div>
       </details>
+      <p className="muted build-stamp">构建 {new Date(__GLASS_BUILD__).toLocaleString('zh-CN', { hour12: false })}</p>
     </div>
   </section>;
 }

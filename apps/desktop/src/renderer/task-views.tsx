@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Projection } from '@glass/protocol';
 import { formatTokens, taskMetrics, type deriveTask } from '../shared/view-model';
 import { Icon, type IconName } from './icon';
@@ -97,14 +97,26 @@ function toolIcon(name: string): IconName {
 function ProcessList({ task }: { task: Task }) {
   const notes = task.session?.notes;
   const activities = task.session?.activities;
+  const listRef = useRef<HTMLDivElement>(null);
+  const [fade, setFade] = useState({ top: false, bottom: false });
+  // Fade the transcript at whichever edge still hides content, so a clipped row
+  // dissolves instead of ending on a hard line.
+  const syncFade = () => {
+    const el = listRef.current;
+    if (!el) return;
+    const top = el.scrollTop > 2;
+    const bottom = el.scrollTop + el.clientHeight < el.scrollHeight - 2;
+    setFade(current => current.top === top && current.bottom === bottom ? current : { top, bottom });
+  };
   // The adapter emits the whole session on every change; only re-merge when the
   // transcript or activity arrays actually changed.
   const rows = useMemo(() => [
     ...(notes ?? []).map(note => ({ kind: 'note' as const, key: note.id, sourceSeq: note.sourceSeq, note })),
     ...(activities ?? []).map(activity => ({ kind: 'tool' as const, key: activity.callId, sourceSeq: activity.sourceSeq ?? 0, activity })),
   ].sort((a, b) => b.sourceSeq - a.sourceSeq), [notes, activities]);
+  useEffect(() => { syncFade(); }, [rows.length]);
   if (!rows.length) return <p className="empty-state">此会话尚无过程；开始工作后，这里会按时间出现思考与工具调用。</p>;
-  return <div className="activity-list process-list" role="tabpanel" aria-label="AI 工作过程">
+  return <div ref={listRef} onScroll={syncFade} data-fade-top={fade.top ? 'true' : undefined} data-fade-bottom={fade.bottom ? 'true' : undefined} className="activity-list process-list" role="tabpanel" aria-label="AI 工作过程">
     {rows.map((row, index) => row.kind === 'note'
       ? <details className="process-entry" data-kind={row.note.kind} key={row.key} style={{ animationDelay: `${Math.min(index, 10) * 16}ms` }}>
         <summary>

@@ -9,7 +9,7 @@
 // The child also receives `--launcher-pid`; Glass exits when that host process
 // disappears, and disposal kills the spawned tree so the companion follows DSH.
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,8 +18,14 @@ export const name = 'dsh-glass-plugin';
 export const inject = ['connection', 'webServer'];
 
 const appDir = fileURLToPath(new URL('../../../apps/desktop/', import.meta.url));
+const mainBundle = join(appDir, 'out', 'main', 'index.js');
 
 let child;
+let bundleStamp = 0;
+
+function bundleMtime() {
+  try { return statSync(mainBundle).mtimeMs; } catch { return 0; }
+}
 
 function electronBinary() {
   try {
@@ -48,6 +54,7 @@ export function apply(ctx, config = {}) {
   let launched = false;
   let attempts = 0;
   let timer;
+  let watcher;
 
   const stop = () => {
     if (timer) clearInterval(timer);
@@ -85,10 +92,24 @@ export function apply(ctx, config = {}) {
     spawned.on('exit', () => { if (child === spawned) child = undefined; });
     spawned.unref();
     launched = true;
+    bundleStamp = bundleMtime();
     stop();
     console.info('[dsh-glass-plugin] Glass desktop companion launched (authenticated link redacted)');
   };
 
-  if (typeof ctx.effect === 'function') ctx.effect(() => () => { stop(); killChild(); });
+  if (typeof ctx.effect === 'function') ctx.effect(() => () => { stop(); if (watcher) clearInterval(watcher); watcher = undefined; killChild(); });
   timer = setInterval(() => { if (!launched) tryLaunch(); }, 250);
+  if (config.autoReload !== false) {
+    // Rebuild-and-reload loop: when the desktop bundle changes, relaunch the
+    // running companion with the current authenticated link. A user-initiated
+    // quit leaves `child` empty, so it is never resurrected by a build.
+    watcher = setInterval(() => {
+      const stamp = bundleMtime();
+      if (!child || !stamp || bundleStamp === 0 || stamp === bundleStamp) return;
+      bundleStamp = stamp;
+      console.info('[dsh-glass-plugin] desktop bundle changed; relaunching Glass');
+      killChild();
+      tryLaunch();
+    }, 1500);
+  }
 }

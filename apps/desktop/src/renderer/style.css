@@ -410,3 +410,8 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .task-peek{padding-bottom:6px;}
 .peek-process{margin-top:14px;}
 .peek-usage{margin-top:2px;}
+
+/* Transcript edges dissolve instead of clipping mid-row. */
+.task-expanded .process-list[data-fade-bottom=true]{mask-image:linear-gradient(to bottom,#000 calc(100% - 20px),rgba(0,0,0,.35) calc(100% - 8px),transparent);}
+.task-expanded .process-list[data-fade-top=true][data-fade-bottom=true]{mask-image:linear-gradient(to bottom,transparent,#000 14px,#000 calc(100% - 20px),rgba(0,0,0,.35) calc(100% - 8px),transparent);}
+.task-expanded .process-list[data-fade-top=true]:not([data-fade-bottom=true]){mask-image:linear-gradient(to bottom,transparent,#000 14px);}

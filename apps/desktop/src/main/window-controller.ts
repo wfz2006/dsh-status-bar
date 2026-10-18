@@ -1,4 +1,4 @@
-import { Menu, nativeTheme, screen, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
+import { app, Menu, nativeTheme, screen, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createPresentation } from './presentation';
@@ -130,6 +130,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
       { label: '始终置顶', id: 'pin', type: 'checkbox', checked: win.isAlwaysOnTop(), click: item => setSettings({ pin: item.checked ? 'always' : 'normal' }) },
       { label: '设置', id: 'settings', click: () => showPanel('settings') },
       { label: '查看 DSH 原窗口', id: 'open-dsh', enabled: hooks.canOpenDSH, click: hooks.openDSH },
+      { label: '重新加载 Glass', id: 'reload', click: () => { app.relaunch({ args: process.argv.slice(1) }); app.exit(0); } },
       { label: '重新连接', id: 'reconnect', click: hooks.reconnect },
       { label: 'Mock 调试', id: 'debug', submenu: [
         { label: '重播演示', id: 'mock-restart', click: () => hooks.mock('restart') },
