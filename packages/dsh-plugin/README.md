@@ -24,15 +24,28 @@ existing window is focused and re-connected with the new link.
 
 ## Install
 
-From the plugin market (once listed), or directly from the release tarball:
+From npm, from the plugin market (once listed), or straight from the release
+tarball:
 
 ```sh
+# npm: ~1.6 MB, fetches the 155 MB runtime once on first launch
+dsh plugin --profile web add dsh-glass-plugin
+
+# release tarball: 155 MB, self-contained, nothing downloaded later
 dsh plugin --profile web add https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-glass-plugin.tgz
 ```
 
-The tarball is self-contained: it ships the built desktop app in `app/` and the
-Electron runtime in `electron/dist/`, so nothing is compiled or downloaded at
-install time.
+Both end up as the same companion: the built desktop app plus an Electron
+runtime. The tarball carries them; the npm package downloads the very same
+tarball the first time DSH starts it (progress goes to the host log, roughly
+`[dsh-glass-plugin] downloading the Glass runtime: 40% of 155 MB`) and unpacks it
+into a per-version cache — `%LOCALAPPDATA%\dsh-glass-plugin\runtime-<version>` on
+Windows, `~/.cache/dsh-glass-plugin/runtime-<version>` elsewhere. Later launches
+reuse that cache, so the download happens once per version.
+
+> `dsh-glass-plugin@0.2.0` on the registry is the earlier self-contained build
+> (388 MB unpacked, runtime included). `0.2.1` and later are the light build
+> described here; prefer them.
 
 ### From a checkout (development)
 

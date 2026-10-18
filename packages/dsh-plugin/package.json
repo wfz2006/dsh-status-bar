@@ -1,6 +1,6 @@
 {
   "name": "dsh-glass-plugin",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Floating glass status bar for DeepSeek Harness: a frameless always-on-top window that shows session progress, pending approvals and questions.",
   "license": "MIT",
   "author": "wfz2006",

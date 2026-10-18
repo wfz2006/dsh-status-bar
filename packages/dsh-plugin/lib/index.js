@@ -6,18 +6,22 @@
 // is already running, its single-instance lock focuses the existing window and
 // re-connects it with the new link.
 //
-// Two install shapes have to work:
+// Three install shapes have to work:
 //
 //   - the release tarball, which ships the built app in `app/` and an Electron
 //     runtime in `electron/dist/` (self-contained, nothing to build);
+//   - the npm package, which ships only this plugin and fetches the same
+//     tarball once into a cache directory on first launch;
 //   - a checkout of the repository, where both live outside this package
 //     (`apps/desktop/out` and the workspace `electron` dependency).
 //
 // The child also receives `--launcher-pid`; Glass exits when that host process
 // disappears, and disposal kills the spawned tree so the companion follows DSH.
-import { spawn } from 'node:child_process';
-import { existsSync, statSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs';
+import { get as httpsGet } from 'node:https';
 import { createRequire } from 'node:module';
+import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,6 +30,9 @@ export const inject = ['connection', 'webServer'];
 
 /** Package root: `lib/index.js` -> the directory that holds `package.json`. */
 const pluginRoot = fileURLToPath(new URL('../', import.meta.url));
+
+/** Where the light npm package writes the runtime it downloads on first run. */
+const DEFAULT_RUNTIME_URL = 'https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-glass-plugin.tgz';
 
 /** Electron's binary sits at these relative paths inside a `dist/` directory. */
 function electronExecutables() {
@@ -41,6 +48,23 @@ function firstFile(candidates) {
   return undefined;
 }
 
+function hasApp(candidate) {
+  return typeof candidate === 'string' && candidate.length > 0 && existsSync(join(candidate, 'out', 'main', 'index.js'));
+}
+
+function distBinary(distDir) {
+  return firstFile(electronExecutables().map(name => join(distDir, name)));
+}
+
+function packageVersion() {
+  try {
+    const manifest = JSON.parse(readFileSync(join(pluginRoot, 'package.json'), 'utf8'));
+    return typeof manifest.version === 'string' ? manifest.version : '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+
 /**
  * The app directory holds `out/main/index.js`. The packaged copy wins, then an
  * explicit override, then the checkout layout used while developing.
@@ -51,11 +75,7 @@ function resolveAppDir(config) {
     process.env.DSH_GLASS_APP,
     join(pluginRoot, 'app'),
     join(pluginRoot, '..', '..', 'apps', 'desktop'),
-  ].filter(candidate => typeof candidate === 'string' && existsSync(join(candidate, 'out', 'main', 'index.js'))));
-}
-
-function distBinary(distDir) {
-  return firstFile(electronExecutables().map(name => join(distDir, name)));
+  ].filter(hasApp));
 }
 
 function resolveElectron(config, appDir) {
@@ -81,47 +101,184 @@ function resolveElectron(config, appDir) {
   return undefined;
 }
 
+/** A layout that already has both halves of the companion. */
+function resolveInstalled(config) {
+  const appDir = resolveAppDir(config);
+  if (!appDir) return undefined;
+  const electron = resolveElectron(config, appDir);
+  return electron ? { appDir, electron } : undefined;
+}
+
+function runtimeRoot(config) {
+  const base = config.runtimeDir
+    ?? process.env.DSH_GLASS_RUNTIME
+    ?? (process.platform === 'win32'
+      ? join(process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local'), 'dsh-glass-plugin')
+      : join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'dsh-glass-plugin'));
+  return join(base, `runtime-${packageVersion()}`);
+}
+
+function describeError(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** Follows redirects; GitHub's release download resolves to a CDN host. */
+function download(url, destination, { redirects = 5 } = {}) {
+  return new Promise((resolve, reject) => {
+    const request = httpsGet(url, (response) => {
+      const status = response.statusCode ?? 0;
+      if (status >= 300 && status < 400 && response.headers.location) {
+        response.resume();
+        if (redirects <= 0) {
+          reject(new Error(`too many redirects while downloading ${url}`));
+          return;
+        }
+        const next = new URL(response.headers.location, url).href;
+        download(next, destination, { redirects: redirects - 1 }).then(resolve, reject);
+        return;
+      }
+      if (status !== 200) {
+        response.resume();
+        reject(new Error(`download failed with HTTP ${status}: ${url}`));
+        return;
+      }
+      const total = Number(response.headers['content-length'] ?? 0);
+      let received = 0;
+      let reported = 0;
+      const file = createWriteStream(destination);
+      response.on('data', (chunk) => {
+        received += chunk.length;
+        if (total > 0) {
+          const percent = Math.floor((received / total) * 100);
+          if (percent >= reported + 10) {
+            reported = percent - (percent % 10);
+            console.info(`[dsh-glass-plugin] downloading the Glass runtime: ${reported}% of ${Math.round(total / (1024 * 1024))} MB`);
+          }
+        }
+      });
+      response.pipe(file);
+      file.on('finish', () => file.close(() => resolve(received)));
+      file.on('error', (error) => {
+        rmSync(destination, { force: true });
+        reject(error);
+      });
+    });
+    request.on('error', (error) => {
+      rmSync(destination, { force: true });
+      reject(error);
+    });
+    request.setTimeout(15 * 60 * 1000, () => request.destroy(new Error(`timed out downloading ${url}`)));
+  });
+}
+
+/** `tar` ships with Windows 10+ (bsdtar), macOS and every mainstream Linux. */
+function extract(tarball, directory) {
+  const result = spawnSync('tar', ['-xzf', tarball, '-C', directory], { stdio: 'ignore', windowsHide: true });
+  if (result.status !== 0) {
+    throw new Error(`could not unpack ${tarball} (tar exited with ${result.status ?? result.signal}); extract it manually to ${directory}`);
+  }
+}
+
+/**
+ * Downloads and unpacks the release tarball into the per-version cache, then
+ * returns the same `{ appDir, electron }` shape as a bundled install.
+ */
+async function fetchRuntime(config) {
+  const url = config.downloadUrl ?? process.env.DSH_GLASS_RUNTIME_URL ?? DEFAULT_RUNTIME_URL;
+  const root = runtimeRoot(config);
+  const cached = { appDir: join(root, 'app'), electron: distBinary(join(root, 'electron', 'dist')) };
+  if (hasApp(cached.appDir) && cached.electron) return cached;
+
+  const staging = `${root}.staging`;
+  const tarball = join(tmpdir(), `dsh-glass-plugin-${process.pid}-${Date.now()}.tgz`);
+  rmSync(staging, { recursive: true, force: true });
+  mkdirSync(staging, { recursive: true });
+  console.info(`[dsh-glass-plugin] first run: fetching the ~155 MB Glass runtime from ${url}`);
+  try {
+    const bytes = await download(url, tarball);
+    console.info(`[dsh-glass-plugin] unpacking the Glass runtime (${Math.round(bytes / (1024 * 1024))} MB)`);
+    extract(tarball, staging);
+    const unpacked = join(staging, 'package');
+    if (!hasApp(join(unpacked, 'app')) || !distBinary(join(unpacked, 'electron', 'dist'))) {
+      throw new Error('the downloaded archive does not contain app/ and electron/dist/');
+    }
+    rmSync(root, { recursive: true, force: true });
+    mkdirSync(root, { recursive: true });
+    renameSync(join(unpacked, 'app'), join(root, 'app'));
+    renameSync(join(unpacked, 'electron'), join(root, 'electron'));
+  } finally {
+    rmSync(tarball, { force: true });
+    rmSync(staging, { recursive: true, force: true });
+  }
+
+  const electron = distBinary(join(root, 'electron', 'dist'));
+  if (!electron) throw new Error(`the runtime in ${root} has no Electron executable`);
+  return { appDir: join(root, 'app'), electron };
+}
+
 function killChild(child) {
   if (!child || child.exitCode !== null || child.pid === undefined) return;
   try { child.kill(); } catch { /* already gone */ }
   if (process.platform === 'win32') spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { stdio: 'ignore', windowsHide: true });
 }
 
+function bundleMtimeOf(appDir) {
+  try { return statSync(join(appDir, 'out', 'main', 'index.js')).mtimeMs; } catch { return 0; }
+}
+
 export function apply(ctx, config = {}) {
   if (config.autoLaunch === false) return;
   let child;
-  let bundleStamp = 0;
-  let launched = false;
   let attempts = 0;
   let timer;
   let watcher;
+  let bundleStamp = 0;
+  let target = resolveInstalled(config);
+  let preparing = false;
+  let fatal;
 
-  const appDir = resolveAppDir(config);
-  const mainBundle = appDir ? join(appDir, 'out', 'main', 'index.js') : undefined;
-
-  const bundleMtime = () => {
-    if (!mainBundle) return 0;
-    try { return statSync(mainBundle).mtimeMs; } catch { return 0; }
-  };
-
-  const stop = () => {
+  const stopClock = () => {
     if (timer) clearInterval(timer);
     timer = undefined;
   };
 
+  const startClock = () => {
+    if (!timer) timer = setInterval(tryLaunch, 250);
+  };
+
+  const useTarget = (next) => {
+    target = next;
+    bundleStamp = bundleMtimeOf(next.appDir);
+    startClock();
+  };
+
+  const prepare = () => {
+    if (preparing || target || fatal) return;
+    preparing = true;
+    fetchRuntime(config).then((next) => {
+      preparing = false;
+      console.info(`[dsh-glass-plugin] Glass runtime ready at ${next.appDir}`);
+      useTarget(next);
+    }, (error) => {
+      preparing = false;
+      fatal = `[dsh-glass-plugin] could not prepare the Glass runtime: ${describeError(error)}`;
+      console.warn(fatal);
+      stopClock();
+    });
+  };
+
   const tryLaunch = () => {
-    attempts += 1;
-    if (attempts > 600) {
-      stop();
-      console.warn('[dsh-glass-plugin] no web server origin after 150s; the Glass companion was not started');
+    if (fatal) return;
+    if (!target) {
+      // The npm build has no app yet: fetch it once, then keep waiting for the
+      // web server in the background instead of counting down against it.
+      prepare();
       return;
     }
-    if (!appDir) {
-      stop();
-      console.warn(
-        '[dsh-glass-plugin] no built desktop app found (looked for app/out/main/index.js and apps/desktop/out/main/index.js); '
-        + 'install the release tarball or run `pnpm build` in the repository',
-      );
+    attempts += 1;
+    if (attempts > 600) {
+      stopClock();
+      console.warn('[dsh-glass-plugin] no web server origin after 150s; the Glass companion was not started');
       return;
     }
     let origin;
@@ -130,18 +287,10 @@ export function apply(ctx, config = {}) {
     try { link = ctx.connection.authenticatedUrl(origin); } catch { return; }
     if (!link || !/^https?:\/\//.test(link)) return;
 
-    const binary = resolveElectron(config, appDir);
-    if (!binary) {
-      stop();
-      console.warn(
-        '[dsh-glass-plugin] no Electron runtime found; install the release tarball (which ships one) or the `electron` package next to the app',
-      );
-      return;
-    }
     const env = { ...process.env };
     delete env.ELECTRON_RUN_AS_NODE;
-    const spawned = spawn(binary, [appDir, `--dsh-link=${link}`, `--launcher-pid=${process.pid}`], {
-      cwd: appDir,
+    const spawned = spawn(target.electron, [target.appDir, `--dsh-link=${link}`, `--launcher-pid=${process.pid}`], {
+      cwd: target.appDir,
       detached: true,
       stdio: 'ignore',
       env,
@@ -149,35 +298,40 @@ export function apply(ctx, config = {}) {
     child = spawned;
     spawned.on('exit', () => { if (child === spawned) child = undefined; });
     spawned.unref();
-    launched = true;
-    bundleStamp = bundleMtime();
-    stop();
+    bundleStamp = bundleMtimeOf(target.appDir);
+    stopClock();
     console.info('[dsh-glass-plugin] Glass desktop companion launched (authenticated link redacted)');
   };
 
   if (typeof ctx.effect === 'function') {
     ctx.effect(() => () => {
-      stop();
+      stopClock();
       if (watcher) clearInterval(watcher);
       watcher = undefined;
       killChild(child);
       child = undefined;
     });
   }
-  timer = setInterval(() => { if (!launched) tryLaunch(); }, 250);
+
+  if (target) {
+    startClock();
+  } else {
+    prepare();
+  }
+
   if (config.autoReload !== false) {
     // Rebuild-and-reload loop: when the desktop bundle changes, relaunch the
     // running companion with the current authenticated link. A user-initiated
     // quit leaves `child` empty, so it is never resurrected by a build.
     watcher = setInterval(() => {
-      const stamp = bundleMtime();
+      if (!target) return;
+      const stamp = bundleMtimeOf(target.appDir);
       if (!child || !stamp || bundleStamp === 0 || stamp === bundleStamp) return;
       bundleStamp = stamp;
       console.info('[dsh-glass-plugin] desktop bundle changed; relaunching the Glass companion');
       killChild(child);
       child = undefined;
-      launched = false;
-      timer = setInterval(() => { if (!launched) tryLaunch(); }, 250);
+      startClock();
     }, 1500);
   }
 }

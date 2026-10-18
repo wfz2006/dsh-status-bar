@@ -63,9 +63,13 @@ pnpm start
 
 ### 装成 DSH 插件（推荐）
 
-不用自己 `pnpm build`：插件包里带着构建好的桌面端和 Electron 运行时，装上就能开。开启 DSH 时它会自己把官方认证链接交给玻璃，不用再手动粘贴。
+不用自己 `pnpm build`：插件带上构建好的桌面端和 Electron 运行时，装上就能开。开启 DSH 时它会自己把官方认证链接交给玻璃，不用再手动粘贴。
 
 ```powershell
+# npm 包只有 870 kB，首次启动自取 155 MB 运行时（缓存到版本目录，之后不再下载）
+dsh plugin --profile web add dsh-glass-plugin
+
+# 或者自包含 tarball：155 MB 一次装完，运行期不再联网
 dsh plugin --profile web add https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-glass-plugin.tgz
 ```
 
