@@ -91,6 +91,10 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     }
     const old = view;
     view = observeFacts(view, facts, panel ? { ...settings, autoApproval: false } : settings);
+    // A fresh approval or question is worth opening the sheet for: the glass is
+    // the answerer, and a request the user never sees is a request that stalls.
+    const newRequest = old.pending.length === 0 && view.pending.length > 0;
+    if (newRequest && !panel && view.mode !== 'approval') { showMode('approval'); return; }
     // Once the request that pulled us into the approval sheet is resolved, go
     // back to the view the user came from instead of parking on an empty sheet.
     if (view.mode === 'approval') {
