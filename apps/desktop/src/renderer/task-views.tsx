@@ -144,10 +144,9 @@ function ProcessList({ task }: { task: Task }) {
   </div>;
 }
 export function TaskExpanded({ task, projection, selected, select, approval, reconnect }: { task: Task; projection: Projection; selected: string; select: (id: string) => void; approval: () => void; reconnect: () => void }) {
-  const rank = { in_progress: 0, pending: 1, completed: 2 };
   const [tab, setTab] = useState<'process' | 'steps'>('process');
   const metrics = taskMetrics(task.session);
-  const todos = [...task.todos].sort((a, b) => rank[a.status] - rank[b.status]);
+  const todos = task.todos;
   return <section className="task-expanded">
     <div className="task-heading"><h1 title={task.title}>{task.title}</h1></div>
     {Object.keys(projection.sessions).length > 1 && <div className="task-picker-row"><SessionPicker sessions={Object.values(projection.sessions).map(session => ({ sessionId: session.sessionId, title: session.title }))} selected={selected} select={select} /></div>}
@@ -166,7 +165,7 @@ export function TaskExpanded({ task, projection, selected, select, approval, rec
     </div>
     <div className="task-panel" key={tab}>
       {tab === 'process' ? <ProcessList task={task} /> : <>
-        <ol className="todo-list" aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span>{todo.content}</span></li>)}</ol>
+        <ol className="todo-list" aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span className="todo-text">{todo.content}</span>{todo.status === 'completed' && <span className="todo-note">已完成</span>}</li>)}</ol>
         {!todos.length && <p className="empty-state">此会话尚无 Todo，不显示百分比。</p>}
       </>}
     </div>

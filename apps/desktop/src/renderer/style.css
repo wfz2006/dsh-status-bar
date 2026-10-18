@@ -478,3 +478,7 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .task-peek .task-heading h1,.task-expanded .task-heading h1{font-weight:600;letter-spacing:-.01em;background:linear-gradient(96deg,var(--fg) 42%,color-mix(in srgb,var(--accent) 55%,var(--fg)));-webkit-background-clip:text;background-clip:text;color:transparent;}
 
 @media (prefers-reduced-motion:reduce){.whale-tail{animation:none;}}
+
+.todo .todo-text{flex:1;min-width:0}
+.todo.completed .todo-text{color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:1px;text-underline-offset:3px}
+.todo-note{flex:0 0 auto;font-size:10px;font-weight:500;letter-spacing:.02em;color:var(--success)}

@@ -8,7 +8,7 @@ import { initialProjection, reduceProjection, type Frame, type Projection } from
 
 type Args = Record<string, unknown>;
 type Seed = {
-  sessionId: string; cwd?: string; running?: boolean; title?: string;
+  sessionId: string; cwd?: string; running?: boolean; agentAvailable?: boolean; title?: string;
   todos?: { content: string; status: 'pending' | 'in_progress' | 'completed' }[];
   stats?: Args;
 };
@@ -22,10 +22,12 @@ class FakeHost {
   sessions: Seed[] = [];
   auth: AuthMode = 'ok';
   rejectResults = false;
+  suppressDecision = false;
   rpc?: (method: string, args: Args) => unknown;
   readonly requests: { method: string; args: Args }[] = [];
   readonly openStreams: string[] = [];
   readonly auditEvents = new Map<string, Args[]>();
+  readonly pending = new Map<string, { agentId: string; event: string; request: Args }>();
   authAttempts = 0;
   origin = '';
   private server?: Server;
@@ -65,7 +67,11 @@ class FakeHost {
     return true;
   }
 
-  waterfall(event: { eventId: string; agentId: string; event: string; request: Args }) { return this.send('gateway', { type: 'waterfall', ...event }); }
+  waterfall(event: { eventId: string; agentId: string; event: string; request: Args }) {
+    this.pending.set(event.eventId, event);
+    if (event.event === 'approval/request') this.audit(event.agentId, { type: 'approval/asked', data: { id: `asked:${event.eventId}`, ...event.request } });
+    return this.send('gateway', { type: 'waterfall', ...event });
+  }
   gateway(value: Args) { return this.send('gateway', value); }
   audit(sessionId: string, event: Args) { return this.send(`audit:${sessionId}`, { type: 'event', event }); }
   snapshot(sessionId: string, projections: Args) { return this.send(`audit:${sessionId}`, { type: 'snapshot', projections: { values: projections }, records: [] }); }
@@ -104,11 +110,11 @@ class FakeHost {
 
   private async http(request: IncomingMessage, response: ServerResponse) {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
-    if (request.method === 'GET' && url.pathname === '/') {
+    if (request.method === 'GET' && url.pathname === '/connect') {
       this.authAttempts += 1;
       if (this.auth !== 'ok') { this.failAuth(response); return; }
-      if (url.searchParams.getAll('token').length !== 1 || url.searchParams.get('token') !== TOKEN) { response.writeHead(200).end(); return; }
-      response.writeHead(303, { Location: '/', 'Set-Cookie': `${COOKIE}; Path=/; HttpOnly; SameSite=Strict` }).end();
+      if (url.searchParams.getAll('token').length !== 1 || url.searchParams.get('token') !== TOKEN || url.searchParams.get('interactions') !== 'answer') { response.writeHead(200).end(); return; }
+      response.writeHead(302, { Location: './api/remote.mux', 'Set-Cookie': `${COOKIE}; Path=/; HttpOnly; SameSite=Strict` }).end();
       return;
     }
     if (request.method !== 'POST' || !url.pathname.startsWith('/api/')) { response.writeHead(404).end(); return; }
@@ -120,18 +126,30 @@ class FakeHost {
     const method = decodeURIComponent(url.pathname.slice(5));
     const args = object(object(body.payload).args);
     this.requests.push({ method, args });
-    let result: Args = { ok: true, value: true };
+    let result: Args = { ok: true, value: method === '$events/result' ? undefined : true };
     if (method === '$events/result' && this.rejectResults) result = { ok: false };
     else if (this.rpc) result = { ok: true, value: this.rpc(method, args) };
-    else if (method === 'session/list') result = { ok: true, value: { items: this.sessions.map(seed => ({ sessionId: seed.sessionId, cwd: seed.cwd ?? 'C:\\ws', running: seed.running ?? false, projections: { values: { title: seed.title ?? seed.sessionId, ...(seed.stats ?? {}) } } })) } };
+    else if (method === 'session/list') result = { ok: true, value: { items: this.sessions.map(seed => ({ sessionId: seed.sessionId, cwd: seed.cwd ?? 'C:\\ws', running: seed.running ?? false, agentAvailable: seed.agentAvailable ?? seed.running ?? false, projections: { values: { title: seed.title ?? seed.sessionId, ...(seed.stats ?? {}) } } })) } };
+    if (method === '$events/result' && result.ok === true && result.value === undefined && !this.suppressDecision) {
+      const id = String(args.eventId); const delivery = this.pending.get(id);
+      if (delivery) {
+        this.gateway({ type: 'cancel', eventId: id });
+        if (delivery.event === 'approval/request') this.audit(delivery.agentId, { type: 'approval/decided', data: { id: `asked:${id}`, outcome: object(args.outcome).value } });
+        else {
+          const callId = object(delivery.request.wait).callId;
+          this.send('control', { type: 'projection', sessionId: delivery.agentId, key: 'userQuestions', value: { active: [], settled: [{ callId, answers: object(object(args.outcome).value).answers }] } });
+        }
+        this.pending.delete(id);
+      }
+    }
     response.writeHead(200, { 'Content-Type': 'application/json' });
     response.end(JSON.stringify({ type: 'server-response', rpcId: String(body.rpcId ?? ''), result }));
   }
 
   private failAuth(response: ServerResponse) {
     if (this.auth === 'not-found') { response.writeHead(200).end(); return; }
-    if (this.auth === 'foreign') { response.writeHead(303, { Location: 'http://203.0.113.5/', 'Set-Cookie': `${COOKIE}; Path=/` }).end(); return; }
-    response.writeHead(303, { Location: '/' }).end();
+    if (this.auth === 'foreign') { response.writeHead(302, { Location: 'http://203.0.113.5/', 'Set-Cookie': `${COOKIE}; Path=/` }).end(); return; }
+    response.writeHead(302, { Location: './api/remote.mux' }).end();
   }
 }
 
@@ -360,6 +378,19 @@ describe('dsh host contract', () => {
     await expect.poll(() => h.state().questions[0]?.status, { timeout: 3000 }).toBe('answered');
   });
 
+  it('keeps a delivered question open when projections do not list it', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.waterfall({ eventId: 'q2-ev', agentId: 's1', event: 'user-questions/request', request: {
+      wait: { callId: 'w2' }, questions: [{ id: 'q2', question: '要哪个?', options: [{ label: '甲' }, { label: '乙' }] }],
+    } });
+    await expect.poll(() => h.state().questions.length, { timeout: 3000 }).toBe(1);
+    h.host.send('control', { type: 'projection', sessionId: 's1', key: 'userQuestions', value: { active: [], settled: [] } });
+    await new Promise(resolve => setTimeout(resolve, 200));
+    expect(h.state().questions[0]?.status).toBe('pending');
+    expect(h.state().questions[0]?.actionable).toBe(true);
+  });
+
   it('fails closed when the host channel drops', async () => {
     const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
     await h.adapter.connect(h.host.link());
@@ -378,12 +409,197 @@ describe('dsh host contract', () => {
     const h = await setup();
     await h.adapter.connect(h.host.link());
     expect(h.state().sessions).toEqual({});
-    h.host.gateway({ type: 'emit', event: 'api-session/added', args: [{ sessionId: 's2', cwd: 'C:\\ws\\beta', running: true, projections: { values: { title: '新会话' } } }] });
+    h.host.gateway({ type: 'emit', event: 'api-session/added', args: [{ sessionId: 's2', cwd: 'C:\\ws\\beta', running: true, agentAvailable: true, projections: { values: { title: '新会话' } } }] });
     await expect.poll(() => h.state().sessions['s2']?.title, { timeout: 3000 }).toBe('新会话');
     expect(h.host.openStreams).toContain('audit:s2');
     h.host.gateway({ type: 'emit', event: 'api-session/status', args: ['s2', false] });
     await expect.poll(() => h.state().sessions['s2']?.agentStatus, { timeout: 3000 }).toBe('idle');
     h.host.gateway({ type: 'emit', event: 'api-session/removed', args: ['s2'] });
     await expect.poll(() => h.state().sessions['s2'], { timeout: 3000 }).toBeUndefined();
+  });
+
+  it('does not activate cold history or label idle as a completed turn', async () => {
+    const h = await setup({ seeds: [{ sessionId: 'cold', agentAvailable: false }, { sessionId: 'live-idle', agentAvailable: true }] });
+    await h.adapter.connect(h.host.link());
+    expect(h.host.openStreams).not.toContain('audit:cold');
+    expect(h.host.openStreams).toContain('audit:live-idle');
+    expect(h.state().sessions['cold']).toMatchObject({ agentStatus: 'idle', phase: 'unknown' });
+    expect(h.state().sessions['live-idle']).toMatchObject({ agentStatus: 'idle', phase: 'unknown' });
+  });
+
+  it('maps object-shaped cancellation and failure reasons and clears todos at turn start', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.audit('s1', { type: 'todo/write', data: { todos: [{ content: 'old', status: 'completed' }] } });
+    await expect.poll(() => h.state().sessions['s1']?.todos.length).toBe(1);
+    h.host.audit('s1', { type: 'turn/start', data: { turn: 2 } });
+    await expect.poll(() => h.state().sessions['s1']?.todos.length).toBe(0);
+    h.host.audit('s1', { type: 'turn/end', data: { reason: { kind: 'aborted', reason: 'user' } } });
+    await expect.poll(() => h.state().sessions['s1']?.phase).toBe('cancelled');
+    h.host.audit('s1', { type: 'turn/start', data: { turn: 3 } });
+    h.host.audit('s1', { type: 'turn/end', data: { reason: { kind: 'error', error: {} } } });
+    await expect.poll(() => h.state().sessions['s1']?.phase).toBe('error');
+  });
+
+  it('rejects ok:true with accepted:false instead of claiming approval success', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.audit('s1', { type: 'tool/call', data: { callId: 'c1', name: 'bash', arguments: '{"command":"ls"}' } });
+    h.host.waterfall({ eventId: 'ev1', agentId: 's1', event: 'approval/request', request: { toolName: 'bash', callId: 'c1' } });
+    await expect.poll(() => h.state().approvals[0]?.actionable).toBe(true);
+    const a = h.state().approvals[0]!;
+    h.host.rpc = () => false;
+    await expect(h.adapter.respondApproval(a, 'allowed-once')).rejects.toThrow('审批提交失败');
+    expect(h.state().approvals[0]?.status).toBe('unavailable');
+    expect(h.state().approvals.some(a => a.status === 'allowed-once')).toBe(false);
+  });
+
+  it('keeps timed questions pending and answers continued requests without reusing cancelled deliveries', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    const items = [{ id: 'q1', question: '确认方案?', options: [{ label: '甲' }, { label: '乙' }] }];
+    h.host.waterfall({ eventId: 'qev', agentId: 's1', event: 'user-questions/request', request: { wait: { callId: 'c1', timed: true }, questions: items } });
+    await expect.poll(() => h.state().questions[0]?.actionable).toBe(true);
+    h.host.rpc = method => method === 'session/projections' ? { values: { userQuestions: { active: [{ callId: 'c1', questions: items, state: 'continued' }], settled: [] } } } : true;
+    h.host.gateway({ type: 'cancel', eventId: 'qev' });
+    await expect.poll(() => h.host.requests.some(r => r.method === 'session/projections')).toBe(true);
+    await expect.poll(() => h.state().questions[0]?.actionable).toBe(true);
+    const q = h.state().questions[0]!;
+    expect(q.status).toBe('pending');
+    await h.adapter.respondQuestion(q, [{ questionId: 'q1', values: ['乙'] }]);
+    expect(h.host.requests.find(r => r.method === 'userQuestions/answer')?.args).toEqual({ agentId: 's1', callId: 'c1', answer: { answers: [{ id: 'q1', selected: ['乙'] }] } });
+    expect(h.host.requests.some(r => r.method === '$events/result')).toBe(false);
+    expect(h.state().questions[0]?.status).toBe('answered');
+  });
+
+  it('correlates approval audit identities without using them as remote event IDs', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.audit('s1', { type: 'tool/call', data: { callId: 'c1', name: 'bash', arguments: '{"command":"ls"}' } });
+    h.host.audit('s1', { type: 'approval/asked', data: { id: 'audit-id', callId: 'c1', toolName: 'bash' } });
+    h.host.waterfall({ eventId: 'remote-id', agentId: 's1', event: 'approval/request', request: { callId: 'c1', toolName: 'bash' } });
+    await expect.poll(() => h.state().approvals[0]?.actionable).toBe(true);
+    expect(h.state().approvals).toHaveLength(1);
+    const a = h.state().approvals[0]!;
+    await h.adapter.respondApproval(a, 'rejected');
+    expect(h.host.requests.find(r => r.method === '$events/result')?.args.eventId).toBe('remote-id');
+  });
+
+  it('accepts independent projection keys sharing a native sequence and rejects stale snapshots', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.send('control', { type: 'projection', sessionId: 's1', key: 'title', value: '最新标题', seq: 10 });
+    h.host.send('control', { type: 'projection', sessionId: 's1', key: 'todos', value: [{ content: '最新任务', status: 'in_progress' }], seq: 10 });
+    h.host.send('control', { type: 'projection', sessionId: 's1', key: 'todos', value: [{ content: '旧任务', status: 'pending' }], seq: 9 });
+    await expect.poll(() => h.state().sessions['s1']?.todos[0]?.content).toBe('最新任务');
+    expect(h.state().sessions['s1']?.title).toBe('最新标题');
+    h.host.send('control', { type: 'projection', sessionId: 's1', key: 'todos', value: [{ content: '后续任务', status: 'pending' }], seq: 11 });
+    await expect.poll(() => h.state().sessions['s1']?.todos[0]?.content).toBe('后续任务');
+    const updates = h.frames.filter((f): f is Extract<Frame, { kind: 'session.upserted' }> => f.kind === 'session.upserted');
+    expect(updates.every((f, i) => i === 0 || f.payload.lastSourceSeq > updates[i - 1]!.payload.lastSourceSeq)).toBe(true);
+  });
+
+  it('does not resurrect completed questions from unrelated projection updates', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    const items = [{ id: 'q1', question: '颜色?', options: [{ label: '蓝' }] }];
+    h.host.send('control', { type: 'projection', sessionId: 's1', key: 'userQuestions', value: { active: [{ callId: 'c1', state: 'continued', questions: items }] }, seq: 3 });
+    await expect.poll(() => h.state().questions[0]?.actionable).toBe(true);
+    await h.adapter.respondQuestion(h.state().questions[0]!, [{ questionId: 'q1', values: ['蓝'] }]);
+    h.host.send('control', { type: 'projection', sessionId: 's1', key: 'title', value: 'Changed', seq: 4 });
+    await expect.poll(() => h.state().sessions['s1']?.title).toBe('Changed');
+    expect(h.state().questions[0]?.status).toBe('answered');
+    expect(h.state().questions[0]?.actionable).toBe(false);
+  });
+
+  it('only calls explicitly completed turn endings finished', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.audit('s1', { type: 'turn/end', data: { reason: { kind: 'unrecognized' } } });
+    await expect.poll(() => h.state().sessions['s1']?.phase).toBe('unknown');
+    expect(h.state().sessions['s1']?.agentStatus).toBe('idle');
+    h.host.audit('s1', { type: 'turn/start', data: { turn: 2 } });
+    h.host.audit('s1', { type: 'turn/end', data: {} });
+    await expect.poll(() => h.state().sessions['s1']?.phase).toBe('unknown');
+    h.host.audit('s1', { type: 'turn/start', data: { turn: 3 } });
+    h.host.audit('s1', { type: 'turn/end', data: { reason: { kind: 'completed' } } });
+    await expect.poll(() => h.state().sessions['s1']?.phase).toBe('finished');
+  });
+
+  it('keeps authoritative current-turn projections when the follow baseline replays historical starts', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.send('control', { type: 'projection', sessionId: 's1', key: 'todos', value: [{ content: '当前任务', status: 'in_progress' }], seq: 12 });
+    await expect.poll(() => h.state().sessions['s1']?.todos[0]?.content).toBe('当前任务');
+    h.host.send('audit:s1', { type: 'snapshot', projections: { asOfSeq: 10, values: { todos: [{ content: '旧任务', status: 'pending' }], turnBoundary: { openTurnStartSeq: 7 } } }, records: [
+      { type: 'event', event: { type: 'turn/start', seq: 1, data: {} } },
+      { type: 'event', event: { type: 'turn/end', seq: 5, data: { reason: { kind: 'completed' } } } },
+    ] });
+    await expect.poll(() => h.state().sessions['s1']?.phase).toBe('working');
+    expect(h.state().sessions['s1']?.todos[0]?.content).toBe('当前任务');
+  });
+
+  it('projects archive and gateway errors without inventing a successful completion', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.send('workspace', { type: 'archived', archivedSessionIds: ['s1'] });
+    await expect.poll(() => h.state().sessions['s1']?.phase).toBe('archived');
+    h.host.send('workspace', { type: 'archived', archivedSessionIds: [] });
+    await expect.poll(() => h.state().sessions['s1']?.phase).toBe('working');
+    h.host.gateway({ type: 'emit', event: 'api-session/error', args: ['s1', 'private diagnostic'] });
+    await expect.poll(() => h.state().sessions['s1']?.phase).toBe('error');
+    expect(h.state().sessions['s1']?.agentStatus).toBe('idle');
+    expect(JSON.stringify(h.frames)).not.toContain('private diagnostic');
+  });
+
+  it('leaves an unconfirmed void submission unavailable after the receipt deadline', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    h.host.suppressDecision = true;
+    await h.adapter.connect(h.host.link());
+    h.host.audit('s1', { type: 'tool/call', data: { callId: 'c1', name: 'bash', arguments: '{"command":"ls"}' } });
+    h.host.waterfall({ eventId: 'ev1', agentId: 's1', event: 'approval/request', request: { toolName: 'bash', callId: 'c1' } });
+    await expect.poll(() => h.state().approvals[0]?.actionable).toBe(true);
+    const response = h.adapter.respondApproval(h.state().approvals[0]!, 'allowed-once');
+    expect(h.state().approvals[0]).toMatchObject({ status: 'submitting', actionable: false });
+    await expect(response).rejects.toThrow('审批提交失败');
+    expect(h.state().approvals[0]).toMatchObject({ status: 'unavailable', actionable: false });
+    expect(h.state().approvals.some(a => a.status === 'allowed-once')).toBe(false);
+  }, 15000);
+
+  it.each([
+    ['completed', 'finished'], ['error', 'error'], ['aborted', 'cancelled'], ['blocked', 'error'], ['max-tokens', 'limit-reached'], ['future-reason', 'unknown'],
+  ])('maps the official %s turn-ending reason to %s', async (kind, phase) => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.audit('s1', { type: 'turn/end', data: { reason: { kind } } });
+    await expect.poll(() => h.state().sessions['s1']?.phase).toBe(phase);
+  });
+
+  it('reads cold terminal boundaries through page without promoting historical Agents', async () => {
+    const h = await setup();
+    const ends = new Map([['done', 'completed'], ['failed', 'error'], ['stopped', 'aborted'], ['limited', 'max-tokens'], ['unknown', 'future-reason']]);
+    h.host.rpc = (method, args) => {
+      if (method === 'session/list') return { items: [...ends.keys()].map(sessionId => ({ sessionId, agentAvailable: false, running: false, projections: { kind: 'cached', asOfSeq: 42, values: { turnBoundary: { lastTurn: 9 } } } })) };
+      if (method === 'session/page') {
+        const request = object(args.request); const sessionId = String(object(request.address).sessionId);
+        return { records: [{ type: 'event', event: { type: 'turn/end', seq: 42, data: { reason: { kind: ends.get(sessionId) } } } }], hasMore: false };
+      }
+      return true;
+    };
+    await h.adapter.connect(h.host.link());
+    expect(Object.fromEntries(Object.entries(h.state().sessions).map(([id, s]) => [id, s.phase]))).toEqual({ done: 'finished', failed: 'error', stopped: 'cancelled', limited: 'limit-reached', unknown: 'unknown' });
+    expect(h.host.requests.filter(r => r.method === 'session/page')).toHaveLength(5);
+    expect(h.host.openStreams.some(s => s.startsWith('audit:'))).toBe(false);
+    expect(h.host.requests.filter(r => r.method === 'session/page').every(r => object(r.args.request).throughSeq === 42 && object(r.args.request).maxMessages === 1)).toBe(true);
+  });
+
+  it('keeps legacy questions without a durable result identity read-only', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    h.host.waterfall({ eventId: 'legacy', agentId: 's1', event: 'user-questions/request', request: { questions: [{ id: 'q1', question: '说明你的想法' }] } });
+    await expect.poll(() => h.state().questions.length).toBe(1);
+    expect(h.state().questions[0]?.actionable).toBe(false);
+    await expect(h.adapter.respondQuestion(h.state().questions[0]!, [{ questionId: 'q1', values: ['示例'] }])).rejects.toThrow('问题已失效');
+    expect(h.host.requests.some(r => r.method === '$events/result')).toBe(false);
   });
 });
