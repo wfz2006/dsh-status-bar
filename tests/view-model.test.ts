@@ -1,13 +1,15 @@
 import { expect, it } from 'vitest';
 import { initialProjection, reduceProjection } from '../packages/protocol/src/index';
 import { mockFrames } from '../packages/adapters/mock/src/index';
-import { DEFAULT_SETTINGS, normalizeSettings, deriveTask, initialView, observeFacts, manualView, viewForSize, viewSize, formatTokens, taskMetrics } from '../apps/desktop/src/shared/view-model';
+import { DEFAULT_SETTINGS, normalizeSettings, deriveTask, initialView, observeFacts, manualView, viewForSize, viewSize, formatTokens, taskMetrics, taskUsage } from '../apps/desktop/src/shared/view-model';
 
 it('defaults to a calm task capsule and validates persisted preferences', () => {
   expect(initialView().mode).toBe('capsule');
   expect(DEFAULT_SETTINGS.autoApproval).toBe(false);
   expect(DEFAULT_SETTINGS.pin).toBe('always');
   expect(DEFAULT_SETTINGS.sound).toBe(true);
+  expect(DEFAULT_SETTINGS.material).toBe('frosted');
+  expect(DEFAULT_SETTINGS).toMatchObject({ tintOpacity: 12, brightness: 125 });
   expect(normalizeSettings({ sound: false }).sound).toBe(false);
   expect(normalizeSettings({}).sound).toBe(true);
   expect(normalizeSettings({ animation: 'invalid', theme: 'light', autoApproval: true }).theme).toBe('light');
@@ -27,7 +29,7 @@ it('migrates the retired native acrylic comparison without resetting other prefe
 it('keeps the frosted glass theme as an explicit material',()=>{
   expect(normalizeSettings({ material: 'frosted' }).material).toBe('frosted');
   expect(normalizeSettings({ material: 'frosted', pin: 'normal', theme: 'light' })).toMatchObject({ material: 'frosted', pin: 'normal', theme: 'light' });
-  expect(normalizeSettings({ material: 'nonsense' }).material).toBe('system');
+  expect(normalizeSettings({ material: 'nonsense' }).material).toBe('frosted');
 });
 it('derives status and progress from source facts, not Todo completion', () => {
   let p = initialProjection();
@@ -51,6 +53,14 @@ it('summarises usage stats for the compact and detailed task views', () => {
   expect(formatTokens(9800)).toBe('9.8K');
   expect(formatTokens(0)).toBe('0');
   expect(taskMetrics(undefined)).toBeUndefined();
+});
+it('labels historical speeds and hides speed on disconnected snapshots', () => {
+  let p = initialProjection(); for (const f of mockFrames().slice(0, 2)) p = reduceProjection(p, f);
+  expect(taskUsage(deriveTask(p, 'demo-main'))).toMatchObject({ live: true, stale: false, speedText: '218 tok/s' });
+  expect(taskUsage(deriveTask(p, 'demo-other'))).toMatchObject({ live: false, speedText: '上次 154 tok/s' });
+  const offline = taskUsage(deriveTask({ ...p, stale: true }, 'demo-main'));
+  expect(offline).toMatchObject({ stale: true, live: false, speedText: undefined, steps: 42 });
+  expect(taskUsage(deriveTask(p, 'missing'))).toBeUndefined();
 });
 it('keeps business approval facts independent of user-selected form', () => {
   const facts = { pending: ['r/s/a'], completed: null };

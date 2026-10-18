@@ -2,10 +2,10 @@ import { expect, it } from 'vitest';
 import { DEFAULT_GLASS_APPEARANCE, normalizeGlassAppearance, tintFill } from '../apps/desktop/src/shared/glass-appearance';
 import { normalizeSettings } from '../apps/desktop/src/shared/view-model';
 
-it('migrates old preferences to the existing 10% black glass without losing choices', () => {
+it('migrates old preferences to the shipped 12% black glass without losing choices', () => {
   const settings = normalizeSettings({ theme: 'dark', animation: 'reduced' });
   expect(settings).toMatchObject({ ...DEFAULT_GLASS_APPEARANCE, theme: 'dark', animation: 'reduced' });
-  expect(tintFill(settings)).toBe('rgba(0,0,0,0.1)');
+  expect(tintFill(settings)).toBe('rgba(0,0,0,0.12)');
 });
 it('preserves custom color and independently clamps finite percentages', () => {
   expect(normalizeGlassAppearance({ tintColor: '#64AADD', tintOpacity: 22.7, brightness: 125 })).toEqual({ tintColor: '#64aadd', tintOpacity: 23, brightness: 125 });

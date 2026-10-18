@@ -1,5 +1,5 @@
 export type GlassAppearance = { tintColor: string; tintOpacity: number; brightness: number };
-export const DEFAULT_GLASS_APPEARANCE: GlassAppearance = { tintColor: '#000000', tintOpacity: 10, brightness: 100 };
+export const DEFAULT_GLASS_APPEARANCE: GlassAppearance = { tintColor: '#000000', tintOpacity: 12, brightness: 125 };
 
 export function normalizeGlassAppearance(value: unknown): GlassAppearance {
   const v = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};

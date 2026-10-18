@@ -7,17 +7,17 @@ export type GlassSettings = GlassAppearance & {
   animation: 'full' | 'reduced' | 'off'; pin: 'always' | 'on-notification' | 'normal';
   material: 'system' | 'transparent' | 'acrylic' | 'frosted' | 'solid'; sound: boolean;
 };
-export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, animation: 'full', pin: 'always', material: 'system', sound: true };
+export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, animation: 'full', pin: 'always', material: 'frosted', sound: true };
 export function normalizeSettings(value: unknown): GlassSettings {
   if (!value || typeof value !== 'object') return { ...DEFAULT_SETTINGS };
   const v = value as Record<string, unknown>;
   function choice<T extends string>(key: string, options: readonly T[], fallback: T): T { return options.includes(v[key] as T) ? v[key] as T : fallback; }
   return { ...normalizeGlassAppearance(v), theme: choice('theme', ['auto', 'light', 'dark'], 'auto'), strength: choice('strength', ['clear', 'balanced', 'readable'], 'balanced'),
     defaultView: choice('defaultView', ['capsule', 'peek', 'remember-last'], 'capsule'), autoApproval: v.autoApproval === true, autoCollapse: v.autoCollapse === true,
-    animation: choice('animation', ['full', 'reduced', 'off'], 'full'), pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], 'system'), sound: v.sound !== false };
+    animation: choice('animation', ['full', 'reduced', 'off'], 'full'), pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], DEFAULT_SETTINGS.material), sound: v.sound !== false };
 }
 export function viewSize(mode: GlassViewMode, attention = false) {
-  return { capsule: { width: 288, height: 44 }, peek: { width: 340, height: attention ? 236 : 190 }, expanded: { width: 400, height: 360 }, approval: { width: 400, height: 340 } }[mode];
+  return { capsule: { width: 288, height: 44 }, peek: { width: 340, height: attention ? 236 : 190 }, expanded: { width: 400, height: 360 }, approval: { width: 400, height: 300 } }[mode];
 }
 export function viewForSize(width: number, height: number, current: GlassViewMode): GlassViewMode {
   if (height < 96) return 'capsule';
@@ -69,4 +69,14 @@ export function taskMetrics(session: Session | undefined) {
   return { turns: stats.turns, steps: stats.steps, tokensPerSecond: stats.tokensPerSecond, cacheHitPercent: stats.cacheHitPercent,
     contextPercent: stats.contextPercent, totalTokens: stats.tokens?.total, inputTokens: stats.tokens?.input,
     cacheTokens: stats.tokens?.cacheRead, outputTokens: stats.tokens?.output };
+}
+/** A recorded speed is live only while this task is running on a current connection. */
+export function taskUsage(task: ReturnType<typeof deriveTask>) {
+  const metrics = taskMetrics(task.session);
+  if (!metrics) return undefined;
+  const stale = task.status === 'disconnected';
+  const live = task.status === 'running';
+  const speedText = stale || metrics.tokensPerSecond === undefined ? undefined
+    : (live ? '' : '上次 ') + metrics.tokensPerSecond + ' tok/s';
+  return { ...metrics, stale, live, speedText };
 }
