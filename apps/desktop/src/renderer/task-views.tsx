@@ -4,7 +4,7 @@ import { formatTokens, taskMetrics, type deriveTask } from '../shared/view-model
 import { Icon, type IconName } from './icon';
 export type Task = ReturnType<typeof deriveTask>;
 export function StatusOrb({ task }: { task: Task }) {
-  const symbol = task.status === 'completed' ? '✓' : task.status === 'disconnected' || task.status === 'error' ? '!' : task.status === 'waiting_approval' || task.status === 'waiting_answer' ? '◇' : task.status === 'cancelled' ? '−' : task.status === 'archived' ? '▦' : '';
+  const symbol = task.status === 'completed' ? '✓' : task.status === 'disconnected' || task.status === 'error' || task.status === 'limit_reached' ? '!' : task.status === 'waiting_approval' || task.status === 'waiting_answer' ? '◇' : task.status === 'cancelled' ? '−' : task.status === 'archived' ? '▦' : '';
   return <span className={'status-orb ' + task.status} aria-label={task.label} title={task.label}>{symbol}</span>;
 }
 function Progress({ task }: { task: Task }) {
@@ -46,6 +46,7 @@ export function TaskCapsule({ task, activate }: { task: Task; activate: () => vo
     {metrics && <span className="capsule-metrics" title={metricsTitle}><b>{metrics.turns}</b>轮 · <b>{metrics.steps}</b>步</span>}
     {task.total > 0 && <span className="step-count" aria-label={task.completed + '/' + task.total + ' Todo 步骤完成'}>{task.completed}/{task.total}</span>}
     {task.status === 'completed' && <span className="capsule-state">已完成</span>}
+    {task.status === 'limit_reached' && <span className="capsule-state">达到上限</span>}
   </button>;
 }
 export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; expand: () => void; approval: () => void; reconnect: () => void }) {
@@ -97,7 +98,7 @@ function ProcessList({ task }: { task: Task }) {
           <span className="entry-icon" aria-hidden="true"><Icon name={noteIcons[row.note.kind]} /></span>
           <span className="entry-title">{noteLabels[row.note.kind]}</span>
           <span className="entry-preview">{row.note.text}</span>
-          <span className="entry-status" />
+          <span className="entry-status entry-status-quiet">{row.note.kind === 'user' ? '已发送' : '已完成'}</span>
           <Icon name="chevron" />
         </summary>
         <p className="entry-body">{row.note.text}</p>

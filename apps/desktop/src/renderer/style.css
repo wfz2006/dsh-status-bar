@@ -317,6 +317,7 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .process-entry .entry-title{font-size:10px;letter-spacing:.02em;}
 .process-entry .entry-preview{font-size:10.5px;}
 .process-entry .entry-status{font-size:9.5px;}
+.process-entry .entry-status-quiet{color:var(--ink-3);font-weight:500;letter-spacing:.02em;}
 .process-entry .entry-body{margin:0 0 5px 24px;font-size:11px;line-height:1.5;}
 .chrome-button{outline:none;}
 .chrome-button:focus-visible{outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 42%,transparent);}
