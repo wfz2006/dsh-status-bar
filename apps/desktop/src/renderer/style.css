@@ -405,3 +405,8 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .approval-header .request-session{margin:7px 0 8px;}
 .decision-buttons button,.decision-preview button{display:flex;align-items:center;justify-content:center;gap:6px;}
 .decision-buttons button .ui-icon,.decision-preview button .ui-icon{width:14px;height:14px;}
+
+/* Peek rhythm: sit the transcript a little lower and keep the status close to the stats. */
+.task-peek{padding-bottom:6px;}
+.peek-process{margin-top:14px;}
+.peek-usage{margin-top:2px;}

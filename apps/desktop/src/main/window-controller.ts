@@ -59,7 +59,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     else if (mode !== 'approval') { approvalReturn = undefined; approvalSawRequest = false; }
     panel = null; panelReturn = null;
     view = { ...view, mode, manual: false, returnMode: null };
-    moveTo({ ...win.getBounds(), ...viewSize(mode) }, reduce, mode === 'capsule' ? 260 : 320); publish();
+    moveTo({ ...win.getBounds(), ...viewSize(mode, view.pending.length > 0) }, reduce, mode === 'capsule' ? 260 : 320); publish();
   }
   function showPanel(value: 'settings' | 'activity') {
     if (!panel) panelReturn = { bounds: win.getBounds(), manual: view.manual, mode: view.mode };
@@ -103,7 +103,11 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
       }
     }
     if (settings.pin === 'on-notification') win.setAlwaysOnTop(facts.pending.length > 0);
-    if (view.mode !== old.mode && !panel) moveTo({ ...win.getBounds(), ...viewSize(view.mode) });
+    if (view.mode !== old.mode && !panel) moveTo({ ...win.getBounds(), ...viewSize(view.mode, view.pending.length > 0) });
+    const attentionChanged = (old.pending.length > 0) !== (view.pending.length > 0);
+    if (view.mode === old.mode && view.mode === 'peek' && !view.manual && !panel && attentionChanged) {
+      moveTo({ ...win.getBounds(), ...viewSize('peek', view.pending.length > 0) });
+    }
     if (facts.completed && facts.completed !== old.completed) {
       completionFeedback = true; clearTimeout(completionTimer); publish();
       completionTimer = setTimeout(() => {
@@ -162,7 +166,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     return state();
   }
   nativeTheme.themeSource = settings.theme === 'auto' ? 'system' : settings.theme;
-  const initial = settings.defaultView === 'remember-last' && remembered ? remembered.bounds : { ...win.getBounds(), ...viewSize(view.mode) };
+  const initial = settings.defaultView === 'remember-last' && remembered ? remembered.bounds : { ...win.getBounds(), ...viewSize(view.mode, view.pending.length > 0) };
   win.setBounds(safeBounds(initial)); presentation.applyShape();
   setSettings(settings);
   win.setMenuBarVisibility(false);

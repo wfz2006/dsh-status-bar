@@ -16,8 +16,8 @@ export function normalizeSettings(value: unknown): GlassSettings {
     defaultView: choice('defaultView', ['capsule', 'peek', 'remember-last'], 'capsule'), autoApproval: v.autoApproval === true, autoCollapse: v.autoCollapse === true,
     animation: choice('animation', ['full', 'reduced', 'off'], 'full'), pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], 'system'), sound: v.sound !== false };
 }
-export function viewSize(mode: GlassViewMode) {
-  return { capsule: { width: 288, height: 50 }, peek: { width: 340, height: 168 }, expanded: { width: 400, height: 360 }, approval: { width: 400, height: 340 } }[mode];
+export function viewSize(mode: GlassViewMode, attention = false) {
+  return { capsule: { width: 288, height: 50 }, peek: { width: 340, height: attention ? 204 : 168 }, expanded: { width: 400, height: 360 }, approval: { width: 400, height: 340 } }[mode];
 }
 export function viewForSize(width: number, height: number, current: GlassViewMode): GlassViewMode {
   if (height < 96) return 'capsule';
