@@ -31,18 +31,7 @@ export function ApprovalCard({ task, openDSH }: { task: Task; openDSH: () => voi
     try { await window.glass.copyApproval({ sessionId, requestId }); setCopyResult({ identity: key, text: '已复制预览' }); }
     catch { setCopyResult({ identity: key, text: '预览不可用' }); }
   }
-  return <section className="approval-view" aria-label="待处理请求">
-    <header className="approval-header">
-      <div className="approval-headline">
-        <span className="approval-mark" aria-hidden="true"><Icon name="shield" /></span>
-        <div className="approval-titles">
-          <h1>{request ? '需要你的确认' : '目前没有待处理请求'}</h1>
-          {request && <p className="approval-summary">{request.reason || request.toolName}</p>}
-        </div>
-        {task.pending.length > 1 && <span className="step-count">{task.pending.length} 项</span>}
-      </div>
-      <p className="request-session" title={task.title}>{task.title}</p>
-    </header>
+  return <>
     {task.pending.length > 1 && <nav className="request-selector" aria-label="待处理请求队列">{task.pending.map((a, index) => <button key={requestKey(a)} data-request-id={a.requestId} className="quiet-button" aria-label={'查看请求 ' + (index + 1)} aria-current={a === request ? 'true' : undefined} onClick={() => setSelected(requestKey(a))}><span className="control-label">{index + 1}</span></button>)}</nav>}
     {request && <>
       <div className="approval-body"><article className="approval-card" key={key}>
@@ -59,5 +48,5 @@ export function ApprovalCard({ task, openDSH }: { task: Task; openDSH: () => voi
       </footer>
     </>}
     <span className="sr-only" role="status">{copyResult.identity === key ? copyResult.text : ''}</span>
-  </section>;
+  </>;
 }

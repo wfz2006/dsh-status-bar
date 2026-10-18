@@ -3,6 +3,7 @@ import type { Question } from '@glass/protocol';
 import type { Task } from './task-views';
 import { questionAnswers, requestIdentity, requestKey } from './request-model';
 import { ApprovalCard } from './approval-card';
+import { Icon } from './icon';
 
 function QuestionForm({ request, disconnected }: { request: Question; disconnected: boolean }) {
   const [values,setValues]=useState<Record<string,string[]>>({});
@@ -45,21 +46,33 @@ function QuestionForm({ request, disconnected }: { request: Question; disconnect
 function QuestionCard({task}:{task:Task}) {
   const [selected,setSelected]=useState<string|null>(null);
   const request=task.questions.find(q=>requestKey(q)===selected)??task.questions[0];
-  return <section className="approval-view question-view" aria-label="待回答问题">
-    <header className="approval-header"><div className="task-heading"><h1>{request?'需要你的回答':'目前没有待回答问题'}</h1>{task.questions.length>1 && <span className="step-count">{task.questions.length} 项</span>}</div><p className="request-session" title={task.title}>{task.title}</p></header>
+  return <>
     {task.questions.length>1 && <nav className="request-selector" aria-label="问题请求队列">{task.questions.map((q,index)=><button className="quiet-button" key={requestKey(q)} onClick={()=>setSelected(requestKey(q))} aria-current={q===request?'true':undefined}><span className="control-label">问题 {index+1}</span></button>)}</nav>}
     {request && <QuestionForm key={requestKey(request)} request={request} disconnected={task.status==='disconnected'}/>}
-  </section>;
+  </>;
 }
 export function RequestPanel({task,openDSH}:{task:Task;openDSH:()=>void}) {
   const [kind,setKind]=useState<'approval'|'question'>('approval');
   const displayed=task.pending.length && task.questions.length?kind:task.questions.length?'question':'approval';
-  return <div className="request-panel">
+  const approval=task.pending[0];
+  const question=task.questions[0];
+  return <section className="approval-view request-panel" aria-label="待处理请求">
+    <header className="approval-header">
+      <div className="approval-headline">
+        <span className="approval-mark" aria-hidden="true"><Icon name="shield" /></span>
+        <div className="approval-titles">
+          <h1>{displayed==='question' ? (question?'需要你的回答':'目前没有待回答问题') : (approval?'需要你的确认':'目前没有待处理请求')}</h1>
+          {displayed==='approval' && approval && <p className="approval-summary">{approval.reason || approval.toolName}</p>}
+        </div>
+        {displayed==='approval' && task.pending.length>1 && <span className="step-count">{task.pending.length} 项</span>}
+      </div>
+      <p className="request-session" title={task.title}>{task.title}</p>
+    </header>
     {task.pending.length>0 && task.questions.length>0 && <nav className="request-kind" aria-label="请求类型">
       <button className="text-button" aria-pressed={displayed==='approval'} onClick={()=>setKind('approval')}><span className="control-label">确认 {task.pending.length}</span></button>
       <button className="text-button" aria-pressed={displayed==='question'} onClick={()=>setKind('question')}><span className="control-label">回答 {task.questions.length}</span></button>
     </nav>}
     <div className="request-content" hidden={displayed!=='approval'}><ApprovalCard task={task} openDSH={openDSH}/></div>
     <div className="request-content" hidden={displayed!=='question'}><QuestionCard task={task}/></div>
-  </div>;
+  </section>;
 }
