@@ -11,12 +11,10 @@
 .glass[data-material=solid] .glass-material { background:transparent; }
 /* Frosted theme: deep-smoked glass. The sampled desktop is pushed down in
    brightness and up in colour, then covered by a dark translucent smoke layer
-   with a top light line and grain. Text tokens switch to the dark set. */
+   with a top light line. Text tokens switch to the dark set. */
 .glass[data-material=frosted] .desktop-backdrop { filter:blur(30px) saturate(1.35) brightness(.74) contrast(1.06); transform:scale(1.08); }
 .glass-frost { position:absolute; inset:0; z-index:0; border-radius:inherit; pointer-events:none;
   background:
     radial-gradient(140% 120% at 18% -20%, rgba(255,255,255,.16), rgba(255,255,255,.05) 42%, transparent 70%),
     linear-gradient(180deg, rgba(48,26,32,.36), rgba(22,13,17,.54) 58%, rgba(36,21,27,.44));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.20),inset 0 0 0 1px rgba(255,255,255,.05); }
-.glass-frost::after { content:""; position:absolute; inset:0; border-radius:inherit; opacity:.14; mix-blend-mode:overlay;
-  background-image:radial-gradient(rgba(255,255,255,.9) .5px, transparent .65px); background-size:3px 3px; }
