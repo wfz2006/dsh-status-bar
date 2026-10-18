@@ -197,7 +197,7 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 | 过程紧凑 | summary padding 8→5px、icon 22→20px、正文 12→11.5px、隐藏横向滚动 | 断言两条 summary paddingTop=5px、row 高 30px |
 | 统计闪烁 | 适配器新增 `projectionValues` 按会话合并投影 key，再计算 stats；单 key 快照不再覆盖为 0 | Fake Host 单 key snapshot 后 stats 仍为 5 轮/137 步/254 tok/s（13 文件 98 测试） |
 | 上下文圆环 | 速览新增 20px SVG 圆环（aria-label「上下文占用 N%」） | 断言圆环存在、label 7.2%，截图 `shot-seven-peek.png` |
-| 选择器 | 自绘 `SessionPicker`（药丸触发器 + listbox 弹层，onBlur 关闭），替换原生 select | 断言无原生 select、弹层 2 项、圆角 12px，截图 `shot-seven-picker.png` |
+| 选择器 | 自绘 `SessionPicker`（触发器显示「会话 N」+ listbox 弹层，onBlur 关闭），替换原生 select；弹层左对齐、宽度自适应（≤240px）、限高 150px，避免出窗遮挡 | 断言无原生 select、弹层 2 项、圆角 12px、rect(18,82,152,64) 完全在 400×360 视口内，截图 `shot-seven-picker.png` |
 
 检查：`pnpm lint` 0、`pnpm typecheck` 0、13 文件 98 测试全过、`pnpm --filter @glass/desktop build` 成功（renderer index-CBk6rsPg.js 845.51 kB）。隔离脚本 `ui-seven-check.mjs` 七项断言 PASS；截图在仓库外 `evidence-real/shot-seven-*.png`。
 

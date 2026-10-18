@@ -22,8 +22,8 @@ function SessionPicker({ sessions, selected, select }: { sessions: { sessionId: 
   const [open, setOpen] = useState(false);
   const current = sessions.find(session => session.sessionId === selected);
   return <div className="session-picker" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false); }}>
-    <button type="button" className="picker-trigger" aria-haspopup="listbox" aria-expanded={open} title={current?.title} onClick={() => setOpen(value => !value)}>
-      <span className="picker-label">{current?.title ?? '选择会话'}</span><Icon name="chevron" />
+    <button type="button" className="picker-trigger" aria-haspopup="listbox" aria-expanded={open} aria-label={'选择会话' + (current ? '：' + current.title : '')} title={current?.title} onClick={() => setOpen(value => !value)}>
+      <span className="picker-label">会话 {sessions.length}</span><Icon name="chevron" />
     </button>
     {open && <ul className="picker-menu" role="listbox" aria-label="选择会话">
       {sessions.map(session => <li key={session.sessionId}><button type="button" role="option" aria-selected={session.sessionId === selected} className="picker-option" onClick={() => { select(session.sessionId); setOpen(false); }}>{session.title}</button></li>)}
