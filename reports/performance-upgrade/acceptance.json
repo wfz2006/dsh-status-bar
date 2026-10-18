@@ -1,0 +1,11 @@
+{
+  "result": "PASS",
+  "checks": [
+    "received RGBA bytes match the painted canvas, including alpha",
+    "memoized material still applies tint/brightness; controlled renderer frames switch automatic ink tone",
+    "all manual layout breakpoints and current-world-position capture still update",
+    "native morph retains three RGB passes and ends with the correctly sized optical map",
+    "hide/resume, solid/transparent lifecycle and explicit stop remain intact"
+  ],
+  "morphSamples": 100
+}

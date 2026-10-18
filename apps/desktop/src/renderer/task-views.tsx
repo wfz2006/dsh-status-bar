@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { Projection } from '@glass/protocol';
-import { formatTokens, taskMetrics, type deriveTask } from '../shared/view-model';
+import { formatTokens, taskUsage, deriveTask } from '../shared/view-model';
 import { Icon, type IconName } from './icon';
+import { WhaleCompanion, WhaleEmpty } from './whale-companion';
 export type Task = ReturnType<typeof deriveTask>;
 export function StatusOrb({ task }: { task: Task }) {
   const symbol = task.status === 'completed' ? '✓' : task.status === 'disconnected' || task.status === 'error' || task.status === 'limit_reached' ? '!' : task.status === 'waiting_approval' || task.status === 'waiting_answer' ? '◇' : task.status === 'cancelled' ? '−' : task.status === 'archived' ? '▦' : '';
@@ -18,22 +19,51 @@ function ContextRing({ percent }: { percent: number }) {
     <b>{value}%</b>
   </span>;
 }
-function SessionPicker({ sessions, selected, select }: { sessions: { sessionId: string; title: string }[]; selected: string; select: (id: string) => void }) {
+function SessionPicker({ sessions, selected, select }: { sessions: { sessionId: string; title: string; status: string; label: string }[]; selected: string; select: (id: string) => void }) {
   const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const pendingFocus = useRef<number | null>(null);
+  const menuId = useId();
   const current = sessions.find(session => session.sessionId === selected);
-  return <div className="session-picker" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false); }}>
-    <button type="button" className="picker-trigger" aria-haspopup="listbox" aria-expanded={open} aria-label={'选择会话' + (current ? '：' + current.title : '')} title={current?.title} onClick={() => setOpen(value => !value)}>
-      <span className="picker-label">会话 {sessions.length}</span><Icon name="chevron" />
+  useEffect(() => () => { if (pendingFocus.current !== null) cancelAnimationFrame(pendingFocus.current); }, []);
+  function dismiss() {
+    if (pendingFocus.current !== null) cancelAnimationFrame(pendingFocus.current);
+    pendingFocus.current = null; setOpen(false);
+  }
+  function close() { dismiss(); root.current?.querySelector<HTMLButtonElement>('.picker-trigger')?.focus(); }
+  function focusOption(index: number) {
+    if (pendingFocus.current !== null) cancelAnimationFrame(pendingFocus.current);
+    const focus = () => { pendingFocus.current = null; root.current?.querySelectorAll<HTMLButtonElement>('[role=option]')[index]?.focus(); };
+    // Once mounted, keyboard movement must be synchronous so a fast Enter uses
+    // the newly focused option rather than the previous animation-frame target.
+    if (open) focus(); else pendingFocus.current = requestAnimationFrame(focus);
+  }
+  return <div ref={root} className="session-picker" data-open={open} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) dismiss(); }} onKeyDown={event => {
+    if (event.key === 'Escape' && open) { event.stopPropagation(); event.preventDefault(); close(); }
+    if (['ArrowDown','ArrowUp','Home','End'].includes(event.key) && (open || event.key.startsWith('Arrow'))) {
+      event.preventDefault(); event.stopPropagation();
+      const options = Array.from(root.current?.querySelectorAll<HTMLButtonElement>('[role=option]') ?? []);
+      const index = options.findIndex(option => option === document.activeElement);
+      const selectedIndex = Math.max(0, sessions.findIndex(session => session.sessionId === selected));
+      const next = !open ? selectedIndex : event.key === 'Home' ? 0 : event.key === 'End' ? sessions.length - 1
+        : index < 0 ? selectedIndex : (index + (event.key === 'ArrowDown' ? 1 : -1) + sessions.length) % sessions.length;
+      setOpen(true); focusOption(next);
+    }
+  }}>
+    <button type="button" className="picker-trigger" aria-haspopup="listbox" aria-controls={menuId} aria-expanded={open} aria-label={'选择会话' + (current ? '：' + current.title : '')} title={current?.title} onClick={() => { if (open) dismiss(); else setOpen(true); }}>
+      <span className="picker-label">{current?.title ?? '选择会话'}</span><span className="picker-count" aria-hidden="true">{sessions.length}</span><Icon name="chevron" />
     </button>
-    {open && <ul className="picker-menu" role="listbox" aria-label="选择会话">
-      {sessions.map(session => <li key={session.sessionId}><button type="button" role="option" aria-selected={session.sessionId === selected} className="picker-option" onClick={() => { select(session.sessionId); setOpen(false); }}>{session.title}</button></li>)}
-    </ul>}
+    <ul id={menuId} className="picker-menu" role="listbox" aria-label="选择会话" aria-hidden={!open} inert={!open}>
+      {sessions.map(session => <li key={session.sessionId} role="presentation"><button type="button" role="option" tabIndex={-1} aria-selected={session.sessionId === selected} className="picker-option" onClick={() => { select(session.sessionId); close(); }}>
+        <span className="picker-status" data-status={session.status} aria-hidden="true" /><span className="picker-option-title">{session.title}</span><small>{session.label}</small>{session.sessionId === selected && <Icon name="check" />}
+      </button></li>)}
+    </ul>
   </div>;
 }
 export function TaskCapsule({ task, activate }: { task: Task; activate: () => void }) {
   const title = task.status === 'disconnected' ? task.label + ' · ' + task.title : task.title;
-  const metrics = taskMetrics(task.session);
-  const metricsTitle = metrics ? metrics.turns + ' 轮 · ' + metrics.steps + ' 步' + (metrics.tokensPerSecond !== undefined ? ' · ' + metrics.tokensPerSecond + ' tok/s' : '') : '';
+  const metrics = taskUsage(task);
+  const metricsTitle = metrics ? (metrics.stale ? '离线快照 · ' : '') + metrics.turns + ' 轮 · ' + metrics.steps + ' 次执行' + (metrics.speedText ? ' · ' + metrics.speedText : '') : '';
   const working = task.status === 'running' || task.status === 'starting';
   const titleNode = working
     ? <span className="capsule-title" aria-hidden="true">{Array.from(title).map((char, index) => char === ' '
@@ -41,17 +71,17 @@ export function TaskCapsule({ task, activate }: { task: Task; activate: () => vo
       : <span className="wave-char" key={index} style={{ animationDelay: (index % 24) * 0.045 + 's' }}>{char}</span>)}</span>
     : <span className="capsule-title">{title}</span>;
   return <button className="task-capsule" aria-label={task.attentionCount ? '展开待处理请求' : '展开速览'} aria-description="可拖动；右键打开菜单。数据来源与调试状态见设置。" title={title + ' · ' + task.label + (metricsTitle ? ' · ' + metricsTitle : '') + (task.attentionCount ? ' · ' + task.attentionCount + ' 项待处理' : '')} onClick={activate}>
-    <StatusOrb task={task} />{titleNode}
+    <WhaleCompanion state={task.status}><StatusOrb task={task} /></WhaleCompanion>{titleNode}
     {task.attentionCount > 0 && <span className="pending-count" aria-label={task.attentionCount + ' 项待处理请求'}>{task.attentionCount} 待处理</span>}
-    {metrics && <span className="capsule-metrics" title={metricsTitle}><b>{metrics.turns}</b>轮 · <b>{metrics.steps}</b>步</span>}
-    {task.total > 0 && <span className="step-count" aria-label={task.completed + '/' + task.total + ' Todo 步骤完成'}>{task.completed}/{task.total}</span>}
+    {metrics && <span className="capsule-metrics" title={metricsTitle} aria-label={metrics.turns + ' 轮，Agent 执行 ' + metrics.steps + ' 步'}><b>{metrics.turns}</b>轮 · <b>{metrics.steps}</b>步</span>}
+    {task.total > 0 && <span className="step-count" aria-label={task.completed + '/' + task.total + ' Todo 步骤完成'}><span className="progress-caption">任务 </span>{task.completed}/{task.total}</span>}
     {task.status === 'completed' && <span className="capsule-state">已完成</span>}
     {task.status === 'limit_reached' && <span className="capsule-state">达到上限</span>}
   </button>;
 }
 export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; expand: () => void; approval: () => void; reconnect: () => void }) {
   const failure = task.status === 'disconnected' || task.status === 'error';
-  const metrics = taskMetrics(task.session);
+  const metrics = taskUsage(task);
   const recent = useMemo(() => {
     const notes = task.session?.notes ?? [];
     const activities = task.session?.activities ?? [];
@@ -70,8 +100,8 @@ export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; ex
       <div className="current-step"><StatusOrb task={task} /><span>{failure ? task.label + '，当前内容可能已过时' : task.current.map(t => t.content).join('、') || task.label}</span>{task.status === 'running' && task.current.length === 0 && <Icon name="whale" className="whale-tail" />}</div>
       {metrics && <div className="peek-usage">
         <div className="peek-stats">
-          <span><b>{metrics.turns}</b> 轮 · <b>{metrics.steps}</b> 步{metrics.tokensPerSecond !== undefined ? ' · ' + metrics.tokensPerSecond + ' tok/s' : ''}</span>
-          <span><b>{formatTokens(metrics.totalTokens ?? 0)}</b> tok{metrics.cacheHitPercent !== undefined ? ' · 缓存 ' + metrics.cacheHitPercent + '%' : ''}</span>
+          <span><b>{metrics.turns}</b> 轮 · 执行 <b>{metrics.steps}</b> 次{metrics.speedText && <span className="usage-speed" data-live={metrics.live}> · {metrics.speedText}</span>}{metrics.stale && <span className="metrics-snapshot"> · 离线快照</span>}</span>
+          <span>{metrics.totalTokens !== undefined && <><b>{formatTokens(metrics.totalTokens)}</b> tok</>}{metrics.cacheHitPercent !== undefined && <span> · 缓存 {metrics.cacheHitPercent}%</span>}</span>
         </div>
         {metrics.contextPercent !== undefined && <ContextRing percent={metrics.contextPercent} />}
       </div>}
@@ -80,7 +110,7 @@ export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; ex
   </section>;
 }
 const noteLabels = { reasoning: '思考', message: 'DSH', user: '你' } as const;
-const noteIcons = { reasoning: 'brain', message: 'chat', user: 'user' } as const;
+const noteIcons = { reasoning: 'brain', message: 'whale', user: 'user' } as const;
 const activityLabels = { pending: '等待执行', running: '执行中', success: '已完成', error: '执行失败', cancelled: '已取消' } as const;
 function toolIcon(name: string): IconName {
   const value = name.toLowerCase();
@@ -115,7 +145,7 @@ function ProcessList({ task }: { task: Task }) {
     ...(activities ?? []).map(activity => ({ kind: 'tool' as const, key: activity.callId, sourceSeq: activity.sourceSeq ?? 0, activity })),
   ].sort((a, b) => b.sourceSeq - a.sourceSeq), [notes, activities]);
   useEffect(() => { syncFade(); }, [rows.length]);
-  if (!rows.length) return <p className="empty-state">此会话尚无过程；开始工作后，这里会按时间出现思考与工具调用。</p>;
+  if (!rows.length) return <WhaleEmpty>此会话尚无过程；开始工作后，这里会按时间出现思考与工具调用。</WhaleEmpty>;
   return <div ref={listRef} onScroll={syncFade} data-fade-top={fade.top ? 'true' : undefined} data-fade-bottom={fade.bottom ? 'true' : undefined} className="activity-list process-list" role="tabpanel" aria-label="AI 工作过程">
     {rows.map((row, index) => row.kind === 'note'
       ? <details className="process-entry" data-kind={row.note.kind} key={row.key} style={{ animationDelay: `${Math.min(index, 10) * 16}ms` }}>
@@ -145,28 +175,32 @@ function ProcessList({ task }: { task: Task }) {
 }
 export function TaskExpanded({ task, projection, selected, select, approval, reconnect }: { task: Task; projection: Projection; selected: string; select: (id: string) => void; approval: () => void; reconnect: () => void }) {
   const [tab, setTab] = useState<'process' | 'steps'>('process');
-  const metrics = taskMetrics(task.session);
+  const metrics = taskUsage(task);
   const todos = task.todos;
   return <section className="task-expanded">
     <div className="task-heading"><h1 title={task.title}>{task.title}</h1></div>
-    {Object.keys(projection.sessions).length > 1 && <div className="task-picker-row"><SessionPicker sessions={Object.values(projection.sessions).map(session => ({ sessionId: session.sessionId, title: session.title }))} selected={selected} select={select} /></div>}
-    <div className="task-meta"><StatusOrb task={task} /><span>{task.label}{projection.stale ? ' · 状态可能过时' : ''}</span>{task.status === 'running' && <Icon name="whale" className="whale-tail" />}{task.total > 0 && <span className="step-count">{task.completed}/{task.total} 步骤</span>}</div>
+    {Object.keys(projection.sessions).length > 1 && <div className="task-picker-row"><SessionPicker sessions={Object.values(projection.sessions).map(session => { const item = deriveTask(projection, session.sessionId); return { sessionId: session.sessionId, title: session.title, status: item.status, label: item.label }; })} selected={selected} select={select} /></div>}
+    <div className="task-meta"><StatusOrb task={task} /><span>{task.label}{projection.stale ? ' · 状态可能过时' : ''}</span>{task.status === 'running' && <Icon name="whale" className="whale-tail" />}{task.total > 0 && <span className="step-count">任务 {task.completed}/{task.total}</span>}</div>
     {metrics && <div className="task-metrics">
-      <span><b>{metrics.turns}</b> 轮 · <b>{metrics.steps}</b> 步</span>
-      {metrics.tokensPerSecond !== undefined && <span><b>{metrics.tokensPerSecond}</b> tok/s</span>}
-      {metrics.totalTokens !== undefined && <span><b>{formatTokens(metrics.totalTokens)}</b> tok</span>}
-      {metrics.cacheHitPercent !== undefined && <span>缓存 <b>{metrics.cacheHitPercent}%</b></span>}
-      {metrics.contextPercent !== undefined && <span>上下文 <b>{metrics.contextPercent}%</b></span>}
+      <div className="metrics-primary"><span><b>{metrics.turns}</b> 轮 · 执行 <b>{metrics.steps}</b> 次</span>
+        {metrics.speedText && <span className="usage-speed" data-live={metrics.live}>{metrics.speedText}</span>}
+        {metrics.stale && <span className="metrics-snapshot">离线快照</span>}
+      </div>
+      <div className="metrics-secondary">
+        {metrics.totalTokens !== undefined && <span><b>{formatTokens(metrics.totalTokens)}</b> tok</span>}
+        {metrics.cacheHitPercent !== undefined && <span>缓存 <b>{metrics.cacheHitPercent}%</b></span>}
+        {metrics.contextPercent !== undefined && <span>上下文 <b>{metrics.contextPercent}%</b></span>}
+      </div>
     </div>}
     <Progress task={task} />
-    <div className="task-tabs" role="tablist" aria-label="任务详情视图">
+    <div className="task-tabs" role="tablist" aria-label="任务详情视图" data-active={tab}>
       <button className="task-tab" role="tab" aria-selected={tab === 'process'} onClick={() => setTab('process')}>过程</button>
       <button className="task-tab" role="tab" aria-selected={tab === 'steps'} onClick={() => setTab('steps')}>步骤{task.total > 0 ? ' ' + task.completed + '/' + task.total : ''}</button>
     </div>
     <div className="task-panel" key={tab}>
       {tab === 'process' ? <ProcessList task={task} /> : <>
-        <ol className="todo-list" aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span className="todo-text">{todo.content}</span>{todo.status === 'completed' && <span className="todo-note">已完成</span>}</li>)}</ol>
-        {!todos.length && <p className="empty-state">此会话尚无 Todo，不显示百分比。</p>}
+        {todos.length > 0 && <ol className="todo-list" aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span className="todo-text">{todo.content}</span>{todo.status === 'completed' && <span className="todo-note">已完成</span>}</li>)}</ol>}
+        {!todos.length && <WhaleEmpty>此会话尚无 Todo，不显示百分比。</WhaleEmpty>}
       </>}
     </div>
     {task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}

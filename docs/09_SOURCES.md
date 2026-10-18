@@ -57,7 +57,7 @@ DSH Git SHA / tag：安装包 commit 未知；参考公开 master=1517a4dbca0a27
 Profile：项目 .local-dsh-probe/profiles/web（独立 DSH_HOME，不改用户原 Profile）
 核心源码签名校验：PASS，安装包 JS 行为+哈希；未提供 .d.ts，本机 Session 回调实测
 真实 todo 事件：PASS，官方 Runtime 的人工夹具 3→2，并已在 Glass 内实装同步（`pnpm test:live`）；非模型任务
-真实 Host 认证/观察链：PASS（2026-10-18，隔离 DSH_HOME）：303+Cookie → `session/list` → `remote.mux`，见 docs/evidence/live-dsh/result.json
+真实 Host 认证/观察链：PASS（2026-10-18，隔离 DSH_HOME）：`/connect?interactions=answer` 302+独立 operator Cookie → `session/list` → `remote.mux` → Todo 快照，断开清理与错误 token 拒绝通过；见 docs/evidence/live-dsh/result.json。样例会话为 idle/cold 夹具，不是模型驱动 Agent。
 Desktop 插件装载：BLOCKED / 未实测
 Approval ownership：BLOCKED / 未注册回答者；真实 Host 上无审批投递
 Structured question ownership：BLOCKED / 未注册回答者

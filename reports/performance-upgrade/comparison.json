@@ -1,0 +1,102 @@
+{
+  "runsPerVersion": 2,
+  "opticsIdentical": true,
+  "scenarios": [
+    {
+      "name": "capsule-no-capture",
+      "before": {
+        "wallMs": 1506.3143,
+        "reactCommits": 2,
+        "copiedBytes": 0,
+        "paintedFrames": 0,
+        "toneWrites": 0,
+        "rendererTaskMs": 3.967000000000002
+      },
+      "after": {
+        "wallMs": 1512.65875,
+        "reactCommits": 2,
+        "copiedBytes": 0,
+        "paintedFrames": 0,
+        "toneWrites": 0,
+        "rendererTaskMs": 3.9265000000000034
+      }
+    },
+    {
+      "name": "expanded-static-capture",
+      "before": {
+        "wallMs": 2011.3337500000002,
+        "reactCommits": 2,
+        "copiedBytes": 61873200,
+        "paintedFrames": 37.5,
+        "toneWrites": 37.5,
+        "rendererTaskMs": 344.938
+      },
+      "after": {
+        "wallMs": 2008.5553500000005,
+        "reactCommits": 2,
+        "copiedBytes": 0,
+        "paintedFrames": 38,
+        "toneWrites": 0,
+        "rendererTaskMs": 315.999
+      }
+    },
+    {
+      "name": "native-drag",
+      "before": {
+        "wallMs": 1007.11915,
+        "reactCommits": 31,
+        "copiedBytes": 29103668,
+        "paintedFrames": 18,
+        "toneWrites": 18,
+        "rendererTaskMs": 483.65200000000004
+      },
+      "after": {
+        "wallMs": 1036.6572,
+        "reactCommits": 9,
+        "copiedBytes": 0,
+        "paintedFrames": 19,
+        "toneWrites": 0,
+        "rendererTaskMs": 503.0865
+      }
+    },
+    {
+      "name": "morph-six-transitions",
+      "before": {
+        "wallMs": 2279.5475500000002,
+        "reactCommits": 99.5,
+        "copiedBytes": 41906610,
+        "paintedFrames": 41,
+        "toneWrites": 41,
+        "rendererTaskMs": 851.1655000000001
+      },
+      "after": {
+        "wallMs": 2272.0581999999995,
+        "reactCommits": 42.5,
+        "copiedBytes": 0,
+        "paintedFrames": 41.5,
+        "toneWrites": 0,
+        "rendererTaskMs": 812.6209999999999
+      }
+    },
+    {
+      "name": "hidden",
+      "before": {
+        "wallMs": 1005.6557000000003,
+        "reactCommits": 1,
+        "copiedBytes": 0,
+        "paintedFrames": 0,
+        "toneWrites": 0,
+        "rendererTaskMs": 4.292000000000185
+      },
+      "after": {
+        "wallMs": 1007.4766,
+        "reactCommits": 1,
+        "copiedBytes": 0,
+        "paintedFrames": 0,
+        "toneWrites": 0,
+        "rendererTaskMs": 4.636500000000154
+      }
+    }
+  ],
+  "scope": "Two local samples, no FPS or system-wide CPU claim"
+}

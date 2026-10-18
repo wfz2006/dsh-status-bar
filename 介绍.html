@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dsh-glass - 介绍</title>
+  <style>
+    :root {
+      --bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      --header: linear-gradient(135deg, #0f9b8e 0%, #00b4db 100%);
+      --accent: #00b4db;
+      --text: #0f172a;
+      --text-2: #1f2937;
+      --card: #f5f7fb;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); padding: 16px 8px; color: var(--text); font-size: 22px; line-height: 1.7; }
+    .container { width: 100%; max-width: 100%; margin: 0 auto; background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.18); backdrop-filter: blur(10px); }
+    .header { background: var(--header); color: white; padding: 20px 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .header h1 { margin: 0; font-size: 2.8rem; }
+    .section { padding: 18px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .section:last-child { border-bottom: none; }
+    h2 { margin: 0 0 14px 0; font-size: 26px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    h3 { margin: 0 0 6px 0; font-size: 22px; font-weight: 600; }
+    .tag { display: inline-block; background: var(--accent); color: white; padding: 6px 12px; border-radius: 12px; font-size: 20px; margin: 3px; }
+    .tag.subtle { background: rgba(102,126,234,0.12); color: var(--text); border: 1px solid rgba(102,126,234,0.25); font-size: 20px; }
+    .tech-tag { background: rgba(0,0,0,0.04); color: var(--text); padding: 6px 10px; border-radius: 8px; font-size: 20px; margin: 3px; display: inline-block; }
+    .note { background: rgba(255, 247, 230, 0.9); border-left: 4px solid #ffb347; padding: 12px 14px; border-radius: 10px; color: #6b4e16; line-height: 1.6; }
+    .muted { color: var(--text-2); font-size: 22px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+    .card { background: rgba(255,255,255,0.6); border-radius: 12px; padding: 18px; box-shadow: 0 6px 20px rgba(0,0,0,0.05); }
+    .readme { background: rgba(0,0,0,0.02); border-radius: 12px; padding: 14px; line-height: 1.7; }
+    .readme h1, .readme h2, .readme h3, .readme h4 { margin-top: 14px; margin-bottom: 10px; }
+    .readme p { margin: 12px 0; color: var(--text-2); }
+    .readme pre { background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: 10px; overflow: auto; font-size: 26px; line-height: 1.9; }
+    .readme code { background: rgba(0,0,0,0.08); padding: 2px 8px; border-radius: 6px; font-size: 24px; }
+    .dep-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+    .dep-card { background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.05); border-radius: 10px; padding: 10px; }
+    .dep-line { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-weight: 600; }
+    .dep-note { color: var(--text-2); font-size: 0.85rem; margin-top: 4px; }
+    .dep-block { margin-bottom: 14px; }
+    .footer { background: rgba(0,0,0,0.02); padding: 16px; text-align: center; font-size: 18px; color: var(--text-2); }
+    .footer-spacer { height: 500px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.05); padding: 6px 10px; border-radius: 999px; font-size: 0.85rem; color: var(--text-2); }
+    .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .theme-option { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); padding: 6px 10px; border-radius: 12px; color: white; border: 1px solid rgba(255,255,255,0.25); }
+    .btn { border: none; padding: 8px 12px; border-radius: 10px; background: white; color: #1f2937; cursor: pointer; font-weight: 600; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .btn.export { background: #2563eb; color: white; }
+    body.exporting .toolbar { display: none; }
+    .export-mode .toolbar { display: none !important; }
+    body.export-mode { padding: 0; background: white; }
+    .export-mode .container { border-radius: 0; box-shadow: none; margin: 0; width: 100%; max-width: 100%; }
+    .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); z-index: 9999; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; padding: 18px; border-radius: 12px; max-width: 520px; width: calc(100% - 40px); box-shadow: 0 16px 50px rgba(0,0,0,0.15); color: #111827; }
+    .modal-content h3 { margin: 0 0 10px 0; font-size: 1rem; }
+    .path-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; word-break: break-all; font-family: monospace; font-size: 0.82rem; color: #111827; line-height: 1.4; }
+    .cmd-line { color: var(--accent); font-weight: 600; }
+    .modal-actions { margin-top: 12px; display: flex; gap: 10px; justify-content: flex-end; }
+    .spinner { width: 18px; height: 18px; border: 3px solid #e5e7eb; border-top-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hero-quote { background: rgba(0,180,219,0.10); border-left: 6px solid var(--accent); padding: 16px 18px; border-radius: 12px; margin: 14px 0; font-size: 26px; line-height: 1.75; color: var(--text); }
+    .lede { font-size: 25px; line-height: 1.8; }
+    .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin: 16px 0; }
+    figure.shot { margin: 0; background: rgba(255,255,255,0.78); border-radius: 14px; padding: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+    figure.shot img { width: 100%; border-radius: 10px; display: block; border: 1px solid rgba(0,0,0,0.06); background: #fff; }
+    figure.shot figcaption { margin-top: 10px; font-size: 20px; color: var(--text-2); line-height: 1.55; }
+    figure.shot figcaption b { color: var(--text); }
+    .fun-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 14px 0; }
+    .fun-card { background: rgba(0,180,219,0.10); border-radius: 14px; padding: 14px 16px; text-align: center; }
+    .fun-card .num { font-size: 34px; font-weight: 800; color: var(--accent); line-height: 1.2; }
+    .fun-card .lbl { font-size: 19px; color: var(--text-2); margin-top: 4px; line-height: 1.5; }
+    .readme ul li { margin: 8px 0; }
+    @media (max-width: 640px) {
+      body { font-size: 22px; padding: 10px 6px; }
+      .header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" contenteditable="true">
+    <div class="header">
+      <div>
+        <h1>dsh-glass</h1>
+        <div style="font-size:20px;opacity:0.95;margin-top:6px;">把 DSH 的任务进度，装进一块会折射的桌面玻璃里</div>
+      </div>
+      <div class="toolbar">
+        <span class="pill">主题</span>
+        <label class="theme-option"><input type="radio" name="theme" value="aurora" /> aurora</label><label class="theme-option"><input type="radio" name="theme" value="sunset" /> sunset</label><label class="theme-option"><input type="radio" name="theme" value="midnight" /> midnight</label><label class="theme-option"><input type="radio" name="theme" value="ocean" checked/> ocean</label><label class="theme-option"><input type="radio" name="theme" value="forest" /> forest</label><label class="theme-option"><input type="radio" name="theme" value="mono" /> mono</label>
+        <button class="btn" id="save-btn" onclick="saveHtml()">保存修改并导出图片</button>
+      </div>
+    </div>
+
+    <div class="section"><h2>📖 这是什么？（30 秒版）</h2><div class="readme">
+      <p class="hero-quote">你让 DSH（DeepSeek Harness）干活的时候，是不是总得反复切窗口看「跑完没」？<strong>DSH Glass</strong> 就是来解决这件小事的——一块液态玻璃小悬浮窗，一直陪你在桌面上：任务跑到哪、下一步干什么、有没有事等你拍板，瞟一眼全知道。</p>
+      <p class="lede">像手机上的「灵动岛」：平时是个安静的小胶囊，有事时自己长大，没事时乖乖待着。你可以随手把它拖到屏幕任何角落、拉成顺手的大小。它只是个看板 + 传话筒，不抢戏、不越权。</p>
+    </div></div>
+
+    <div class="section"><h2>🫧 四副面孔：从小胶囊到审批台</h2><div class="readme">
+      <div class="gallery">
+        <figure class="shot"><img src="reports/intro-shots/capsule.png" alt="胶囊形态" /><figcaption><b>胶囊 · 平时</b>：小鲸鱼标志 + 一行任务名 + 「3 轮 · 42 步」的小字进度。小到可以贴着屏幕边缘安静待着。</figcaption></figure>
+        <figure class="shot"><img src="reports/intro-shots/peek.png" alt="速览形态" /><figcaption><b>速览 · 瞟一眼</b>：会话转录（思考 / DSH / 你）、当前步骤「搭建本地通信桥」，还有吞吐与缓存这些小仪表。</figcaption></figure>
+        <figure class="shot"><img src="reports/intro-shots/expanded.png" alt="紧凑详情形态" /><figcaption><b>紧凑详情 · 看全程</b>：「过程 / 步骤」双标签，思考、工具调用、消息一条条排开，谁已完成谁已发送一目了然。</figcaption></figure>
+        <figure class="shot"><img src="reports/intro-shots/approval.png" alt="独立审批形态" /><figcaption><b>独立审批 · 拍板时</b>：「需要你的确认 2 项」，命令先预览再点「拒绝 / 允许一次」，拿不准还能跳回 DSH 原窗口处理。</figcaption></figure>
+      </div>
+    </div></div>
+
+    <div class="section"><h2>📖 这块玻璃是「真」玻璃</h2><div class="readme">
+      <p class="lede">普通悬浮窗只是把背景涂白假装透明；这块玻璃是真的会「看穿」它背后的东西——只取窗后一小块画面（不保存、不上传），再用同一套透镜把它折射出来：窗后的内容会被压弯约 <strong>13 个物理像素</strong>，边缘还带着一丝丝彩虹（RGB 色散）。下图左边是不开特效的样子，右边是玻璃折射后——竖条纹真的弯了。</p>
+      <div class="gallery">
+        <figure class="shot"><img src="reports/desktop-optics/comparison.png" alt="折射对照" /><figcaption><b>对照实验（实测存档）</b>：左「零位移」，右「开启折射与 RGB 色散」。拿真实窗后条纹做的实测，不是效果图。</figcaption></figure>
+      </div>
+      <p>这项能力默认<strong>关闭</strong>，要在设置里手动打开；关闭、隐藏窗口或程序退出时立刻停用。隐私条款就一句话：只看该看的那块，别的不碰。</p>
+      <div class="gallery">
+        <figure class="shot"><img src="reports/intro-shots/settings.png" alt="设置界面" /><figcaption><b>设置</b>：连接 DSH 用官方本地认证地址（用完即清、不保存），外观与行为选项也都在这里。</figcaption></figure>
+      </div>
+    </div></div>
+
+    <div class="section"><h2>📖 定下的死规矩：按钮永远是你按的</h2><div class="readme">
+      <p class="lede">玻璃只是传话筒，不是代理人：</p>
+      <ul>
+        <li>审批必须等 DSH 回了正式「已决定」才算数，<strong>绝不抢答</strong>；</li>
+        <li>断线、过期、撤销、参数看不懂？那就只读展示，<strong>绝不自动放行</strong>——任何一次批准都来自你明确的一次点击；</li>
+        <li>连不上就明说连不上，不装作一切正常。</li>
+      </ul>
+    </div></div>
+
+    <div class="section"><h2>📊 数字小卡片</h2>
+      <div class="fun-cards">
+        <div class="fun-card"><div class="num">120</div><div class="lbl">项单测全绿（另有类型检查、lint、桌面构建）</div></div>
+        <div class="fun-card"><div class="num">4</div><div class="lbl">副面孔：胶囊 / 速览 / 详情 / 审批</div></div>
+        <div class="fun-card"><div class="num">13 px</div><div class="lbl">真实折射偏折（实测物理像素）</div></div>
+        <div class="fun-card"><div class="num">1200</div><div class="lbl">个项目文件的工程现场</div></div>
+        <div class="fun-card"><div class="num">150%</div><div class="lbl">DPI 下拖动「自己长大」的 bug 已摁死</div></div>
+        <div class="fun-card"><div class="num">0</div><div class="lbl">次自动放行（永远是 0）</div></div>
+      </div>
+    </div></div>
+
+    <div class="section"><h2>📖 幕后花絮（踩坑博物馆）</h2><div class="readme">
+      <ul>
+        <li>整面蓝灰大色块 → 「看不清」一票否决，改成清透玻璃 + 黑白内容 + 一抹冷蓝；</li>
+        <li>磨砂白膜质感 → 验收没过，换成薄透；</li>
+        <li>字体描边加阴影 → 删；</li>
+        <li>拖动窗口时它会自己越长越大 → 已修复，现在拖动只挪位置；</li>
+        <li>顺手做了 Tauri 原生材质对照实验，最终主入口仍是 Electron。</li>
+      </ul>
+    </div></div>
+
+    <div class="section"><h2>📊 项目概览</h2>
+      <div class="grid">
+        <div class="card"><h3>文件数</h3><p class="muted">1200</p></div>
+        <div class="card"><h3>主要语言</h3><span class="tag subtle">JSON · 193</span><span class="tag subtle">JavaScript · 41</span><span class="tag subtle">Markdown · 36</span><span class="tag subtle">TypeScript · 20</span><span class="tag subtle">Python · 5</span><span class="tag subtle">PowerShell · 5</span><span class="tag subtle">YAML · 4</span><span class="tag subtle">Rust · 1</span><span class="tag subtle">HTML · 1</span><span class="tag subtle">CSS · 1</span></div>
+        <div class="card"><h3>目录</h3><span class="tech-tag">experiments (181)</span><span class="tech-tag">reports (31)</span><span class="tech-tag">packages (13)</span><span class="tech-tag">.local-dsh-probe (1)</span><span class="tech-tag">.tools (1)</span><span class="tech-tag">apps (1)</span><span class="tech-tag">docs (1)</span><span class="tech-tag">examples (1)</span></div>
+      </div>
+    </div>
+
+    <div class="section"><h2>🛠️ 技术积木</h2>
+      <div class="dep-grid">
+        <div class="dep-card"><div class="dep-line"><span>Electron + electron-vite</span></div><div class="dep-note">悬浮窗本体（apps/desktop）</div></div>
+        <div class="dep-card"><div class="dep-line"><span>React 19 + Zustand</span></div><div class="dep-note">界面与状态管理</div></div>
+        <div class="dep-card"><div class="dep-line"><span>TypeScript（strict）</span></div><div class="dep-note">全套类型约束</div></div>
+        <div class="dep-card"><div class="dep-line"><span>自研工作包</span></div><div class="dep-note">protocol / bridge / adapters / dsh-plugin</div></div>
+        <div class="dep-card"><div class="dep-line"><span>Vitest + Playwright</span></div><div class="dep-note">120 项单测 + 桌面实测脚本</div></div>
+        <div class="dep-card"><div class="dep-line"><span>ws</span></div><div class="dep-note">本地 WebSocket 通信</div></div>
+      </div>
+      <p class="muted" style="margin-top:12px;">想深挖：跑起来看 docs/RUNNING.md；产品边界与协议看 docs/ 00-09 系列；每轮真实截图与验收记录都在 reports/ 目录。</p>
+    </div>
+
+    <div class="footer-spacer" aria-hidden="true"></div>
+  </div>
+
+  <div class="footer">
+    <div>生成时间：2026/10/18 14:22:36</div>
+  </div>
+
+  <script>
+    const themes = {"aurora":{"name":"aurora","background":"linear-gradient(135deg, #667eea 0%, #764ba2 100%)","header":"linear-gradient(135deg, #11998e 0%, #38ef7d 100%)","accent":"#667eea","textPrimary":"#1f2937","textSecondary":"#4b5563","card":"#ffffff"},"sunset":{"name":"sunset","background":"linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%)","header":"linear-gradient(135deg, #f83600 0%, #f9d423 100%)","accent":"#ff7e5f","textPrimary":"#1f1f1f","textSecondary":"#4a4a4a","card":"#ffffff"},"midnight":{"name":"midnight","background":"linear-gradient(135deg, #0f172a 0%, #1e293b 100%)","header":"linear-gradient(135deg, #2563eb 0%, #10b981 100%)","accent":"#38bdf8","textPrimary":"#e5e7eb","textSecondary":"#cbd5e1","card":"rgba(15, 23, 42, 0.8)"},"ocean":{"name":"ocean","background":"linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)","header":"linear-gradient(135deg, #0f9b8e 0%, #00b4db 100%)","accent":"#00b4db","textPrimary":"#0f172a","textSecondary":"#1f2937","card":"#f5f7fb"},"forest":{"name":"forest","background":"linear-gradient(135deg, #134e5e 0%, #71b280 100%)","header":"linear-gradient(135deg, #2e8b57 0%, #56ab2f 100%)","accent":"#4caf50","textPrimary":"#102a27","textSecondary":"#305f4d","card":"#f5f7f2"},"mono":{"name":"mono","background":"linear-gradient(135deg, #2c3e50 0%, #bdc3c7 100%)","header":"linear-gradient(135deg, #4b5563 0%, #9ca3af 100%)","accent":"#111827","textPrimary":"#111827","textSecondary":"#4b5563","card":"#ffffff"}};
+    const imagePath = "D:\\codexwork\\dsh\\dsh-glass-spec\\介绍.png";
+    const htmlPath = "D:\\codexwork\\dsh\\dsh-glass-spec\\介绍.html";
+    const projectPath = "D:\\codexwork\\dsh\\dsh-glass-spec";
+    const gitUrl = "";
+    const cliPath = "C:\\Users\\wfz\\.qoder-cn\\skills\\project-intro-generator\\bin\\cli.js";
+    const themeName = "ocean";
+    const projectName = "dsh-glass";
+    function applyTheme(name) {
+      const t = themes[name] || themes['aurora'];
+      document.documentElement.style.setProperty('--bg', t.background);
+      document.documentElement.style.setProperty('--header', t.header);
+      document.documentElement.style.setProperty('--accent', t.accent);
+      document.documentElement.style.setProperty('--text', t.textPrimary);
+      document.documentElement.style.setProperty('--text-2', t.textSecondary);
+      document.documentElement.style.setProperty('--card', t.card);
+      localStorage.setItem('introshow-theme', name);
+    }
+    const stored = localStorage.getItem('introshow-theme');
+    if (stored && themes[stored]) { applyTheme(stored); }
+    document.querySelectorAll('input[name="theme"]').forEach((input) => {
+      input.addEventListener('change', (e) => { applyTheme(e.target.value); });
+    });
+
+    let modalTitle = null;
+    let pathBox = null;
+    const editedPlaceholder = '[已下载HTML绝对路径]';
+    let latestSavedHtml = '';
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = '<div class="modal-content">' +
+      '<h3 id="modal-title">导出图片</h3>' +
+      '<div class="path-box" id="img-path-box"></div>' +
+      '<div class="modal-actions">' +
+        '<button class="btn" id="close-modal">关闭</button>' +
+        '<button class="btn export" id="copy-path">复制命令</button>' +
+      '</div>' +
+    '</div>';
+    document.body.appendChild(modal);
+    modalTitle = document.getElementById('modal-title');
+    pathBox = document.getElementById('img-path-box');
+    document.getElementById('close-modal').onclick = () => modal.classList.remove('open');
+    let cmdForCopy = '';
+    document.getElementById('copy-path').onclick = () => {
+      const txt = cmdForCopy || '';
+      if (!txt) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(() => { alert('已复制指令'); });
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        alert('已复制指令');
+      }
+    };
+
+    function showImagePath() {
+      const box = pathBox || document.getElementById('img-path-box');
+      if (!imagePath) {
+        box.textContent = '长图已生成，请在 output 目录查看对应 .png 文件。';
+      } else {
+        box.textContent = imagePath;
+      }
+      modal.classList.add('open');
+    }
+
+    function wrapPath(p) {
+      if (!p) return '';
+      return p.includes(' ') ? '"' + p + '"' : p;
+    }
+
+    function saveHtml() {
+      const html = '<!DOCTYPE html>' + document.documentElement.outerHTML;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const editedName = projectName + '-edited-' + Date.now() + '.html';
+      a.download = editedName;
+      a.click();
+      URL.revokeObjectURL(url);
+      latestSavedHtml = editedName;
+      modalTitle.textContent = '已保存';
+      const imgForCmd = imagePath || '[PNG输出路径]';
+      const htmlHint = '[下载目录]/' + editedName;
+      const cmd = 'node ' + wrapPath(cliPath) + ' --html ' + wrapPath(htmlHint) + ' --image-out ' + wrapPath(imgForCmd);
+      cmdForCopy = cmd;
+      pathBox.innerHTML = '<small><strong style="color:#dc2626;">将 ' + htmlHint + ' 换成该文件的绝对路径再执行。</strong></small>' +
+        '<br>如需更新 PNG，请运行：<br><span class="cmd-line">' + cmd + '</span>';
+      modal.classList.add('open');
+    }
+
+  </script>
+</body>
+</html>

@@ -4,7 +4,7 @@ import { Icon } from './icon';
 import { requestIdentity, requestKey } from './request-model';
 function DecisionPreview({label,tone,explain}:{label:string;tone:'allow'|'reject';explain:()=>void}) {
   const [pressed,setPressed]=useState(false);
-  return <span className="decision-preview" data-no-window-drag data-pressed={pressed} tabIndex={0} role="group" aria-label={label+'，仅预览'} aria-describedby="approval-status" title="仅预览，审批通道尚未接入" onClick={explain}
+  return <span className="decision-preview" data-no-window-drag data-pressed={pressed} tabIndex={0} role="group" aria-label={label+'，仅预览'} aria-describedby="approval-status" title="当前请求仅供预览，请在 DSH 中处理" onClick={explain}
     onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setPressed(true);if(!e.repeat)explain();}}} onKeyUp={()=>setPressed(false)} onBlur={()=>setPressed(false)}>
     <button className={'decision-'+tone} aria-describedby="approval-status" disabled><Icon name={tone === 'allow' ? 'check' : 'x'}/><span className="control-label">{label}</span></button>
   </span>;
@@ -39,8 +39,8 @@ export function ApprovalCard({ task, openDSH }: { task: Task; openDSH: () => voi
         <p className="approval-reason" aria-label="审批标题">{request.reason || '此操作需要你的确认'}</p>
         <details className="request-details"><summary><Icon name="code"/><span>查看完整命令与请求</span><Icon name="chevron"/></summary><pre className="command-full">{request.commandPreview ?? '参数暂不可用'}</pre><p>{request.reason}</p><dl><dt>Session</dt><dd>{request.sessionId}</dd><dt>Request</dt><dd>{request.requestId}</dd><dt>Call</dt><dd>{request.callId ?? '未提供'}</dd></dl></details>
       </article></div>
-      <footer className="approval-footer" data-request-id={request.requestId} data-session-id={request.sessionId}>
-        <p className="safety-note" id="approval-status" role="status">{task.status === 'disconnected' ? '连接已断开，暂不可提交。' : submission ? submission.text : actionable ? '仅对当前请求生效，等待 DSH 确认后结束。' : blocked.identity===key ? blocked.text : request.displayDetails !== 'complete' ? '仅供预览 · 完整参数缺失' : '当前请求只读 · 请在 DSH 中处理'}</p>
+      <footer className="approval-footer" data-request-id={request.requestId} data-session-id={request.sessionId} data-stage={busy ? 'waiting' : submission?.stage ?? 'idle'} data-readonly={!actionable && !busy}>
+        <p className="safety-note" id="approval-status" role="status">{!actionable && !busy && <span className="readonly-label"><Icon name="lock"/>只读预览</span>}{task.status === 'disconnected' ? '连接已断开，暂不可提交。' : submission ? submission.text : actionable ? '仅对当前请求生效，等待 DSH 确认后结束。' : blocked.identity===key ? blocked.text : request.displayDetails !== 'complete' ? '完整参数缺失 · 请在 DSH 中处理' : '请在 DSH 中处理'}</p>
         <div className="decision-buttons">{actionable || busy ? <>
           <button className="decision-reject" disabled={!actionable || busy} onClick={()=>void respond('rejected')}><Icon name="x"/><span className="control-label">拒绝</span></button>
           <button className="decision-allow" disabled={!actionable || busy} onClick={()=>void respond('allowed-once')}><Icon name="check"/><span className="control-label">允许一次</span></button>

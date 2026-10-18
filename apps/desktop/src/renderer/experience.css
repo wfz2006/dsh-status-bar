@@ -1,0 +1,49 @@
+/* Read the task first; usage supports it, and the whale carries the quiet motion. */
+.glass[data-theme] .capsule-title { font-weight:500; }
+.glass[data-theme] .task-capsule .step-count { color:var(--ink-2); font-size:10.5px; letter-spacing:0; }
+.progress-caption { color:var(--ink-2); font-family:var(--font-caption); }
+.glass[data-theme] .task-metrics { flex-direction:column; gap:2px; font-size:10.5px; line-height:1.6; color:var(--ink-2); }
+.metrics-primary,.metrics-secondary { display:flex; flex-wrap:wrap; gap:2px; }
+.metrics-secondary:empty { display:none; }
+.glass[data-theme] .metrics-secondary b { font-size:10.5px; }
+.glass[data-theme] .task-metrics b,.glass[data-theme] .peek-stats b { color:var(--ink-2); font-weight:500; }
+.glass[data-theme] .task-metrics .usage-speed[data-live=true],.glass[data-theme] .peek-stats .usage-speed[data-live=true] { color:var(--action-ink); font-weight:600; }
+.glass[data-theme] .peek-stats > span:last-child { color:var(--ink-2); }
+.metrics-snapshot { color:var(--warning); font-family:var(--font-caption); }
+.glass[data-theme] .peek-stats .metrics-snapshot { color:var(--warning); }
+.glass[data-theme] .context-ring { color:var(--ink-2); }
+.context-ring .ring-value { stroke:color-mix(in srgb,var(--accent) 65%,var(--ink-2)); }
+
+/* The current name stays visible and truncates inside the actual window width. */
+.glass .task-picker-row .session-picker { max-width:min(240px,100%); min-width:0; }
+.picker-trigger { min-width:0; width:100%; }
+.glass[data-theme] .picker-trigger:focus-visible { outline:2px solid var(--accent); outline-offset:2px; box-shadow:inset 0 1px 0 var(--surface-glint); }
+.picker-label { flex:1; text-align:left; }
+.picker-count { flex:0 0 auto; padding:1px 4px; border-radius:4px; background:var(--neutral-fill); color:var(--ink-2); font:10px/1.3 var(--font-mono); }
+.glass .picker-option { display:flex; align-items:center; gap:7px; }
+.picker-option-title { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.picker-option small { flex:0 0 auto; font-size:9.5px; color:var(--ink-2); }
+.picker-option > .ui-icon { width:11px; height:11px; flex:0 0 auto; }
+.picker-option:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; background:var(--accent-soft); }
+.picker-status { flex:0 0 5px; width:5px; height:5px; border-radius:50%; background:var(--ink-3); }
+.picker-status:is([data-status=running],[data-status=starting]) { background:var(--accent); }
+.picker-status[data-status=completed] { background:var(--success); }
+.picker-status:is([data-status=waiting_approval],[data-status=waiting_answer],[data-status=limit_reached]) { background:var(--warning); }
+.picker-status:is([data-status=error],[data-status=disconnected]) { background:var(--danger); }
+.picker-menu { scrollbar-width:thin; }
+
+.readonly-label { display:inline-flex; align-items:center; gap:4px; margin-right:7px; color:var(--ink-2); font-weight:600; }
+.readonly-label > .ui-icon { width:11px; height:11px; }
+.glass[data-theme] .approval-footer[data-readonly=true] .decision-preview > button { background:linear-gradient(180deg,var(--surface-glint),transparent 2px),color-mix(in srgb,var(--decision-ink) 14%,transparent); }
+.glass[data-theme] .approval-footer[data-readonly=true] .decision-preview:is(:hover,:focus-visible) > button { background:color-mix(in srgb,var(--decision-ink) 22%,transparent); }
+
+/* Remove competing continuous effects; keep interpolation and finite state feedback. */
+.glass[data-mode=capsule][data-state=running] .task-capsule::after { display:none; }
+.glass[data-state=running] .task-progress > span { animation:none; background-image:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 60%,var(--success))); background-size:100% 100%; transition:width 300ms var(--motion-enter); }
+.glass[data-state=running] .status-orb.running { animation:orb-breathe 4.8s cubic-bezier(.45,0,.55,1) infinite; }
+.glass .whale-companion > .status-orb.running { animation:none; }
+.capsule-title .wave-char { animation-name:reading-wave; animation-duration:5.6s; }
+@keyframes reading-wave { 0%,35%,100% { transform:translateY(0); opacity:1; } 14% { transform:translateY(-.65px); opacity:1; } }
+.task-capsule:is(:hover,:focus-visible) .wave-char { animation-play-state:paused; }
+.attention-link { animation-duration:5.6s; }
+@media(max-width:300px) { .progress-caption { display:none; } .glass[data-theme] .approval-footer .safety-note { font-size:10px; } }

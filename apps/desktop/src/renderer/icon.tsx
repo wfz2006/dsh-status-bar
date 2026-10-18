@@ -1,6 +1,6 @@
 import { WHALE_MARK } from './whale-mark';
 
-export type IconName = 'collapse' | 'more' | 'back' | 'chevron' | 'chevron-right' | 'code' | 'external' | 'file' | 'image' | 'terminal' | 'pencil' | 'search' | 'globe' | 'list' | 'wrench' | 'brain' | 'chat' | 'user' | 'shield' | 'check' | 'x' | 'whale';
+export type IconName = 'collapse' | 'more' | 'back' | 'chevron' | 'chevron-right' | 'code' | 'external' | 'file' | 'image' | 'terminal' | 'pencil' | 'search' | 'globe' | 'list' | 'wrench' | 'brain' | 'chat' | 'user' | 'shield' | 'lock' | 'check' | 'x' | 'whale';
 const paths: Record<Exclude<IconName, 'more'>, React.ReactNode> = {
   collapse: <path d="m7 10 5 5 5-5" />,
   chevron: <path d="m7 10 5 5 5-5" />,
@@ -21,6 +21,7 @@ const paths: Record<Exclude<IconName, 'more'>, React.ReactNode> = {
   user: <><circle cx="12" cy="8" r="3.5" /><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6" /></>,
   shield: <><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Z" /><path d="M12 8.5v4.5" /><circle cx="12" cy="16.5" r=".9" fill="currentColor" stroke="none" /></>,
   check: <path d="m5 12 4.5 4.5L19 7" />,
+  lock: <><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></>,
   x: <path d="m6 6 12 12M18 6 6 18" />,
   whale: <path d={WHALE_MARK} fill="currentColor" stroke="none" />,
 };

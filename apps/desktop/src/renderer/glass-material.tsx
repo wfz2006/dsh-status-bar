@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react';
+import { memo, useLayoutEffect, useRef } from 'react';
 import type { GlassSettings } from '../shared/view-model';
 import './vendor/edge-liquid-glass.js';
 import './glass-material.css';
@@ -15,7 +15,8 @@ declare global {
   }
 }
 
-export function GlassMaterial({ strength, moving, solid, frosted, autoTheme, appearance }: { strength: GlassSettings['strength']; moving: boolean; solid: boolean; frosted: boolean; autoTheme:boolean;appearance:GlassAppearance }) {
+type MaterialProps = { strength: GlassSettings['strength']; moving: boolean; solid: boolean; frosted: boolean; autoTheme:boolean;appearance:GlassAppearance };
+export const GlassMaterial = memo(function GlassMaterial({ strength, moving, solid, frosted, autoTheme, appearance }: MaterialProps) {
   const surface = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => { document.documentElement.dataset.glassProfile = strength; }, [strength]);
   useLayoutEffect(() => {
@@ -45,6 +46,17 @@ export function GlassMaterial({ strength, moving, solid, frosted, autoTheme, app
       {!solid && <div ref={surface} className="lg-material-surface" data-glass data-lg-role="operation" />}
       {!solid && <div className="glass-tint" style={{backgroundColor:tintFill(appearance)}} />}
     </div>
-    <div className="glass-rim" />
+    <svg className="glass-rim" width="100%" height="100%" focusable="false">
+      <defs><linearGradient id="glass-rim-shine" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#ffffff" stopOpacity=".82" />
+        <stop offset=".26" stopColor="#ffffff" stopOpacity=".38" />
+        <stop offset=".52" stopColor="#dcecff" stopOpacity=".22" />
+        <stop offset=".78" stopColor="#ffe9d0" stopOpacity=".36" />
+        <stop offset="1" stopColor="#ffffff" stopOpacity=".64" />
+      </linearGradient></defs>
+      <rect className="glass-rim-line" />
+    </svg>
   </div>;
-}
+}, (before,after) => before.strength===after.strength && before.moving===after.moving && before.solid===after.solid && before.frosted===after.frosted
+  && before.autoTheme===after.autoTheme && before.appearance.tintColor===after.appearance.tintColor && before.appearance.tintOpacity===after.appearance.tintOpacity
+  && before.appearance.brightness===after.appearance.brightness);

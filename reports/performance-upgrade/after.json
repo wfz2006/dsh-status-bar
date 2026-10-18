@@ -1,0 +1,121 @@
+{
+  "label": "after",
+  "scenarios": [
+    {
+      "name": "capsule-no-capture",
+      "wallMs": 1518.4571,
+      "mainCPUMs": 0,
+      "renderer": {
+        "TaskDuration": 0.003716000000000004,
+        "ScriptDuration": 0.0006310000000000003,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0,
+        "LayoutCount": 0,
+        "RecalcStyleCount": 0
+      },
+      "counters": {
+        "commits": 2,
+        "pixelCopies": 0,
+        "copiedBytes": 0,
+        "paintedFrames": 0,
+        "toneWrites": 0
+      },
+      "jsHeapBytes": 8877904
+    },
+    {
+      "name": "expanded-static-capture",
+      "wallMs": 2013.5215000000007,
+      "mainCPUMs": 110,
+      "renderer": {
+        "TaskDuration": 0.3148099999999999,
+        "ScriptDuration": 0.0011719999999999925,
+        "LayoutDuration": 0.006196000000000007,
+        "RecalcStyleDuration": 0.032027,
+        "LayoutCount": 79,
+        "RecalcStyleCount": 520
+      },
+      "counters": {
+        "commits": 2,
+        "pixelCopies": 0,
+        "copiedBytes": 0,
+        "paintedFrames": 38,
+        "toneWrites": 0
+      },
+      "jsHeapBytes": 4773132
+    },
+    {
+      "name": "native-drag",
+      "wallMs": 1013.8725000000004,
+      "mainCPUMs": 469,
+      "renderer": {
+        "TaskDuration": 0.48044599999999993,
+        "ScriptDuration": 0.245087,
+        "LayoutDuration": 0.03366899999999999,
+        "RecalcStyleDuration": 0.027153999999999984,
+        "LayoutCount": 92,
+        "RecalcStyleCount": 219
+      },
+      "counters": {
+        "commits": 9,
+        "pixelCopies": 0,
+        "copiedBytes": 0,
+        "paintedFrames": 19,
+        "toneWrites": 0
+      },
+      "jsHeapBytes": 6941776
+    },
+    {
+      "name": "morph-six-transitions",
+      "wallMs": 2233.1553999999996,
+      "mainCPUMs": 593,
+      "renderer": {
+        "TaskDuration": 0.8161909999999999,
+        "ScriptDuration": 0.280455,
+        "LayoutDuration": 0.053989999999999996,
+        "RecalcStyleDuration": 0.11051799999999998,
+        "LayoutCount": 300,
+        "RecalcStyleCount": 580
+      },
+      "counters": {
+        "commits": 42,
+        "pixelCopies": 0,
+        "copiedBytes": 0,
+        "paintedFrames": 40,
+        "toneWrites": 0
+      },
+      "jsHeapBytes": 7346508
+    },
+    {
+      "name": "hidden",
+      "wallMs": 1007.116,
+      "mainCPUMs": 0,
+      "renderer": {
+        "TaskDuration": 0.004713000000000189,
+        "ScriptDuration": 0.0006909999999999972,
+        "LayoutDuration": 0.00012999999999999123,
+        "RecalcStyleDuration": 0.0021019999999999928,
+        "LayoutCount": 1,
+        "RecalcStyleCount": 1
+      },
+      "counters": {
+        "commits": 1,
+        "pixelCopies": 0,
+        "copiedBytes": 0,
+        "paintedFrames": 0,
+        "toneWrites": 0
+      },
+      "jsHeapBytes": 7441624
+    }
+  ],
+  "errors": [],
+  "note": "Local Electron CPU/DOM/copy counters; not presented-frame FPS. Same native capture cadence and full RGB optics.",
+  "optics": {
+    "mapSHA256": "f4adad22cd7edb07e66e61a392d67b2ff37b46d4171e69cd2b66ebb6fb117ff6",
+    "passes": 3,
+    "scales": [
+      "20",
+      "19.14",
+      "18.28"
+    ]
+  }
+}

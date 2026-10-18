@@ -21,7 +21,7 @@ export const noteSchema = z.object({ id: id, kind: z.enum(['reasoning', 'message
 export const sessionSchema = z.object({
   runtimeId: id, sessionId: id, title: text, workspaceLabel: text,
   agentStatus: z.enum(['starting', 'running', 'stopping', 'idle', 'unknown']),
-  phase: z.enum(['working', 'waiting-approval', 'waiting-question', 'finished', 'error', 'cancelled', 'archived', 'unknown']),
+  phase: z.enum(['working', 'waiting-approval', 'waiting-question', 'finished', 'limit-reached', 'error', 'cancelled', 'archived', 'unknown']),
   todos: z.array(todoSchema).max(1000), lastSourceSeq: seq,
   activities: z.array(activitySchema).max(100),
   notes: z.array(noteSchema).max(60).optional(),
@@ -87,7 +87,7 @@ export function initialProjection(): Projection {
     sessions: {}, approvals: [], questions: [], seen: [], removedSessions: {} };
 }
 function sessionAcceptsRequests(state: Projection, sessionId: string) {
-  return Object.hasOwn(state.sessions, sessionId) && !['finished', 'error', 'cancelled', 'archived'].includes(state.sessions[sessionId]!.phase);
+  return Object.hasOwn(state.sessions, sessionId) && !['finished', 'limit-reached', 'error', 'cancelled', 'archived'].includes(state.sessions[sessionId]!.phase);
 }
 function safeApprovals(approvals: Approval[], state?: Projection): Approval[] {
   return approvals.map(a => ({ ...a, actionable: !!(a.actionable && state?.source === 'dsh' && state.connection === 'connected' && !state.stale &&

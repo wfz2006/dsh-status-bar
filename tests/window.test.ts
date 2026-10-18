@@ -29,6 +29,22 @@ it('keeps a short capsule slightly squarer while clamping tiny-window corners', 
   const tiny = roundedRegion(30, 20);
   expect(tiny.every(r => r.x >= 0 && r.y >= 0 && r.x + r.width <= 30 && r.y + r.height <= 20)).toBe(true);
 });
+it('preserves transparent antialias coverage without changing bounds or opening square corners', () => {
+  for (const [width, height] of [[288, 44], [400, 360], [180, 54], [30, 20]] as const) {
+    const strict = roundedRegion(width, height);
+    const padded = roundedRegion(width, height, 1.25);
+    const contains = (x: number, y: number) => padded.some(r => x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height);
+    expect(padded.every(r => r.x >= 0 && r.y >= 0 && r.x + r.width <= width && r.y + r.height <= height)).toBe(true);
+    for (const row of strict) {
+      expect(contains(row.x, row.y)).toBe(true);
+      expect(contains(row.x + row.width - 1, row.y + row.height - 1)).toBe(true);
+    }
+    expect(contains(0, 0)).toBe(false);
+    expect(contains(width - 1, height - 1)).toBe(false);
+    expect(padded[1]!.x).toBeLessThan(strict[1]!.x);
+  }
+  expect(roundedRegion(288, 44, -2)).toEqual(roundedRegion(288, 44));
+});
 it('custom resizing respects minimum size while anchoring the opposite edge', () => {
   expect(resizeBounds({ x: 500, y: 100, width: 340, height: 360 }, 'w', 300, 0)).toEqual({ x: 660, y: 100, width: 180, height: 360 });
   expect(resizeBounds({ x: 500, y: 100, width: 340, height: 360 }, 'se', 40, -500)).toEqual({ x: 500, y: 100, width: 380, height: 44 });

@@ -50,7 +50,7 @@ describe('main request response gate', () => {
   });
 
   it('rechecks request and session lifetimes even if UI retained an enabled button', () => {
-    for (const phase of ['finished', 'error', 'cancelled', 'archived'] as const) {
+    for (const phase of ['finished', 'limit-reached', 'error', 'cancelled', 'archived'] as const) {
       const state = fixture(); state.sessions.session!.phase = phase;
       expect(() => assertApprovalResponse(state, identity, 'rejected')).toThrow();
       expect(() => assertQuestionResponse(state, identity, answers())).toThrow();

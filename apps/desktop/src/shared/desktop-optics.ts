@@ -2,6 +2,12 @@ export type DesktopOpticsState = { enabled:boolean; running:boolean; error:strin
 export type CaptureHeader = { bytes:number; width:number; height:number; left:number; top:number; windowLeft:number; windowTop:number; windowWidth:number; windowHeight:number };
 export type DesktopOpticsFrame = Omit<CaptureHeader,'bytes'> & { pixels:Uint8Array };
 export type DesktopOpticsBounds=Pick<CaptureHeader,'windowLeft'|'windowTop'|'windowWidth'|'windowHeight'>;
+/** Received pixels already own an ArrayBuffer. Reinterpret bytes, without an RGBA copy. */
+export function framePixelView(pixels:Uint8Array):Uint8ClampedArray<ArrayBuffer> {
+  return pixels.buffer instanceof ArrayBuffer
+    ? new Uint8ClampedArray(pixels.buffer,pixels.byteOffset,pixels.byteLength)
+    : new Uint8ClampedArray(pixels);
+}
 export function captureCoversWindow(frame:Pick<CaptureHeader,'left'|'top'|'width'|'height'>,bounds:DesktopOpticsBounds) {
   return frame.left<=bounds.windowLeft && frame.top<=bounds.windowTop && frame.left+frame.width>=bounds.windowLeft+bounds.windowWidth && frame.top+frame.height>=bounds.windowTop+bounds.windowHeight;
 }

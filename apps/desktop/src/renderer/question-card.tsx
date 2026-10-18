@@ -37,7 +37,7 @@ function QuestionForm({ request, disconnected }: { request: Question; disconnect
           if(q.type==='single')setValues(current=>({...current,[q.id]:[]}));
         }} placeholder={q.type==='freeText'?'输入回答…':'也可以输入自己的答案…'}/></label>}
     </fieldset>)}</div>
-    <footer className="approval-footer" data-request-id={request.requestId} data-session-id={request.sessionId}>
+    <footer className="approval-footer" data-request-id={request.requestId} data-session-id={request.sessionId} data-stage={busy ? 'waiting' : stage}>
       <p className="safety-note" role="status">{disconnected?'连接已断开，暂不可提交。':stage==='error'?'提交未确认，请在 DSH 中核实或重试。':busy?'已提交，等待 DSH 确认结果…':!request.actionable?'当前问题只读，请在 DSH 中回答。':!complete?'请回答所有问题后提交。':'回答仅发送给当前会话。'}</p>
       <button className="quiet-button question-submit" type="submit" disabled={!enabled || !complete}><span className="control-label">{busy?'等待确认…':'提交回答'}</span></button>
     </footer>

@@ -1,6 +1,14 @@
 import { describe,expect,it } from 'vitest';
-import { decodeCaptureHeader, CAPTURE_HEADER_BYTES,projectCaptureFrame,captureVisibility } from '../apps/desktop/src/shared/desktop-optics';
+import { decodeCaptureHeader, CAPTURE_HEADER_BYTES,projectCaptureFrame,captureVisibility,framePixelView } from '../apps/desktop/src/shared/desktop-optics';
 function header(values:number[]) {const b=Buffer.alloc(CAPTURE_HEADER_BYTES);b.write('DSHG');values.forEach((v,i)=>b.writeInt32LE(v,4+i*4));return b;}
+it('reuses received RGBA bytes including a nonzero byte offset without changing pixels',()=>{
+  const buffer=Uint8Array.from([99,88,1,2,255,255,6,7,8,255,77]);
+  const input=buffer.subarray(2,10);
+  const view=framePixelView(input);
+  expect(view.buffer).toBe(input.buffer);expect(view.byteOffset).toBe(2);
+  expect(Array.from(view)).toEqual([1,2,255,255,6,7,8,255]);
+  expect(Array.from(input)).toEqual(Array.from(view));
+});
 describe('bounded desktop optical input',()=>{
   it('accepts only bounded RGBA frames matching the current native window',()=>{
     const valid=header([80000,200,100,10,10,20,20,180,80]);

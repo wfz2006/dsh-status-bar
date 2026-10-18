@@ -1,0 +1,14 @@
+{
+  "result": "PASS",
+  "checks": [
+    "capsule status remains accessible",
+    "drag preserves window size and does not expand",
+    "whale click expands",
+    "reduced and system motion preferences",
+    "empty session whale",
+    "settings signature",
+    "disconnected whale stops swimming"
+  ],
+  "native": false,
+  "rendererErrors": []
+}

@@ -37,7 +37,7 @@ function currentIdentity(state: Projection, value: unknown, capability: 'respond
     identity.runtimeId !== state.runtimeId || identity.sourceEpoch !== state.epoch || !Object.hasOwn(state.sessions, identity.sessionId)) return refuse();
   const session = state.sessions[identity.sessionId];
   if (!session || session.runtimeId !== identity.runtimeId || session.sessionId !== identity.sessionId ||
-    ['finished', 'error', 'cancelled', 'archived'].includes(session.phase)) return refuse();
+    ['finished', 'limit-reached', 'error', 'cancelled', 'archived'].includes(session.phase)) return refuse();
   return identity;
 }
 

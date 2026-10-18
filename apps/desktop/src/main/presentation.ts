@@ -12,7 +12,7 @@ export function createPresentation(win: BrowserWindow, changed: () => void) {
   function applyShape() {
     if (process.platform === 'win32' && !win.isDestroyed()) {
       const { width, height } = win.getBounds();
-      win.setShape(roundedRegion(width, height));
+      win.setShape(roundedRegion(width, height, material === 'clear' || material === 'frosted' ? 1.25 : 0));
     }
   }
   function applyMaterial() {

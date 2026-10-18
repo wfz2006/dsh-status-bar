@@ -1,20 +1,20 @@
 # 本地接入支持矩阵
 
-检查日期：2026-10-18。当前交付版本：Glass 0.1.0，**Mock 开发预览 + 认证适配器（合同测试 + 真实 Host 实装联调）**。
+检查日期：2026-10-18。当前交付版本：Glass 0.1.0，**真实源连接入口 + 显式 Mock 演示**。当前认证合同已更正为 0.2.1-rc.2 独立 operator，旧根路径 303 联调记录不能替代本次回归。
 
 | 目标 | 插件加载 | Session/Todo | Glass UI 真实连接 | 审批 / 问题回答 |
 |---|---|---|---|---|
 | Mock Adapter | PASS | PASS，确定性夹具 | PASS，认证 WS + Electron | 不提供，按钮禁用 |
-| 官方 0.2.1-rc.2 bundled CLI / 独立 Web Profile | PASS | PASS：插件通过官方 SessionStore 写入测试事件并收到 `session/event`，Todo 数量 3→2 | PASS（实装联调 2026-10-18）：同一真实 Host 上，Electron 经设置面板粘贴认证链接 → 303+Cookie → `session/list` RPC → `remote.mux` `session/follow`；会话/标题/Todo 同步、断线清空、错误 token 拒绝；`pnpm test:live` 可复现 | 代码路径已实现（`$events/result` 回写）并由 Fake Host 合同测试覆盖；真实 Host 上尚无审批投递 → BLOCKED |
+| 官方 0.2.1-rc.2 bundled CLI / 独立 Web Profile | 历史探针 PASS | PASS：真实 session/list 与投影 Todo 同步；样例为 idle/cold 会话，状态安全标 unknown，不恢复 Agent | PASS：用户链接 → `/connect?interactions=answer` 302+独立 Cookie → RPC → `remote.mux` 三条 baseline → Electron；断开清空、错误 token 拒绝、renderer 不含 token；`pnpm test:live` | void 投递 + 官方决议/投影回执由34项 Fake Host 合同测试覆盖；真实模型驱动审批/问答尚未验收 → BLOCKED |
 | 官方 Desktop 0.2.1-rc.2 / 原有 desktop Profile | 未测试 | 未测试现有用户会话 | BLOCKED | BLOCKED，未验证唯一 owner/委派 |
 
-Web 证据是**真实 DSH Runtime 中的人工测试夹具**，不是模型驱动的 Agent 任务，也不证明 Desktop UI 已联通。Glass 默认仍显示 Mock 数据；DSH 模式需要用户粘贴官方启动器输出的认证链接。认证、会话/Todo 观察、断线清理与错误 token 拒绝已在真实官方 Host（隔离 DSH_HOME）上实装联调通过（`pnpm test:live`，证据 `docs/evidence/live-dsh/`），但未接入官方 Desktop 的当前任务，真实审批投递/决议仍未验收，不能据此宣传 Control PASS。
+Web 证据是**真实 DSH Runtime 中的人工测试夹具**，不是模型驱动的 Agent 任务，也不证明 Desktop UI 已联通。默认真实源未连接；Mock 仅显式演示/测试开启。DSH 模式需要用户粘贴官方启动器输出的认证链接。不得用历史 303 登录记录证明新的独立 operator 认证或真实审批成功。真实审批与提问必须等当前官方决议/投影回执；审批参数无法完整验证、旧式无 durable callId 问题、无合法 owner answer delivery 时只读。
 
 ## 环境
 
 - Windows 11 家庭版 中文版 x64，10.0.26300 / Build 26300。
 - Shell 开发工具：`D:\node\node.exe` v24.15.0，`D:\npm-global\pnpm.ps1` 12.4.1。
-- 官方应用：`D:\DSH\DeepSeek Harness.exe`；卸载注册项/文件版本旧记录为 0.2.0-rc.2，本轮未复核。
+- 官方应用：`D:\DSH\DeepSeek Harness.exe`；本轮文件版本 0.2.1.0，ASAR package/CLI 版本 0.2.1-rc.2。旧 0.2.0-rc.2 记录不作为当前版本依据。
 - CLI 不在当前 PATH，但**已经随 Desktop 捆绑**：`D:\DSH\resources\runtime\cli\bin\dsh.cmd` 与 `app.asar` 内 `dsh-desktop-host/lib/cli.js`；2026-10-18 实测后者 `--version`=0.2.1-rc.2（`dsh.cmd` 包装器仍报 0.2.0-rc.2，两者版本号不一致）。无需重新安装。
 - DSH 自带 runtime 元数据：Node 24.18.1、pnpm 11.7.0。与系统 PATH 工具不同。
 - Glass：Electron 44.8.0、electron-vite 6.0.0、Vite 8.3.4、React 19.3.1、TypeScript 5.9.3。版本在 pnpm-lock.yaml 锁定。
@@ -38,4 +38,4 @@ $env:GLASS_PROBE_FIXTURE = '1'
 
 ## Go / No-Go
 
-默认只允许交付 Mock Preview。DSH 模式保持实验性、默认关闭，只能由用户粘贴自己的认证链接开启；官方 Desktop 的插件正常装载、live Session 快照、生命周期和审批所有权验证完成前，不对外宣称真实审批可用，不接管任何官方 answerer。2026-10-18 增补：认证、会话/Todo 观察、断线清理与错误 token 拒绝已在真实官方 Host（隔离 DSH_HOME + 只读探测插件）上实装联调通过（`pnpm test:live`）；该证据不覆盖官方 Desktop 当前任务与真实审批决议。
+默认真实源未连接；DSH 模式由用户粘贴自己的认证链接开启，Mock 需显式演示。独立 operator 的 `answer` 权限由官方 `/connect` 授予，`$events` 还会校验权限并仅向 owner 下发 waterfall；Glass 不注册 Cordis answerer。真实 Desktop 当前用户任务及真实模型驱动审批/问答验收完成前，不将代码或 Fake Host 合同测试宣传为实机审批 PASS。10 秒无权威回执的提交显示 unavailable，用户须回 DSH 核对，不显示通过/已答复。

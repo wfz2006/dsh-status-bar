@@ -130,7 +130,7 @@ describe('session and tool lifecycle projection', () => {
     p = reduceProjection(p, frame('session.upserted', { ...original, lastSourceSeq: 4 }));
     expect(p.sessions['demo-main']).toBeDefined();
   });
-  it.each(['finished', 'error', 'cancelled', 'archived'] as const)('invalidates actionable requests when the session becomes %s', phase => {
+  it.each(['finished', 'limit-reached', 'error', 'cancelled', 'archived'] as const)('invalidates actionable requests when the session becomes %s', phase => {
     let p = reduceProjection(connected(), frame('approval.requested', approval()));
     p = reduceProjection(p, frame('question.requested', question()));
     p = reduceProjection(p, frame('session.updated', { sessionId: 'demo-main', sourceSeq: 2, fields: { agentStatus: 'idle', phase } }));

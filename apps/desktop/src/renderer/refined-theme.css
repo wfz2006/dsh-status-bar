@@ -33,8 +33,6 @@
 .glass[data-theme][data-strength=readable] { --neutral-fill:rgba(255,255,255,.18); }
 .glass[data-theme=dark][data-strength=readable],.glass[data-theme=auto][data-backdrop-tone=dark][data-strength=readable] { --neutral-fill:rgba(18,22,30,.18); }
 @media(prefers-color-scheme:dark) { .glass[data-theme=auto][data-strength=readable]:not([data-backdrop-tone=light]) { --neutral-fill:rgba(18,22,30,.18); } }
-.glass[data-theme] .glass-rim { box-shadow:inset 0 0 0 1px #ffffff24,inset 0 1px 2px #ffffff52; }
-.glass[data-theme] .glass-rim::before { background:linear-gradient(138deg,#ffffffe8,#ffffff44 26%,#ffffff08 46%,#d8ecff33 66%,#ffe9c766 88%,#ffffffaa); }
 .glass[data-theme] h1 { font-size:16px; font-weight:500; line-height:1.5; letter-spacing:0; }
 .glass[data-theme] .chrome-group { border-color:var(--surface-edge); background:transparent; box-shadow:inset 0 1px 0 #ffffff16; }
 .glass[data-theme] .chrome-button,.glass[data-theme] .back-button { color:var(--muted); background:transparent; }

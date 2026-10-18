@@ -4,13 +4,13 @@
 
 **一句话定义**：以液态玻璃为视觉语言、可自由移动与伸缩的桌面窗口，让用户查看 DSH 会话任务、Todo、工具活动，并在已验证的授权通道中直接处理审批和结构化提问，无需切回 DSH 主窗口。
 
-原始输入是开发规格包。2026-10-17 已实现首轮 **Mock 开发预览**（协议、鉴权桥、Electron 自适应窗口），并完成独立 DSH Web 插件探测。**尚未连接官方 Desktop 的当前任务，真实审批不可用**。后续轮次补上跨进程认证适配器（官方 Host 认证链接 → 本机 JSON-RPC + `remote.mux` WS），以 Fake Host 合同测试验证；2026-10-18 又在**真实官方 Host**（隔离 DSH_HOME + 只读探测插件）上完成实装联调：Electron 经设置面板认证 303+Set-Cookie、`session/list`、`remote.mux` 会话/Todo 同步、断线清空与错误 token 拒绝，`pnpm test:live` 可复现。官方 Desktop 的当前任务与真实审批仍未联通。运行方式见 [RUNNING.md](docs/RUNNING.md)，实测范围见 [支持矩阵](docs/integration-matrix.md)。原始完整规格保留在下文及 MASTER_SPEC。
+原始输入是开发规格包。现有 Electron 窗口支持真实 DSH Host 和显式 Mock 演示。当前版本通过 DSH 0.2.1-rc.2 的 `/connect?interactions=answer` 建立独立 operator 连接，并适配会话增删、Todo/统计/工具活动与结果、任务终止状态、归档、审批和结构化问题；真实 Host 联调已验证 operator 认证、会话/Todo 同步、断开清理与错误 token 拒绝。审批只在收到匹配的 `approval/decided` 后确认，提问只在权威回执后确认；无法验证的参数或旧式无持久调用 ID 的问题保持只读。真实用户 Desktop 任务与模型驱动审批/提问尚未验收，不能视为实机闭环通过。运行方式见 [RUNNING.md](docs/RUNNING.md)，证据范围见 [支持矩阵](docs/integration-matrix.md) 与 [ADR 004](docs/adr/004-authenticated-host.md)。原始完整规格保留在下文及 MASTER_SPEC。
 
 2026-10-17 按 [Liquid UI 重设计规范](DSH_Glass_Liquid_UI_Redesign_Spec.md) 完成四形态 UI 重构：任务胶囊、速览、紧凑详情与独立审批，移除常驻品牌/连接底栏，功能迁至菜单/设置；新增偏好持久化、自动行为与手动尺寸保护。实际验证与尚未覆盖项见 [分阶段记录](docs/redesign-audit.md)。
 
 同日按 UI Improvement Pack 做一轮集中整改：去除正常任务子卡片、默认薄透、审批固定操作栏、内容先退场再收起。真实桌面截图/录屏、材质矩阵、性能记录及尚待用户评价的Gate A见 [验收包](reports/electron-redesign/decision.md)；未擅自迁移技术栈。
 
-最新状态：已删除整面蓝灰染色和字体白边/阴影，加实字重。旧材质验收失败后完成 Tauri 原生对照；在用户明确授权后，新增**默认关闭的限定区域取样**，让同源透镜实际处理窗后画面。真实原生条纹输入已验证13物理像素偏折及RGB分离，隐藏/停用/实色/异常退出回归通过；见 [真实折射验收](reports/desktop-optics/README.md)。正式入口仍为 Electron。10-17 晚追加跨进程 DSH 适配器与 10 项合同测试；10-18 在真实官方 Host（隔离 DSH_HOME）上完成 Electron 实装联调：认证 303/Cookie、`session/list`、`remote.mux` 会话/Todo 同步、断线清空、错误 token 拒绝，`pnpm test:live` 可复现，证据见 `docs/evidence/live-dsh/`。真实 Desktop 审批仍 BLOCKED，见 [ADR 004](docs/adr/004-authenticated-host.md)。
+最新状态：已删除整面蓝灰染色和字体白边/阴影，加实字重。旧材质验收失败后完成 Tauri 原生对照；在用户明确授权后，新增**默认关闭的限定区域取样**，让同源透镜实际处理窗后画面。真实原生条纹输入已验证13物理像素偏折及RGB分离，隐藏/停用/实色/异常退出回归通过；见 [真实折射验收](reports/desktop-optics/README.md)。正式入口仍为 Electron。DSH 真实 Host 联调已改为验证 0.2.1-rc.2 独立 `/connect` operator（302/Cookie），同步会话/Todo并验证断开清理与错误 token 拒绝。120 项单测、类型检查、lint、桌面构建通过；真实 Host 联调见 `docs/evidence/live-dsh/`。真实用户 Desktop 任务及审批/问答仍待实机验收，见 [ADR 004](docs/adr/004-authenticated-host.md)。
 
 Glass 另以本地 DSH bundle（`packages/dsh-plugin`）接入插件市场：profile 以 `link:` 依赖声明并加入 `dsh.profile.bundles`，重启后市场「已安装」可见。当前插件入口只是空载占位（启动日志一行），Electron 伴侣仍由桌面单独启动；见 [packages/dsh-plugin/README.md](packages/dsh-plugin/README.md)。
 

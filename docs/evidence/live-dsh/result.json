@@ -2,7 +2,7 @@
   "steps": [
     {
       "name": "host-up",
-      "origin": "http://127.0.0.1:40479",
+      "origin": "http://127.0.0.1:49033",
       "dshVersion": "0.2.1-rc.2"
     },
     {
@@ -10,14 +10,64 @@
       "marker": true
     },
     {
-      "name": "auth-contract",
-      "status": 303,
-      "locationPath": "/",
+      "name": "operator-auth-contract",
+      "status": 302,
+      "locationPath": "/api/remote.mux",
       "cookieCount": 1,
       "rpcStatus": 200,
       "rpcType": "server-response",
       "rpcOk": true,
-      "itemCount": 1
+      "sessions": [
+        {
+          "running": false,
+          "agentAvailable": false,
+          "projectionKind": "sequenced",
+          "asOfSeq": 5,
+          "projectionKeys": [
+            "title",
+            "goal",
+            "tokenUsage",
+            "contextPressure",
+            "contextBreakdown",
+            "inbox",
+            "sessionStats",
+            "turnOutline",
+            "agentPreset",
+            "userQuestions",
+            "permissions",
+            "workingDirectory",
+            "subagentCatalog",
+            "subagentTiming",
+            "subagent",
+            "todos",
+            "plan",
+            "modelSelection",
+            "sessionListMetadata",
+            "imageLimits"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "operator-stream-probe",
+      "activeSessionAvailable": false,
+      "events": [
+        {
+          "streamId": "control",
+          "type": "item",
+          "valueType": "baseline"
+        },
+        {
+          "streamId": "gateway",
+          "type": "item",
+          "valueType": "ready"
+        },
+        {
+          "streamId": "workspace",
+          "type": "item",
+          "valueType": "baseline"
+        }
+      ]
     },
     {
       "name": "app-start",
@@ -29,7 +79,7 @@
       "name": "connected",
       "mode": "dsh",
       "connection": "connected",
-      "endpoint": "http://127.0.0.1:40479",
+      "endpoint": "http://127.0.0.1:49033",
       "error": null,
       "capabilities": {
         "observeSessions": true,
@@ -40,7 +90,7 @@
       },
       "sessions": 1,
       "phases": [
-        "finished/idle"
+        "unknown/idle"
       ],
       "titles": [
         "未命名会话"
@@ -67,6 +117,6 @@
     }
   ],
   "dshVersion": "0.2.1-rc.2",
-  "hostOrigin": "http://127.0.0.1:40479",
+  "hostOrigin": "http://127.0.0.1:49033",
   "outcome": "PASS"
 }

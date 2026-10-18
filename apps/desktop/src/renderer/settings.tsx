@@ -11,7 +11,7 @@ export function GlassSettingsPanel({ value, update, projection, mock, back }: { 
   const [optics,setOptics]=useState<DesktopOpticsState>({enabled:false,running:false,error:null});
   useEffect(()=>{void window.glass.getOpticsState().then(setOptics);return window.glass.subscribeOpticsState(setOptics);},[]);
   return <section className="settings-panel">
-    <div className="panel-heading"><button className="back-button" aria-label="返回" title="返回" onClick={back}><Icon name="back"/></button><h1>设置</h1></div>
+    <div className="panel-heading"><button className="back-button" aria-label="返回" title="返回" onClick={back}><Icon name="back"/></button><h1>设置</h1><span className="whale-signature" aria-hidden="true"><Icon name="whale" /></span></div>
     <div className="settings-scroll">
       <DSHConnection projection={projection}/>
       <fieldset className="settings-group"><legend>外观</legend>

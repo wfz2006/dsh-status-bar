@@ -12,11 +12,13 @@ export function morphBounds(start: Bounds, end: Bounds, progress: number): Bound
   // Position and width use the same curve so an edge anchored to the work area stays fixed.
   return { x: lerp(start.x, end.x, ease), y: lerp(start.y, end.y, heightEase), width: lerp(start.width, end.width, ease), height: lerp(start.height, end.height, heightEase) };
 }
-export function roundedRegion(width: number, height: number): Bounds[] {
+export function roundedRegion(width: number, height: number, antialiasPadding = 0): Bounds[] {
   const radius = Math.min(height < 96 ? 15 : 20, Math.floor(height / 2), Math.floor(width / 2));
   const rows: Bounds[] = [{ x: 0, y: radius, width, height: height - radius * 2 }];
   for (let y = 0; y < radius; y++) {
-    const inset = Math.max(0, Math.ceil(radius - Math.sqrt(radius ** 2 - (radius - y - 0.5) ** 2) - 0.5));
+    // Transparent windows let Chromium draw the fractional coverage. The
+    // integer native region must contain that fringe instead of cutting it off.
+    const inset = Math.max(0, Math.ceil(radius - Math.sqrt(radius ** 2 - (radius - y - 0.5) ** 2) - 0.5 - Math.max(0, antialiasPadding)));
     rows.push({ x: inset, y, width: width - inset * 2, height: 1 }, { x: inset, y: height - 1 - y, width: width - inset * 2, height: 1 });
   }
   return rows.filter(r => r.height > 0 && r.width > 0);

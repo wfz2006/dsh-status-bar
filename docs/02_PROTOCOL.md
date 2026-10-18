@@ -63,7 +63,7 @@ type SessionView = {
   connectionState: ConnectionState;
   agentStatus: 'running' | 'idle' | 'unknown';
   phase: 'working' | 'waiting-approval' | 'waiting-question'
-    | 'finished' | 'error' | 'unknown';
+    | 'finished' | 'limit-reached' | 'error' | 'cancelled' | 'archived' | 'unknown';
   todos: Todo[];
   lastEventAt?: string;
   lastSourceSeq?: number;
@@ -170,17 +170,17 @@ type UserQuestionView = {
 
 当前开发协议 `protocolVersion = 1`。主版本不一致时 `ConnectionState='incompatible'`，禁止控制操作但允许显示可识别错误。协议字段做向前兼容时新增可选字段；更改含义必须升版本。
 
-## 9. 首轮实际实现子集（2026-10-17）
+## 9. 当前实际实现子集（更新于 2026-10-18）
 
-`packages/protocol/src/index.ts` 的 Zod 是本轮唯一运行时定义。实现 welcome/snapshot/heartbeat、session.updated/todo.snapshot/tool.activity/note、approval.requested、question.requested、approval.respond/ack/resolved、question.respond/ack/resolved。应答命令仅在连接成功且活动投递匹配时被接受：`capabilities.respondApproval/respondQuestion` 由适配器按连接级能力上报，Mock Adapter 保持 false；每次应答仍由 `deliveries` 校验 runtime/epoch/session/过期状态。
+`packages/protocol/src/index.ts` 的 Zod 是运行时定义。实现 welcome/snapshot/heartbeat、session.updated/todo.snapshot/tool.activity/note、approval.requested/resolved、question.requested/resolved 与用户回答请求。会话阶段区分运行、等待审批/问题、完成、达到输出上限、失败、取消、归档和未知；idle 或未知终止原因不推断成功。Mock Adapter 保持回答能力关闭；DSH 的连接能力也不使任意请求可操作，Main 与 Adapter 还会校验 runtime/epoch/session/request、参数完整性、当前 owner delivery 和重复提交。
 
 客户端握手使用受认证 WS 的精简控制帧 `{kind:'glass.hello',protocolVersion:1,clientNonce}`；快照请求为 `{kind:'glass.snapshot.request',reason}`。这些**控制帧没有服务端事件 envelope**；token 仅在 Main 的 Authorization header，renderer 无 WS/凭据。服务端事件使用本文标准 envelope。
 
-快照包含 `sessions`、`approvals`，每个 Session 内含 `lastSourceSeq` 和最多 100 个 `activities`。这替代第一轮独立 `lastSeq` map；问题数组待 M4 加入。Session 显示值 title/workspaceLabel/activities 在本轮为必填，缺失使用 Adapter 显式默认值，不透传原生对象。
+快照包含 `sessions`、`approvals`、`questions`，每个 Session 内含 `lastSourceSeq`、最多 100 个 `activities` 与最多 60 条转录摘要。Session 显示值 title/workspaceLabel/activities 缺失时使用 Adapter 显式默认值，不透传原生对象。
 
 初始/重连：hello → welcome → snapshot.request → snapshot，快照仅在连接同步阶段接受；已连接后不接受迟到的旧快照。正常刷新需重新进入同步阶段。过滤事件序号跳号正常，不推断丢包；旧/重复序号、不同 runtime/epoch 拒收。重连保留旧内容并标 stale，收到新快照后原子替换。
 
-Bridge：系统分配端口、127.0.0.1、随机 256-bit token、拒绝所有带 Origin 的浏览器升级、单客户端、256 KiB 最大帧、40 条/秒输入限流、2 秒 hello 超时、背压上限。心跳 2.5 秒；Main 9 秒无有效帧即失效并重连观察。连接参数由 Main 解析用户粘贴的 `dsh://host=…&token=…` 启动链接后在同一进程内传递到跨进程适配器：`packages/adapters/dsh/src/transport.ts` 以认证 HTTP RPC（`POST /api/<method>`）取数，并以 `remote.mux` WebSocket 的 `open/item/subscribe` 消费官方事件流。第二轮的应答帧（approval.respond/ack/resolved、question.respond/ack/resolved）由 Mock Host 合同测试覆盖，官方 Desktop 上仍未验收。
+本机 Bridge 以 loopback 和单客户端传递最小投影，不暴露 DSH Cookie/token。适配器由 Main 使用用户提供的根认证 URL token 换取官方 `/connect?interactions=answer` operator Cookie，再通过 HTTP RPC 与 `remote.mux` 订阅状态。`$events/result` 返回 void 只代表投递；审批等待匹配 `approval/decided`，问题等待 durable settled 投影，超时则 unavailable。合同测试已验证这些规则；真实模型审批/问答与官方 Desktop 用户任务仍未验收。
 
 ## 10. 独立的桌面光学IPC（不进入DSH协议）
 

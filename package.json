@@ -11,6 +11,9 @@
     "test:desktop": "node scripts/desktop-smoke.mjs",
     "test:preferences": "node scripts/preferences-acceptance.mjs",
     "test:approval-layout": "node scripts/approval-layout.mjs",
+    "test:motion": "node scripts/motion-acceptance.mjs",
+    "test:experience": "node scripts/experience-acceptance.mjs",
+    "test:performance": "node scripts/performance-acceptance.mjs",
     "test:native-redesign": "node scripts/native-redesign.mjs",
     "test:liquid": "node scripts/liquid-acceptance.mjs",
     "test:live": "node scripts/live-dsh-integration.mjs"

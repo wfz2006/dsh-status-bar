@@ -97,6 +97,17 @@
 - [x] M5-14 烟熏磨砂与真实转录（2026-10-18）：磨砂主题改为烟熏深色（取样 `blur(30px) saturate(1.35) brightness(.74)`，深色雾面 + 颗粒，auto 主题在磨砂下解析为深色）；新增 `session.note` 帧与 `Session.notes`（reasoning/message，≤60 条），DSH 适配器从 `assistant/message` 抽取思考与正文，工具活动摘要改用命令预览；大窗过程页按 sourceSeq 混合思考、正文与工具调用，带类型图标与可展开详情；胶囊运行态改为逐字波动（`capsule-wave`，空格用固定宽度占位，动画关闭设置仍生效）。13 文件 97 测试、lint/typecheck 0、构建通过；隔离截图 `evidence-real/shot-frost-*.png`（仓库外）。后续按反馈移除 3px 点阵颗粒（白色小点），烟熏雾面保留。
 - [x] M5-15 紧凑胶囊与七项体验修正（2026-10-18）：胶囊 300×52→288×50、内边距 18→13px、间距 12→8px；移除系统托盘并在 BrowserWindow 上 `skipTaskbar: true`，菜单「隐藏到托盘」改为「隐藏窗口」；完成态由整块绿色渐变改为 5% success 底 + 1px 内描边 + 小签「已完成」；过程行 padding 8→5px、图标 22→20px、正文 12→11.5px；随后进一步压到 22px 行高（padding 2px、图标 18px、标题 10px、预览 10.5px），转录新增用户输入（note kind `user`、标签「你」）并按真实事件 seq 排序，工具结果到达时行状态即时从「执行中」变为「已完成」（Mock 同步补 user note 与 read_file 结果帧）；修复统计闪烁根因（`applyProjections` 按 key 合并缓存，单 key 快照不再把 stats 归零）；速览新增 20px 上下文圆环；原生 `<select>` 换成自绘 `SessionPicker`（药丸触发器显示「会话 N」+ 半透明列表；弹层左对齐、宽度自适应 ≤240px、限高 150px，始终留在窗内）；修复胶囊省略号与三点重叠、下拉框原生弹层不可美化的问题。新增 Fake Host 单 key 投影与转录/状态回归测试（13 文件 100 测试）、隔离 Electron 七项断言 PASS，截图 `evidence-real/shot-seven-*.png`（仓库外）。
 - [x] M5-16 完成与审批提示音（2026-10-18）：新增 `shared/sound.ts` 纯规则 `chimeFor`（仅同一会话内、完成态翻转或待处理数增加时触发；首次观察、切换会话、关闭提示音均静默）与 `renderer/sound.ts` Web Audio 双音提示（完成 659→988Hz、审批 523→784Hz，无音频资源、无网络）；主进程开启 `autoplay-policy=no-user-gesture-required`；设置「行为」新增「提示音」开关（默认开启，持久化）。新增 4 个规则用例与设置归一化断言（14 文件 127 测试）；隔离 Electron 断言默认开启、完成音、审批音、AudioContext running 全 PASS。
+- [x] M5-17 动效与交互节奏升级（2026-10-18）：展开内容分层入场，过程/步骤页签共享滑动选中层，切页行内容依次进入；会话菜单保留退场动画与 Esc 就地关闭；审批、问答、请求队列和窗口操作增加触压反馈，状态与详情随真实内容展开。原生窗口与取样几何不变，动画关闭及系统减少动画均关闭新增动效。证据：`reports/motion-upgrade/acceptance.json`、原生展开/审批截图；`pnpm test:motion`、`pnpm test:approval-layout`、lint/typecheck/test/build。
+
+- [x] M5-18 小鲸鱼元素（2026-10-18）：复用已有 DeepSeek 矢量轮廓，新增胶囊鲸鱼及真实状态角标、运行游动/气泡、DSH消息头像、空状态插画与设置签名；减少动画与断线停止动效。129 单测、lint/typecheck/build、Electron 拖动/展开/状态/空会话回归通过。来源、排版预览与原生截图受遮挡的限制见 `reports/whale-elements/README.md`。
+
+- [x] M5-19 信息层级与交互收紧（2026-10-18）：胶囊优先标题/任务进度，Agent执行次数明确定名；空闲速率标“上次”、断线隐藏速率并提示快照；统计分两行、运行速率单独强调；会话名/状态/选中标记与方向键/Home/End/Enter/Esc/Tab完整操作；审批默认300 DIP与只读锁标识；减少竞争动效。130单测、lint/typecheck/build、Electron体验/审批布局/动效/拖动回归通过，见 `reports/experience-upgrade/README.md`。
+
+- [x] M5-20 保留视觉/功能的性能优化（2026-10-18）：按布局断点提交React尺寸状态，缓存任务派生与材质，RGBA改用原字节缓冲视图，复用Canvas context并避免相同位置/主题的重复DOM写入。各两轮实测：六次形变提交99.5→42.5、30次移动31→9、2秒额外RGBA复制61.87MB→0；取样绘制数量相近、贴图哈希/RGB系数一致。131单测、类型/构建、光学生命周期与UI/审批/拖动回归通过；原始基线与范围限制见 `reports/performance-upgrade/README.md`。不替代M5-03的完整GPU/降级策略验收。
+
+- [x] M5-21 按用户要求恢复胶囊“轮数 · 步数”（2026-10-18）：恢复可见统计并保留右侧 Todo 进度，悬停/可访问说明区分 Agent 执行与 Todo；沿用现有性能优化。lint/typecheck/build 与 `pnpm test:experience` 通过，预览 `reports/experience-upgrade/capsule.png`。全套测试130/131；唯一失败为现有默认底色12%与旧测试10%断言不符，未改动该配置。
+
+- [x] M5-22 悬浮窗边缘细化（2026-10-18）：以单层1.25 DIP矢量渐变亮边替代叠加遮罩/阴影，为透明原生裁剪保留抗锯齿余量，保留圆角大小、光学参数和动效。132单测、lint/typecheck/build、100/125/150/200%轮廓检查及动效/审批/光学回归通过；当前150%展开半透明像素裁断24→0。证据与人工步骤见 `reports/edge-polish/README.md`；原生截图被遮挡/焦点检查拒绝，桌面视觉验收尚未通过。
 
 ## 后续扩展（P2）
 - [ ] 多 Agent 统一抽象与插件接口。

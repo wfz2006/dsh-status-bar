@@ -8,6 +8,7 @@ import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import WebSocket from 'ws';
 
 const repo = resolve(fileURLToPath(new URL('..', import.meta.url)));
 process.chdir(repo);
@@ -47,8 +48,11 @@ try {
   });
   step('fixture-created', { marker: hostText.includes('fixture appended') });
 
-  // 2. Raw contract of the official host: 303 -> cookie -> unary RPC.
-  const auth = await fetch(link, { redirect: 'manual' });
+  // 2. Verify the dedicated answer-capable operator contract used by Glass.
+  const operatorUrl = new URL('/connect', origin);
+  operatorUrl.searchParams.set('token', new URL(link).searchParams.get('token'));
+  operatorUrl.searchParams.set('interactions', 'answer');
+  const auth = await fetch(operatorUrl, { redirect: 'manual' });
   const setCookie = typeof auth.headers.getSetCookie === 'function' ? auth.headers.getSetCookie() : [];
   const location = auth.headers.get('location');
   const cookie = setCookie.map(value => value.split(';')[0]).join('; ');
@@ -59,7 +63,33 @@ try {
   });
   const rpcBody = await rpc.json().catch(() => null);
   const items = rpcBody?.result?.value?.items;
-  step('auth-contract', { status: auth.status, locationPath: location ? new URL(location, origin).pathname : null, cookieCount: setCookie.length, rpcStatus: rpc.status, rpcType: rpcBody?.type ?? null, rpcOk: rpcBody?.result?.ok ?? null, itemCount: Array.isArray(items) ? items.length : null });
+  step('operator-auth-contract', {
+    status: auth.status, locationPath: location ? new URL(location, origin).pathname : null, cookieCount: setCookie.length,
+    rpcStatus: rpc.status, rpcType: rpcBody?.type ?? null, rpcOk: rpcBody?.result?.ok ?? null,
+    sessions: Array.isArray(items) ? items.map(item => ({ running: item.running, agentAvailable: item.agentAvailable,
+      projectionKind: item.projections?.kind, asOfSeq: item.projections?.asOfSeq, projectionKeys: Object.keys(item.projections?.values ?? {}) })) : [],
+  });
+  // Inspect the real multiplexer's per-stream contract without logging session content.
+  const activeSession = Array.isArray(items) ? items.find(item => item?.agentAvailable === true) : undefined;
+  const ws = new WebSocket(new URL('/api/remote.mux', origin).toString().replace(/^http/, 'ws'), { headers: { cookie, origin } });
+  const streamEvents = [];
+  await new Promise((accept, reject) => {
+    const timer = setTimeout(() => accept(), 1800);
+    ws.once('error', reject);
+    ws.on('open', () => {
+      for (const [streamId, endpoint] of [['control', 'session/control'], ['gateway', '$events'], ['workspace', 'workspace/follow']])
+        ws.send(JSON.stringify({ type: 'open', streamId, endpoint, payload: { args: {} } }));
+      if (activeSession) ws.send(JSON.stringify({
+        type: 'open', streamId: 'audit-probe', endpoint: 'session/follow',
+        payload: { args: { request: { address: { kind: 'session', sessionId: activeSession.sessionId }, maxMessages: 80 } } },
+      }));
+    });
+    ws.on('message', data => {
+      const message = JSON.parse(data.toString());
+      streamEvents.push({ streamId: message.streamId, type: message.type, valueType: message.value?.type, errorCode: message.error?.code });
+    });
+  }).finally(() => ws.close());
+  step('operator-stream-probe', { activeSessionAvailable: Boolean(activeSession), events: streamEvents });
 
   // 3. Real Electron app connected through the real settings field.
   const profile = await mkdtemp(join(tmpdir(), 'glass-live-'));
@@ -127,6 +157,8 @@ try {
   try { if (app) await app.close(); } catch { /* already closed */ }
   try { if (host) host.kill(); } catch { /* already gone */ }
   await writeFile(resolve('.local-dsh-probe/live-integration.json'), JSON.stringify(result, null, 2));
+  await mkdir(resolve('docs/evidence/live-dsh'), { recursive: true });
+  await writeFile(resolve('docs/evidence/live-dsh/result.json'), JSON.stringify(result, null, 2));
   log('---', result.outcome, '---');
   if (result.outcome !== 'PASS') process.exitCode = 1;
 }

@@ -1,0 +1,149 @@
+{
+  "label": "scale-200",
+  "results": [
+    {
+      "mode": "capsule",
+      "dpr": 2,
+      "width": 288,
+      "height": 64,
+      "radius": "15px",
+      "rim": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "width": 286.3999938964844,
+        "height": 62.400001525878906,
+        "rx": "14.2px",
+        "stroke": "1.25px"
+      }
+    },
+    {
+      "mode": "capsule",
+      "rendererCorner": {
+        "size": {
+          "width": 576,
+          "height": 128
+        },
+        "firstAlphaByRow": [
+          24,
+          20,
+          18,
+          16,
+          14,
+          13,
+          11,
+          10,
+          9,
+          8,
+          7,
+          6,
+          6,
+          5,
+          4,
+          4,
+          3,
+          3,
+          2,
+          2,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "clippedAlphaPixels": 0,
+        "clippedVisiblePixels": 0,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "clippedSamples": []
+      }
+    },
+    {
+      "mode": "expanded",
+      "dpr": 2,
+      "width": 400,
+      "height": 360,
+      "radius": "20px",
+      "rim": {
+        "x": 0.800000011920929,
+        "y": 0.800000011920929,
+        "width": 398.3999938964844,
+        "height": 358.3999938964844,
+        "rx": "19.2px",
+        "stroke": "1.25px"
+      }
+    },
+    {
+      "mode": "expanded",
+      "rendererCorner": {
+        "size": {
+          "width": 800,
+          "height": 720
+        },
+        "firstAlphaByRow": [
+          33,
+          29,
+          26,
+          23,
+          21,
+          20,
+          18,
+          17,
+          15,
+          14,
+          13,
+          12,
+          11,
+          10,
+          9,
+          8,
+          8,
+          7,
+          6,
+          6,
+          5,
+          4,
+          4,
+          3,
+          3,
+          3,
+          2,
+          2,
+          2,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "clippedAlphaPixels": 0,
+        "clippedVisiblePixels": 0,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "clippedSamples": []
+      }
+    }
+  ],
+  "errors": [],
+  "native": []
+}
