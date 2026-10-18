@@ -52,10 +52,21 @@ export function TaskCapsule({ task, activate }: { task: Task; activate: () => vo
 export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; expand: () => void; approval: () => void; reconnect: () => void }) {
   const failure = task.status === 'disconnected' || task.status === 'error';
   const metrics = taskMetrics(task.session);
+  const recent = useMemo(() => {
+    const notes = task.session?.notes ?? [];
+    const activities = task.session?.activities ?? [];
+    return [
+      ...notes.map(note => ({ key: note.id, seq: note.sourceSeq, icon: noteIcons[note.kind], label: noteLabels[note.kind], text: note.text })),
+      ...activities.map(activity => ({ key: 'tool:' + activity.callId, seq: activity.sourceSeq ?? 0, icon: toolIcon(activity.toolName), label: activity.toolName, text: activity.summary })),
+    ].sort((a, b) => b.seq - a.seq).slice(0, 2);
+  }, [task.session]);
   return <section className="task-peek" data-attention={task.attentionCount > 0}>
     <button className="peek-main" aria-label="展开任务详情" onClick={expand}>
       <div className="task-heading"><h1 title={task.title}>{task.title}</h1>{task.total > 0 && <span className="step-count">{task.completed}/{task.total}</span>}</div>
       <Progress task={task} />
+      {recent.length > 0 && <div className="peek-process">
+        {recent.map(row => <div className="peek-entry" key={row.key}><Icon name={row.icon} /><span className="peek-entry-title">{row.label}</span><span className="peek-entry-text">{row.text}</span></div>)}
+      </div>}
       <div className="current-step"><StatusOrb task={task} /><span>{failure ? task.label + '，当前内容可能已过时' : task.current.map(t => t.content).join('、') || task.label}</span></div>
       {metrics && <div className="peek-usage">
         <div className="peek-stats">

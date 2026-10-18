@@ -376,3 +376,15 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .todo{animation:entry-in 200ms var(--motion-settle) both;}
 .glass[data-animation=off] .task-progress>span,.glass[data-animation=off] .status-orb.running,.glass[data-animation=off] .approval-card,.glass[data-animation=off] .todo{animation:none;}
 @media (prefers-reduced-motion:reduce){.glass[data-state=running] .task-progress>span,.glass[data-state=running] .status-orb.running,.glass[data-state=completed] .status-orb.completed,.approval-card,.todo{animation:none;}}
+
+/* Layout fixes: the tab wrapper must stay in the flex chain or its scrolling
+   child loses the height clamp. The peek gets a short live transcript so its
+   middle is not dead space. */
+.task-panel{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;animation:panel-in 180ms var(--motion-settle) both;}
+.task-panel>.process-list,.task-panel>.todo-list{flex:1;min-height:0;overflow-y:auto;}
+.peek-process{flex:0 0 auto;display:flex;flex-direction:column;gap:3px;margin:7px 0 2px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent);}
+.task-peek .task-heading h1{-webkit-line-clamp:1;}
+.peek-entry{display:grid;grid-template-columns:14px auto minmax(0,1fr);gap:6px;align-items:center;font-size:10.5px;color:var(--ink-3);}
+.peek-entry .ui-icon{width:12px;height:12px;color:var(--ink-3);}
+.peek-entry-title{font:600 9.5px/1 var(--font-mono);letter-spacing:.02em;color:var(--ink-2);white-space:nowrap;}
+.peek-entry-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
