@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { GlassAPI, WindowAction, WindowState } from '../shared/api';
 import { DEFAULT_SETTINGS, deriveTask, viewForSize, type GlassViewMode } from '../shared/view-model';
+import { chimeFor, type ChimeSnapshot } from '../shared/sound';
+import { playChime } from './sound';
 import { useGlass } from './store';
 import { ResizeHandles,useWindowDrag } from './gestures';
 import { TaskCapsule, TaskPeek, TaskExpanded } from './task-views';
@@ -35,12 +37,19 @@ function App() {
   }, [replace]);
   async function action(value: WindowAction) {
     try { setWindowState(await window.glass.windowAction(value, matchMedia('(prefers-reduced-motion: reduce)').matches)); }
-    catch { setError('操作未完成，请通过托盘重试'); }
+    catch { setError('操作未完成，请稍后重试'); }
   }
   async function chooseSession(id: string) {
     try { await window.glass.selectSession(id); select(id); } catch { setError('会话已不可用'); }
   }
   const task = deriveTask(projection, selected);
+  const chime = useRef<ChimeSnapshot | null>(null);
+  useEffect(() => {
+    const next = { sessionId: selected, status: task.status, attention: task.attentionCount };
+    const kind = chimeFor(chime.current, next, windowState.settings.sound);
+    chime.current = next;
+    if (kind) playChime(kind);
+  }, [selected, task.status, task.attentionCount, windowState.settings.sound]);
   const mode = windowState.morphing === 'collapsing' && windowState.viewMode === 'capsule' ? settledMode.current : windowState.morphing || windowState.panel ? windowState.viewMode : viewForSize(size.width, size.height, windowState.viewMode);
   if (!windowState.morphing) settledMode.current = mode;
   const invoke = (value: WindowAction) => () => void action(value);

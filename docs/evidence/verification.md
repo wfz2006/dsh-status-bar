@@ -32,7 +32,7 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 | `pnpm test` | PASS，12 files / 88 tests（含 `tests/dsh-host-contract.test.ts` 10 项） |
 | `pnpm build` | PASS |
 
-合同测试在本机 Fake Host（HTTP 303 认证 + `/api/<method>` JSON-RPC + `/api/remote.mux` WS）上复现握手、快照、网关事件、审批与提问投递、`$events/result` 回写与断线失效；不连接官方 Desktop，不能替代真实 owner/answerer 验收。首轮修复：welcome 能力位曾写成「连接时是否已有投递」，恒为 false 导致审批卡片永久禁用；现改为连接级能力，逐投递授权仍由适配器与 `request-gate` 强制。
+合同测试在本机 Fake Host 上复现 0.2.1 独立 operator 302 认证、`/api/<method>` JSON-RPC、`/api/remote.mux` WS、会话投影、审批/提问提交及权威回执、断线失效；不连接官方 Desktop，不能替代真实模型任务与 Desktop answerer 竞争验收。`$events/result` 的 void 只作为投递，不作为成功确认。
 
 ## 真实官方 Host 实装联调（2026-10-18）
 
@@ -40,15 +40,15 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 
 | 检查 | 结果 |
 |---|---|
-| Host 版本 / 认证 | `0.2.1-rc.2`；GET 根链接 → 303 + 同源 `Location: /` + `Set-Cookie`，`POST /api/session/list` → `server-response result.ok=true`（1 项） |
+| Host 版本 / 认证 | `0.2.1-rc.2`；`GET /connect?token=…&interactions=answer` → 302 + `/api/remote.mux` + 独立 operator Cookie，`POST /api/session/list` → `server-response result.ok=true`（1 项） |
 | 应用连接 | 设置面板提交后 `mode=dsh`、`connection=connected`、`endpoint=http://127.0.0.1:<port>`、`error=null` |
 | 能力位 | `observeSessions/observeTodos/observeTools/respondApproval/respondQuestion` 全 true（真实链路复验连接级能力修复） |
-| 会话观察 | 真实 API 返回 1 个会话；标题「未命名会话」、phase/agentStatus `finished/idle`、Todo `Probe A:completed` + `Probe C:in_progress`（与 Host 侧 fixture 一致） |
+| 会话观察 | 真实 API 返回 1 个 idle/cold 会话；phase/agentStatus `unknown/idle`，未把 idle 误标完成或 follow 唤醒；Todo `Probe A:completed` + `Probe C:in_progress`（与 Host 侧 fixture 一致） |
 | 凭据边界 | renderer `getState()` 序列化中不含 token；证据文件不含 token |
 | 断开 / 错误 token | 断开后 `connection=disconnected` 且 sessions=0；错误 token 被 Host 拒绝，界面显示本地化错误且保持 disconnected |
 | 截图 | [connected.png](live-dsh/connected.png)（设置面板「DSH 已连接 / 会话已同步」）；机器可读结果 [result.json](live-dsh/result.json) |
 
-未覆盖：真实模型任务、真实审批投递/决议（fixture 只写 turn/todo，无 `$events` 审批事件）、官方 Desktop 当前任务、多会话并发；本机 DSH 安装版本为 `0.2.1-rc.2`（`dsh.cmd` 包装器仍报 `0.2.0-rc.2`，文件属性未复核）。
+未覆盖：真实模型任务、真实审批投递/决议（fixture 只写投影/Todo，无 `$events` 审批事件）、官方 Desktop 当前任务、多会话并发。较早的本机真实会话人工验收使用浏览器根路径登录态，现已归档为历史证据，不替代独立 operator 合同。
 
 ## 真实本机会话人工验收（2026-10-18，只读快照）
 
@@ -176,7 +176,7 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 
 ## 烟熏磨砂、过程转录与逐字波动（2026-10-18）
 
-磨砂主题按反馈重做为烟熏深色：取样画面 `filter: blur(30px) saturate(1.35) brightness(.74) contrast(1.06) scale(1.06)`，叠加深色雾面渐变、白色斜向光泽与 3px 颗粒；`auto` 主题在磨砂下解析为深色，未取样时退回 `rgba(26,14,19,.34)` 深色底。截图 `shot-frost-capsule.png`、`shot-frost-expanded.png`（仓库外）为深红壁纸上的烟熏效果。
+磨砂主题按反馈重做为烟熏深色：取样画面 `filter: blur(30px) saturate(1.35) brightness(.74) contrast(1.06) scale(1.06)`，叠加深色雾面渐变与白色斜向光泽；`auto` 主题在磨砂下解析为深色，未取样时退回 `rgba(26,14,19,.34)` 深色底。2026-10-18 晚按反馈移除 3px 点阵颗粒层（白色小点），烟熏雾面保留。截图 `shot-frost-capsule.png`、`shot-frost-expanded.png`（仓库外）为深红壁纸上的烟熏效果。
 
 过程数据：协议新增 `session.note`（`kind: reasoning|message`，`text` 1–2000，按 `sourceSeq` 去重、最多 60 条）与 `Session.notes`；DSH 适配器在 `assistant/message` 事件中抽取 `content` 的 reasoning/text 块（空白归一化、忽略空块），工具活动摘要改为命令预览（完整可解析时）。大窗过程页把 notes 与 activities 按 `sourceSeq` 降序混排，每行带类型图标（思考/正文/read_file/pwsh/edit/search/globe 等）、工具名与状态，行可展开看完整正文/结果。Fake Host 合同测试新增 assistant/message 用例，协议生命周期新增 note 顺序/去重/过期用例，Mock 快照回放包含 notes。
 
@@ -209,3 +209,16 @@ Electron 重点：默认胶囊展开、Todo 整表替换、只读审批禁用、
 - 适配器新增 `user/message` → note kind `user`（UI 标签「你」）；note 与工具活动改用真实事件 `seq` 排序（工具活动此前用 revision，导致与 DSH 转录顺序不一致）；`tool/result` 到达时把行状态从 running 改为 success/error，并为缺失 call 的 result 补一条已完成行。
 - Mock 会话新增一条用户输入与 `read_file` 成功结果帧；Fake Host 新增用户消息排序与工具状态完成两个合同用例。
 - 验证：lint 0、typecheck 0、13 文件 100 测试；隔离 Electron 断言 6 行过程（含「你」）、工具行状态「已完成」、行高 22px，截图 `evidence-real/shot-frost-expanded.png`。
+
+### 完成与审批提示音（2026-10-18 晚）
+
+| 触发 | 规则 |
+| --- | --- |
+| 任务完成 | 同一会话内 `status` 从非 completed 翻到 completed，播双音 659→988Hz |
+| 新审批/提问 | 同一会话内待处理数增加，播双音 523→784Hz（若与完成同时发生，优先审批音） |
+| 静默 | 首次观察、切换会话、设置「提示音」关闭、音频设备不可用时都不播 |
+
+- 实现：`shared/sound.ts` 纯函数 `chimeFor`（可单测）+ `renderer/sound.ts` Web Audio 振荡器包络；无音频资源、无网络、无新依赖；主进程开启 `autoplay-policy=no-user-gesture-required`，避免首声被自动播放策略吞掉。
+- 设置：`sound` 进入 `GlassSettings`（默认 true，归一化 `v.sound !== false`），设置「行为」新增「提示音」开关并持久化到 `glass-ui.json`。
+- 验证：14 文件 127 测试全过；隔离 Electron `ui-sound-check.mjs` 断言默认开启、完成音、审批音、`AudioContext.state==='running'` 全部 PASS。
+- 限制：提示音音量固定（约 0.1 包络），未做音量滑杆；真实 DSH 会话的声音与 Mock 走同一渲染路径，本轮未额外实机听测。

@@ -27,6 +27,7 @@ export function GlassSettingsPanel({ value, update, projection, mock, back }: { 
       <fieldset className="settings-group"><legend>行为</legend>
       <label>默认形态<select aria-label="默认形态" value={value.defaultView} onChange={e => update({ defaultView: e.target.value as GlassSettings['defaultView'] })}><option value="capsule">胶囊</option><option value="peek">速览</option><option value="remember-last">记住上次</option></select></label>
       <label>审批时自动展开<input aria-label="审批时自动展开" type="checkbox" checked={value.autoApproval} onChange={e => update({ autoApproval: e.target.checked })} /></label>
+      <label>提示音<input aria-label="提示音" type="checkbox" checked={value.sound} onChange={e => update({ sound: e.target.checked })} /></label>
       <label>完成后自动收起<input aria-label="完成后自动收起" type="checkbox" checked={value.autoCollapse} onChange={e => update({ autoCollapse: e.target.checked })} /></label>
       <label>动画<select aria-label="动画" value={value.animation} onChange={e => update({ animation: e.target.value as GlassSettings['animation'] })}><option value="full">完整</option><option value="reduced">减少</option><option value="off">关闭</option></select></label>
       <label>置顶行为<select aria-label="置顶行为" value={value.pin} onChange={e => update({ pin: e.target.value as GlassSettings['pin'] })}><option value="normal">普通</option><option value="always">始终置顶</option><option value="on-notification">有待处理请求时</option></select></label>

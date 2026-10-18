@@ -61,24 +61,24 @@
 - [x] M2-21 字体按角色搭配：标题Georgia/Noto Serif SC、正文Segoe Text/Noto Sans SC、小字Segoe Small、代码/数值Cascadia Mono；本机已有字体无新增安装。CDP核实实际字形，亮暗10样张与布局/窄审批回归，41单测，见`reports/type-clarity/editorial.md`。
 
 ## M3 — DSH 观察模式（P0）
-- [ ] M3-01 构建 Cordis DSH Adapter 插件，能被目标 Profile 加载。
-- [ ] M3-02 监听或通过受支持 API 获取持久会话事件。
-- [ ] M3-03 `todo/write` 完整快照投影，sessionId 隔离。
-- [ ] M3-04 关联 `tool/call` 与结果，输出脱敏摘要；未验证的内容标记缺失。
-- [ ] M3-05 获取真实状态和重连快照；模型思考中与未知状态不伪装成准确进度。
-- [ ] M3-06 不启动 DSH 主窗口时的稳定性/生命周期测试。
-- [x] M3-07 认证跨进程适配器：`hostLink → 认证 HTTP RPC + remote.mux WS` 已实现；本机 Fake Host 合同测试 10 项覆盖握手、快照、网关事件、审批/提问流与断线（`tests/dsh-host-contract.test.ts`，2026-10-17）。2026-10-18 在真实官方 Host（隔离 DSH_HOME + 只读探测插件）上实装联调 PASS，见 `scripts/live-dsh-integration.mjs` 与 `docs/evidence/live-dsh/`；官方 Desktop 端到端未验收，如实仍按 BLOCKED 处理。
+- [x] M3-01 采用经官方认证 Host 的 Electron Adapter（不依赖 Cordis 插件）：用户根认证 URL → 0.2.1-rc.2 `/connect?interactions=answer` 独立 operator；Fake Host 与真实 Host 均验证 302/Cookie/RPC。
+- [x] M3-02 会话增删、control baseline、live `session/follow` 与冷历史只读 `session/page`；冷会话不 follow、不唤醒 Agent。真实 Host `pnpm test:live` 读到一条 idle/cold 测试会话并安全保持 unknown。
+- [x] M3-03 `todos` 作为每个 session 的完整投影，按 native sequence 合并、拒绝旧快照；支持清空、重连快照与跨会话隔离。证据：`tests/dsh-host-contract.test.ts` + live Todo Probe A/C。
+- [x] M3-04 关联 `tool/call`/`tool/result`，跟踪 pending/running/success/error/cancelled 与脱敏摘要；审批审计 ID、tool callId、Remote eventId 分开；参数不完整不显示成可批准。Fake Host 合同覆盖。
+- [x] M3-05 映射 starting/running/idle/unknown；明确 completed、max-tokens（limit-reached）、blocked/error、aborted/cancelled、archived；idle/缺少 reason 不推断完成。实时 Todo、工具、stats/note 投影已接入。
+- [x] M3-06 独立 DSH_HOME Web Host + Electron 生命周期：成功连接、token 拒绝、断开清理真实验证；不读写原用户 Profile。`pnpm test:live`。
+- [x] M3-07 认证跨进程 Adapter 的 Fake Host 合同测试扩至34项，覆盖权限、冷历史、状态终因、投影排序、会话生命周期、审批/提问回执和超时；真实 Host 联调见 `scripts/live-dsh-integration.mjs` 与 `docs/evidence/live-dsh/`。Desktop 当前用户会话单列为 M4-08，不冒充实机验收。
 
 ## M4 — 人工交互闭环（P0/P1，**取决于 M0-05 是否通过**）
-- [ ] M4-01 验证审批 answerer 所有权与请求生命周期，形成 ADR。
-- [ ] M4-02 审批请求显示 toolName/callId/原始命令摘要；完整参数缺失时限制危险批准。
-- [ ] M4-03 单次允许/拒绝；等待真实决议确认后改变 UI。
-- [ ] M4-04 处理 cancelled/unavailable、断线、重复点击、过期、并发。
-- [ ] M4-05 用户问题（结构化选项/文本）验证与回答闭环。
-- [ ] M4-06 多 Session 多请求路由隔离测试。
-- [x] M4-07 应答通道：`approval.respond`/`question.respond` 经官方 `$events/result` 回写，仅在官方事件确认后收口；Main `request-gate` 校验身份/能力/参数完整性（Fake Host 合同测试覆盖）。
-- [ ] M4-08 官方 Desktop 上验证 answerer 所有权与真实决议（M4-01 未完成前对外保持 BLOCKED）。
-- [x] M4-09 真实官方 Host 实装联调（认证 + 会话/Todo 观察 + 断线清空 + 错误 token 拒绝）：`pnpm test:live`，隔离 DSH_HOME + 只读探测插件，2026-10-18 PASS；不替代官方 Desktop 与真实审批验收。证据：`scripts/live-dsh-integration.mjs`、`docs/evidence/live-dsh/`。
+- [x] M4-01 独立 operator `/connect?interactions=answer` 与 Gateway owner/client.peer 限制已形成 ADR 004；收到当前 waterfall 可证明答复权限。Desktop 中原 answerer 是否与 operator 同时响应、真实所有权竞争仍未实测，见 M4-08。
+- [x] M4-02 审批显示 toolName/callId/安全命令摘要；完整参数缺失/不匹配时只读。
+- [x] M4-03 单次允许/拒绝，`$events/result` void 不当作确认；只在匹配 `approval/decided` 后改变状态。34 项合同测试覆盖；真实审批请求尚未在 Host 生成。
+- [x] M4-04 cancelled/unavailable、断线、重复点击、过期、并发与10秒无回执降不可用；Fake Host合同测试覆盖。
+- [x] M4-05 有 durable callId 的结构化选项/文本验证；等待 settled 投影确认，timed wait continued 使用正式 `userQuestions/answer`；无 durable callId 的旧式问题只读。
+- [x] M4-06 多 Session / 多请求隔离由 Main gate、Adapter identity 与 Fake Host 合同测试覆盖。
+- [x] M4-07 应答通道由 Main `request-gate` 与 Adapter 双重校验身份/能力/参数。审批只等官方决议；continued 问题只等正式 API boolean true；不复用过期 Remote event。
+- [ ] M4-08 官方 Desktop 当前用户任务、真实审批/问答和原 answerer 竞争实测。BLOCKED：隔离 Host 探针没有模型生成操作或真实审批，因此现有结果只证明认证、只读会话/Todo和安全拒绝。
+- [x] M4-09 真实官方 Host 实装联调：`/connect` 302 独立 operator + 会话/Todo 观察 + 断开清空 + 错误 token 拒绝；`pnpm test:live`，隔离 DSH_HOME + 只读探测插件，2026-10-18 PASS。此项不替代官方 Desktop 与真实审批验收。证据：`scripts/live-dsh-integration.mjs`、`docs/evidence/live-dsh/`。
 
 ## M5 — 质量、打包与发布（P1）
 - [ ] M5-01 Windows 11 22H2+、DPI 100/125/150/200% 检查。
@@ -94,8 +94,9 @@
 - [x] M5-11 磨砂玻璃主题（2026-10-18）：新增 `material: frosted`（设置「玻璃主题」），取样画面 `blur(34px) saturate(.72) contrast(.9)` + 乳白径向雾面 + 细颗粒；auto 主题在磨砂下按浅色表面解析，深色主题使用深灰雾面；未取样时退回半透明白雾。隔离 Electron 断言 material/图层/滤镜/auto 解析/深色 PASS，截图 `evidence-real/ui-frost-*.png`（仓库外），13 文件 95 测试全过。
 - [x] M5-12 工作过程视图与胶囊动效（2026-10-18）：大窗新增「过程 / 步骤」切换，过程页按工具活动时间线渲染 `toolName`、状态与摘要（复用最近活动面板的同一份 `session.activities` 数据）；展开高度 280→360。工作胶囊标题加呼吸动画（透明度 + 0.5px 浮动，`data-animation=reduced/off` 与 `prefers-reduced-motion` 均关闭）。隔离 Electron 断言 `capsule-breathe`、过程页 1 条活动、步骤页 2 条 Todo、窗口 400×360 PASS，截图 `evidence-real/ui-capsule-working.png`、`ui-expanded-process.png`、`ui-expanded-steps.png`（仓库外）。
 - [x] M5-13 排版与配色层级（2026-10-18）：建立三级墨色 `--fg / --ink-2 / --ink-3` 与语义色 `accent / success / warning / danger`（含 soft 底色，light/dark 同步）；标题用 Georgia/宋体 600，指标数字改等宽并以强调色着色，工具名用强调色芯片，活动状态用色点，设置分组标题加引导点与发丝线，页签选中有强调色浅底；运行态胶囊标题用 fg→accent 渐变，删除与省略号重叠的尾随三点。隔离 Electron 复核 capsule/peek/expanded/settings/dark 五张截图，13 文件 95 测试全过、lint/typecheck 0。
-- [x] M5-14 烟熏磨砂与真实转录（2026-10-18）：磨砂主题改为烟熏深色（取样 `blur(30px) saturate(1.35) brightness(.74)`，深色雾面 + 颗粒，auto 主题在磨砂下解析为深色）；新增 `session.note` 帧与 `Session.notes`（reasoning/message，≤60 条），DSH 适配器从 `assistant/message` 抽取思考与正文，工具活动摘要改用命令预览；大窗过程页按 sourceSeq 混合思考、正文与工具调用，带类型图标与可展开详情；胶囊运行态改为逐字波动（`capsule-wave`，空格用固定宽度占位，动画关闭设置仍生效）。13 文件 97 测试、lint/typecheck 0、构建通过；隔离截图 `evidence-real/shot-frost-*.png`（仓库外）。
+- [x] M5-14 烟熏磨砂与真实转录（2026-10-18）：磨砂主题改为烟熏深色（取样 `blur(30px) saturate(1.35) brightness(.74)`，深色雾面 + 颗粒，auto 主题在磨砂下解析为深色）；新增 `session.note` 帧与 `Session.notes`（reasoning/message，≤60 条），DSH 适配器从 `assistant/message` 抽取思考与正文，工具活动摘要改用命令预览；大窗过程页按 sourceSeq 混合思考、正文与工具调用，带类型图标与可展开详情；胶囊运行态改为逐字波动（`capsule-wave`，空格用固定宽度占位，动画关闭设置仍生效）。13 文件 97 测试、lint/typecheck 0、构建通过；隔离截图 `evidence-real/shot-frost-*.png`（仓库外）。后续按反馈移除 3px 点阵颗粒（白色小点），烟熏雾面保留。
 - [x] M5-15 紧凑胶囊与七项体验修正（2026-10-18）：胶囊 300×52→288×50、内边距 18→13px、间距 12→8px；移除系统托盘并在 BrowserWindow 上 `skipTaskbar: true`，菜单「隐藏到托盘」改为「隐藏窗口」；完成态由整块绿色渐变改为 5% success 底 + 1px 内描边 + 小签「已完成」；过程行 padding 8→5px、图标 22→20px、正文 12→11.5px；随后进一步压到 22px 行高（padding 2px、图标 18px、标题 10px、预览 10.5px），转录新增用户输入（note kind `user`、标签「你」）并按真实事件 seq 排序，工具结果到达时行状态即时从「执行中」变为「已完成」（Mock 同步补 user note 与 read_file 结果帧）；修复统计闪烁根因（`applyProjections` 按 key 合并缓存，单 key 快照不再把 stats 归零）；速览新增 20px 上下文圆环；原生 `<select>` 换成自绘 `SessionPicker`（药丸触发器显示「会话 N」+ 半透明列表；弹层左对齐、宽度自适应 ≤240px、限高 150px，始终留在窗内）；修复胶囊省略号与三点重叠、下拉框原生弹层不可美化的问题。新增 Fake Host 单 key 投影与转录/状态回归测试（13 文件 100 测试）、隔离 Electron 七项断言 PASS，截图 `evidence-real/shot-seven-*.png`（仓库外）。
+- [x] M5-16 完成与审批提示音（2026-10-18）：新增 `shared/sound.ts` 纯规则 `chimeFor`（仅同一会话内、完成态翻转或待处理数增加时触发；首次观察、切换会话、关闭提示音均静默）与 `renderer/sound.ts` Web Audio 双音提示（完成 659→988Hz、审批 523→784Hz，无音频资源、无网络）；主进程开启 `autoplay-policy=no-user-gesture-required`；设置「行为」新增「提示音」开关（默认开启，持久化）。新增 4 个规则用例与设置归一化断言（14 文件 127 测试）；隔离 Electron 断言默认开启、完成音、审批音、AudioContext running 全 PASS。
 
 ## 后续扩展（P2）
 - [ ] 多 Agent 统一抽象与插件接口。

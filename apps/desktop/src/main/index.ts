@@ -18,6 +18,7 @@ import { createDesktopOptics } from './desktop-optics';
 import {createWindowPositioner} from './window-positioner';
 
 const here = dirname(fileURLToPath(import.meta.url));
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 const rendererFile = join(here, '../renderer/index.html');
 const devURL = process.env.ELECTRON_RENDERER_URL;
 const smoke = process.env.GLASS_SMOKE === '1';

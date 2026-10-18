@@ -5,16 +5,16 @@ export type GlassSettings = GlassAppearance & {
   theme: 'auto' | 'light' | 'dark'; strength: 'clear' | 'balanced' | 'readable';
   defaultView: 'capsule' | 'peek' | 'remember-last'; autoApproval: boolean; autoCollapse: boolean;
   animation: 'full' | 'reduced' | 'off'; pin: 'always' | 'on-notification' | 'normal';
-  material: 'system' | 'transparent' | 'acrylic' | 'frosted' | 'solid';
+  material: 'system' | 'transparent' | 'acrylic' | 'frosted' | 'solid'; sound: boolean;
 };
-export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, animation: 'full', pin: 'always', material: 'system' };
+export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, animation: 'full', pin: 'always', material: 'system', sound: true };
 export function normalizeSettings(value: unknown): GlassSettings {
   if (!value || typeof value !== 'object') return { ...DEFAULT_SETTINGS };
   const v = value as Record<string, unknown>;
   function choice<T extends string>(key: string, options: readonly T[], fallback: T): T { return options.includes(v[key] as T) ? v[key] as T : fallback; }
   return { ...normalizeGlassAppearance(v), theme: choice('theme', ['auto', 'light', 'dark'], 'auto'), strength: choice('strength', ['clear', 'balanced', 'readable'], 'balanced'),
     defaultView: choice('defaultView', ['capsule', 'peek', 'remember-last'], 'capsule'), autoApproval: v.autoApproval === true, autoCollapse: v.autoCollapse === true,
-    animation: choice('animation', ['full', 'reduced', 'off'], 'full'), pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], 'system') };
+    animation: choice('animation', ['full', 'reduced', 'off'], 'full'), pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], 'system'), sound: v.sound !== false };
 }
 export function viewSize(mode: GlassViewMode) {
   return { capsule: { width: 288, height: 50 }, peek: { width: 340, height: 168 }, expanded: { width: 400, height: 360 }, approval: { width: 400, height: 340 } }[mode];
@@ -38,16 +38,17 @@ export function observeFacts(state: ViewState, facts: AttentionFacts, settings: 
 export function deriveTask(p: Projection, selected: string) {
   const session = Object.hasOwn(p.sessions, selected) ? p.sessions[selected] : undefined;
   const todos = session?.todos ?? [];
-  const terminal = !!session && ['finished', 'error', 'cancelled', 'archived'].includes(session.phase);
+  const terminal = !!session && ['finished', 'limit-reached', 'error', 'cancelled', 'archived'].includes(session.phase);
   const pending = terminal ? [] : p.approvals.filter(a => a.sessionId === selected && a.runtimeId === p.runtimeId && a.sourceEpoch === p.epoch && (a.status === 'pending' || a.status === 'submitting'));
   const questions = terminal ? [] : p.questions.filter(q => q.sessionId === selected && q.runtimeId === p.runtimeId && q.sourceEpoch === p.epoch && (q.status === 'pending' || q.status === 'submitting'));
   const status = p.connection !== 'connected' || p.stale ? 'disconnected' : !session ? 'empty' : session.phase === 'error' ? 'error'
     : session.phase === 'finished' ? 'completed' : session.phase === 'cancelled' ? 'cancelled' : session.phase === 'archived' ? 'archived'
+    : session.phase === 'limit-reached' ? 'limit_reached'
     : pending.length || session.phase === 'waiting-approval' ? 'waiting_approval' : questions.length || session.phase === 'waiting-question' ? 'waiting_answer'
     : session.agentStatus === 'running' ? 'running' : session.agentStatus === 'starting' ? 'starting' : session.agentStatus === 'stopping' ? 'stopping'
     : session.agentStatus === 'idle' ? 'idle' : 'unknown';
   const labels = { disconnected: p.connection === 'connecting' || p.connection === 'reconnecting' ? '正在重连' : p.connection === 'incompatible' ? '协议不兼容' : '连接已断开',
-    waiting_approval: '等待确认', error: '任务出错', completed: '已完成', waiting_answer: '等待回答', running: '进行中', starting: '正在启动', stopping: '正在停止',
+    waiting_approval: '等待确认', error: '任务出错', completed: '已完成', limit_reached: '达到输出上限', waiting_answer: '等待回答', running: '进行中', starting: '正在启动', stopping: '正在停止',
     idle: '空闲', unknown: '状态待同步', empty: '尚无会话', cancelled: '已取消', archived: '已归档' };
   return { session, title: session?.title || '尚无任务', todos, current: todos.filter(t => t.status === 'in_progress'), completed: todos.filter(t => t.status === 'completed').length,
     total: todos.length, pending, questions, attentionCount: pending.length + questions.length, status, label: labels[status] };

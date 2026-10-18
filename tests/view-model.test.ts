@@ -7,6 +7,9 @@ it('defaults to a calm task capsule and validates persisted preferences', () => 
   expect(initialView().mode).toBe('capsule');
   expect(DEFAULT_SETTINGS.autoApproval).toBe(false);
   expect(DEFAULT_SETTINGS.pin).toBe('always');
+  expect(DEFAULT_SETTINGS.sound).toBe(true);
+  expect(normalizeSettings({ sound: false }).sound).toBe(false);
+  expect(normalizeSettings({}).sound).toBe(true);
   expect(normalizeSettings({ animation: 'invalid', theme: 'light', autoApproval: true }).theme).toBe('light');
   expect(normalizeSettings({ animation: 'invalid' }).animation).toBe('full');
   expect(viewSize('capsule')).toEqual({ width: 288, height: 50 });
@@ -77,7 +80,7 @@ it('distinguishes empty, idle, unknown, starting, stopping and terminal states',
   for (const agentStatus of ['idle', 'unknown', 'starting', 'stopping'] as const) {
     expect(deriveTask({ ...p, approvals: [], sessions: { ...p.sessions, 'demo-main': { ...original, agentStatus } } }, 'demo-main').status).toBe(agentStatus);
   }
-  for (const [phase, expected] of [['finished', 'completed'], ['error', 'error'], ['cancelled', 'cancelled'], ['archived', 'archived']] as const) {
+  for (const [phase, expected] of [['finished', 'completed'], ['limit-reached', 'limit_reached'], ['error', 'error'], ['cancelled', 'cancelled'], ['archived', 'archived']] as const) {
     const task = deriveTask({ ...p, sessions: { ...p.sessions, 'demo-main': { ...original, phase } } }, 'demo-main');
     expect(task.status).toBe(expected); expect(task.pending).toEqual([]); expect(task.attentionCount).toBe(0);
   }
