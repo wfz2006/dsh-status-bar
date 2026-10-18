@@ -10,10 +10,13 @@
 //
 // `app/` and `electron/` are generated and git-ignored. Usage:
 //
-//   node scripts/pack-plugin-release.mjs [--no-build] [--out <dir>]
+//   node scripts/pack-plugin-release.mjs [--no-build] [--out <dir>] [--stage <dir>]
 //
 // The resulting file is renamed to `dsh-glass-plugin.tgz` so a release asset can
 // keep a version-free name (releases/latest/download/dsh-glass-plugin.tgz).
+// `--stage` assembles somewhere other than `packages/dsh-plugin`, which is needed
+// while a DSH profile runs the checkout install (that keeps `app/` and
+// `electron/dist/` locked on Windows).
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -27,6 +30,8 @@ const args = process.argv.slice(2);
 const noBuild = args.includes('--no-build');
 const outIndex = args.indexOf('--out');
 const outDir = resolve(outIndex === -1 ? join(repoRoot, 'dist') : args[outIndex + 1]);
+const stageIndex = args.indexOf('--stage');
+const stageDir = stageIndex === -1 ? pluginDir : resolve(args[stageIndex + 1]);
 
 const version = JSON.parse(readFileSync(join(pluginDir, 'package.json'), 'utf8')).version;
 
@@ -77,7 +82,14 @@ if (!existsSync(nativeHelper)) {
 }
 
 // 2. app/ — main bundle, renderer, preload, native helper.
-const appDir = join(pluginDir, 'app');
+if (stageDir !== pluginDir) {
+  mkdirSync(stageDir, { recursive: true });
+  for (const entry of ['lib', 'cordis.patch.yml', 'README.md', 'LICENSE', 'assets', 'screenshots.json', 'package.json']) {
+    cpSync(join(pluginDir, entry), join(stageDir, entry), { recursive: true });
+  }
+  console.log(`[pack] staging in ${stageDir}`);
+}
+const appDir = join(stageDir, 'app');
 rmSync(appDir, { recursive: true, force: true });
 mkdirSync(join(appDir, 'native'), { recursive: true });
 cpSync(join(desktopDir, 'out'), join(appDir, 'out'), { recursive: true });
@@ -97,14 +109,14 @@ if (!existsSync(distSource)) {
   console.error(`[pack] missing Electron runtime at ${distSource}; run \`pnpm install\` first`);
   process.exit(1);
 }
-const electronTarget = join(pluginDir, 'electron', 'dist');
-rmSync(join(pluginDir, 'electron'), { recursive: true, force: true });
+const electronTarget = join(stageDir, 'electron', 'dist');
+rmSync(join(stageDir, 'electron'), { recursive: true, force: true });
 mkdirSync(electronTarget, { recursive: true });
 cpSync(distSource, electronTarget, { recursive: true });
 
 // 4. npm pack, then give the artifact a version-free release name.
 mkdirSync(outDir, { recursive: true });
-run('npm', ['pack', '--pack-destination', outDir], pluginDir);
+run('npm', ['pack', '--pack-destination', outDir], stageDir);
 const packed = join(outDir, `dsh-glass-plugin-${version}.tgz`);
 const releaseName = join(outDir, 'dsh-glass-plugin.tgz');
 if (existsSync(packed)) {
