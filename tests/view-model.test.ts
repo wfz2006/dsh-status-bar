@@ -12,7 +12,7 @@ it('defaults to a calm task capsule and validates persisted preferences', () => 
   expect(normalizeSettings({}).sound).toBe(true);
   expect(normalizeSettings({ animation: 'invalid', theme: 'light', autoApproval: true }).theme).toBe('light');
   expect(normalizeSettings({ animation: 'invalid' }).animation).toBe('full');
-  expect(viewSize('capsule')).toEqual({ width: 288, height: 50 });
+  expect(viewSize('capsule')).toEqual({ width: 288, height: 46 });
   expect(viewSize('peek')).toEqual({ width: 340, height: 190 });
   expect(viewSize('peek', true)).toEqual({ width: 340, height: 236 });
   expect(viewSize('expanded')).toEqual({ width: 400, height: 360 });

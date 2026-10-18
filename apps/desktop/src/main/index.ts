@@ -224,7 +224,7 @@ else {
   });
   app.whenReady().then(async () => {
     app.setAppUserModelId('local.dsh-glass.preview');
-    win = new BrowserWindow({ ...position(), minWidth: 180, minHeight: 50, maxWidth: 900, maxHeight: 1000,
+    win = new BrowserWindow({ ...position(), minWidth: 180, minHeight: 46, maxWidth: 900, maxHeight: 1000,
       frame: false, thickFrame: false, hasShadow: false, roundedCorners: false, transparent: true,
       resizable: true, show: false, skipTaskbar: true, backgroundColor: '#00000000', title: 'DSH Glass · 悬浮伴侣',
       webPreferences: { preload: join(here, '../preload/index.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true },
