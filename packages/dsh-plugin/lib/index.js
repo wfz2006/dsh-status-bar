@@ -5,6 +5,9 @@
 // authenticated URL through `--dsh-link` so Glass connects without the user
 // pasting anything. When Glass is already running, its single-instance lock
 // focuses the existing window and re-connects it with the new link.
+//
+// The child also receives `--launcher-pid`; Glass exits when that host process
+// disappears, and disposal kills the spawned tree so the companion follows DSH.
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -15,6 +18,8 @@ export const name = 'dsh-glass-plugin';
 export const inject = ['connection', 'webServer'];
 
 const appDir = fileURLToPath(new URL('../../../apps/desktop/', import.meta.url));
+
+let child;
 
 function electronBinary() {
   try {
@@ -28,6 +33,14 @@ function electronBinary() {
   } catch {
     return undefined;
   }
+}
+
+function killChild() {
+  const current = child;
+  child = undefined;
+  if (!current || current.exitCode !== null || current.pid === undefined) return;
+  try { current.kill(); } catch { /* already gone */ }
+  if (process.platform === 'win32') spawn('taskkill', ['/pid', String(current.pid), '/t', '/f'], { stdio: 'ignore', windowsHide: true });
 }
 
 export function apply(ctx, config = {}) {
@@ -62,18 +75,20 @@ export function apply(ctx, config = {}) {
     }
     const env = { ...process.env };
     delete env.ELECTRON_RUN_AS_NODE;
-    const child = spawn(binary, [appDir, `--dsh-link=${link}`], {
+    const spawned = spawn(binary, [appDir, `--dsh-link=${link}`, `--launcher-pid=${process.pid}`], {
       cwd: appDir,
       detached: true,
       stdio: 'ignore',
       env,
     });
-    child.unref();
+    child = spawned;
+    spawned.on('exit', () => { if (child === spawned) child = undefined; });
+    spawned.unref();
     launched = true;
     stop();
     console.info('[dsh-glass-plugin] Glass desktop companion launched (authenticated link redacted)');
   };
 
-  if (typeof ctx.effect === 'function') ctx.effect(() => () => { stop(); });
+  if (typeof ctx.effect === 'function') ctx.effect(() => () => { stop(); killChild(); });
   timer = setInterval(() => { if (!launched) tryLaunch(); }, 250);
 }

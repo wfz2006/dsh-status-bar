@@ -23,3 +23,18 @@ export function dshLinkFromArgs(argv: readonly string[]): string | undefined {
     return undefined;
   }
 }
+
+/**
+ * The DSH host plugin passes `--launcher-pid=<pid>` alongside the link so the
+ * companion can quit with the host that spawned it. Only a positive decimal pid
+ * is accepted; the flag is ignored when malformed.
+ */
+export function launcherPidFromArgs(argv: readonly string[]): number | undefined {
+  let value: string | undefined;
+  for (const arg of argv) {
+    if (arg.startsWith('--launcher-pid=')) value = arg.slice('--launcher-pid='.length);
+  }
+  if (!value || !/^\d{1,10}$/.test(value)) return undefined;
+  const pid = Number(value);
+  return Number.isSafeInteger(pid) && pid > 0 ? pid : undefined;
+}

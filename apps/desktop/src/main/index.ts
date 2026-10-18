@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain, screen, globalShortcut, shell, clipboard } from 'electron';
-import { existsSync, readFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -9,7 +9,7 @@ import { createMockAdapter, mockSnapshot, mockWelcome, type MockScenario } from 
 import { createDshAdapter } from '@glass/dsh';
 import { frameSchema, initialProjection, reduceProjection, type Frame, type LocalEvent } from '@glass/protocol';
 import { clampBounds, type Bounds } from '../shared/window';
-import { dshLinkFromArgs } from '../shared/launch';
+import { dshLinkFromArgs, launcherPidFromArgs } from '../shared/launch';
 import { deriveTask } from '../shared/view-model';
 import type { MockAction, WindowAction, SourceState } from '../shared/api';
 import { assertApprovalResponse, assertQuestionResponse } from './request-gate';
@@ -160,11 +160,23 @@ function connect() {
 }
 function position(): Bounds {
   const area = screen.getPrimaryDisplay().workArea;
-  let initial = { x: area.x + area.width - 350, y: area.y + 80, width: 300, height: 56 };
+  // Rest in the lower-right quadrant so the taller peek/expanded forms still
+  // have room and the capsule no longer sits against the top edge.
+  const restingY = Math.max(area.y + 96, area.y + area.height - 420);
+  let initial = { x: area.x + area.width - 350, y: restingY, width: 300, height: 56 };
+  let legacyTop = false;
   if (!smoke) try {
     const old: unknown = JSON.parse(readFileSync(join(app.getPath('userData'), 'window.json'), 'utf8'));
-    if (old && typeof old === 'object' && 'x' in old && 'y' in old && typeof old.x === 'number' && typeof old.y === 'number' && Number.isFinite(old.x) && Number.isFinite(old.y)) initial = { ...initial, x: old.x, y: old.y };
+    if (old && typeof old === 'object' && 'x' in old && 'y' in old && typeof old.x === 'number' && typeof old.y === 'number' && Number.isFinite(old.x) && Number.isFinite(old.y)) {
+      initial = { ...initial, x: old.x, y: old.y };
+      legacyTop = old.y < area.y + 160;
+    }
   } catch { /* Only legacy geometry is read, no conversation/config. */ }
+  const marker = join(app.getPath('userData'), 'window-placement.json');
+  // One-time migration for windows parked in the old top band. The marker is
+  // written on first run, so a later deliberate top placement is respected.
+  if (legacyTop && !existsSync(marker)) initial = { ...initial, y: restingY };
+  if (!smoke) try { if (!existsSync(marker)) writeFileSync(marker, JSON.stringify({ version: 2 })); } catch { /* Optional. */ }
   return clampBounds(initial, screen.getDisplayMatching(initial).workArea);
 }
 function assertSender(event: Electron.IpcMainInvokeEvent) {
@@ -187,8 +199,25 @@ function finiteRecord(value: unknown, keys: string[]): value is Record<string, n
 }
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
+  let watchedLauncher = launcherPidFromArgs(process.argv);
+  function watchLauncher(pid: number | undefined) {
+    watchedLauncher = pid;
+    if (!pid) { if (launcherWatch) clearInterval(launcherWatch); launcherWatch = undefined; return; }
+    if (launcherWatch) return;
+    launcherWatch = setInterval(() => {
+      if (!watchedLauncher) return;
+      try { process.kill(watchedLauncher, 0); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code === 'ESRCH') app.quit(); }
+    }, 3000);
+    launcherWatch.unref?.();
+  }
+  // Quit with the DSH host that spawned this window; a later focus wake-up can
+  // re-target the watched pid through the second-instance hand-off.
+  watchLauncher(watchedLauncher);
   app.on('second-instance', (_event, argv) => {
     if (win) { win.show(); win.focus(); }
+    const launcher = launcherPidFromArgs(argv);
+    if (launcher) watchLauncher(launcher);
     const link = dshLinkFromArgs(argv);
     if (link) void connectDSH(link).catch(() => { /* connectDSH already published the failure state */ });
   });
@@ -302,8 +331,9 @@ else {
     if (startupLink && !smoke) void connectDSH(startupLink).catch(() => { /* connectDSH published the failure state */ });
   }).catch(error => { console.error('[glass] Startup failed: ' + (error instanceof Error ? error.message : 'unknown')); app.quit(); });
 }
+let launcherWatch: ReturnType<typeof setInterval> | undefined;
 app.on('before-quit', () => {
-  quitting = true; reconnectEnabled = false; clearTimeout(retry); clearInterval(watchdog); ui?.stop();
+  quitting = true; reconnectEnabled = false; clearTimeout(retry); clearInterval(watchdog); clearInterval(launcherWatch); ui?.stop();
   optics?.stop();
   positioner?.stop();
   sourceGeneration++; dsh?.stop(); adapter?.stop(); socket?.terminate(); void bridge?.close(); globalShortcut.unregisterAll();
