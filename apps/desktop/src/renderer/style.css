@@ -388,3 +388,20 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .peek-entry .ui-icon{width:12px;height:12px;color:var(--ink-3);}
 .peek-entry-title{font:600 9.5px/1 var(--font-mono);letter-spacing:.02em;color:var(--ink-2);white-space:nowrap;}
 .peek-entry-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* Approval sheet: a fixed title block, a scrolling body and fixed decisions.
+   The title used to be inside the scroll area and disappeared on long requests,
+   which left the top-left corner looking empty. */
+.approval-view{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;}
+.approval-header{flex:0 0 auto;}
+.approval-body{flex:1;min-height:0;overflow-y:auto;padding-right:1px;}
+.approval-footer{flex:0 0 auto;}
+.approval-headline{display:flex;align-items:center;gap:10px;padding-right:88px;}
+.approval-titles{min-width:0;display:flex;flex-direction:column;gap:3px;}
+.approval-titles h1{font-size:16px;line-height:1.25;}
+.approval-summary{margin:0;font-size:11.5px;line-height:1.4;color:var(--ink-3);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;}
+.approval-mark{display:grid;place-items:center;width:32px;height:32px;flex:0 0 32px;border-radius:10px;background:color-mix(in srgb,var(--warning) 14%,transparent);color:var(--warning);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warning) 26%,transparent);}
+.approval-mark .ui-icon{width:18px;height:18px;}
+.approval-header .request-session{margin:7px 0 8px;}
+.decision-buttons button,.decision-preview button{display:flex;align-items:center;justify-content:center;gap:6px;}
+.decision-buttons button .ui-icon,.decision-preview button .ui-icon{width:14px;height:14px;}

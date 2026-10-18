@@ -31,6 +31,8 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   let panelReturn: { bounds: Bounds; manual: boolean; mode: GlassViewMode } | null = null;
   let completionFeedback = false;
   let completionTimer: ReturnType<typeof setTimeout> | undefined;
+  let approvalReturn: GlassViewMode | undefined;
+  let approvalSawRequest = false;
   let persistenceTimer: ReturnType<typeof setTimeout> | undefined;
   const presentation = createPresentation(win, publish);
   function state(): WindowState {
@@ -53,6 +55,8 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     saveSoon();
   }
   function showMode(mode: GlassViewMode, reduce = false) {
+    if (mode === 'approval' && view.mode !== 'approval') { approvalReturn = view.mode; approvalSawRequest = false; }
+    else if (mode !== 'approval') { approvalReturn = undefined; approvalSawRequest = false; }
     panel = null; panelReturn = null;
     view = { ...view, mode, manual: false, returnMode: null };
     moveTo({ ...win.getBounds(), ...viewSize(mode) }, reduce, mode === 'capsule' ? 260 : 320); publish();
@@ -87,6 +91,17 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     }
     const old = view;
     view = observeFacts(view, facts, panel ? { ...settings, autoApproval: false } : settings);
+    // Once the request that pulled us into the approval sheet is resolved, go
+    // back to the view the user came from instead of parking on an empty sheet.
+    if (view.mode === 'approval') {
+      if (facts.pending.length > 0) approvalSawRequest = true;
+      else if (approvalSawRequest && !panel) {
+        const target = approvalReturn ?? 'peek';
+        approvalReturn = undefined; approvalSawRequest = false;
+        showMode(target);
+        return;
+      }
+    }
     if (settings.pin === 'on-notification') win.setAlwaysOnTop(facts.pending.length > 0);
     if (view.mode !== old.mode && !panel) moveTo({ ...win.getBounds(), ...viewSize(view.mode) });
     if (facts.completed && facts.completed !== old.completed) {

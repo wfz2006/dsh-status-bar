@@ -6,7 +6,7 @@ function DecisionPreview({label,tone,explain}:{label:string;tone:'allow'|'reject
   const [pressed,setPressed]=useState(false);
   return <span className="decision-preview" data-no-window-drag data-pressed={pressed} tabIndex={0} role="group" aria-label={label+'，仅预览'} aria-describedby="approval-status" title="仅预览，审批通道尚未接入" onClick={explain}
     onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setPressed(true);if(!e.repeat)explain();}}} onKeyUp={()=>setPressed(false)} onBlur={()=>setPressed(false)}>
-    <button className={'decision-'+tone} aria-describedby="approval-status" disabled><span className="control-label">{label}</span></button>
+    <button className={'decision-'+tone} aria-describedby="approval-status" disabled><Icon name={tone === 'allow' ? 'check' : 'x'}/><span className="control-label">{label}</span></button>
   </span>;
 }
 export function ApprovalCard({ task, openDSH }: { task: Task; openDSH: () => void }) {
@@ -32,8 +32,17 @@ export function ApprovalCard({ task, openDSH }: { task: Task; openDSH: () => voi
     catch { setCopyResult({ identity: key, text: '预览不可用' }); }
   }
   return <section className="approval-view" aria-label="待处理请求">
-    <header className="approval-header"><div className="task-heading"><h1>{request ? '需要你的确认' : '目前没有待处理请求'}</h1>{task.pending.length > 1 && <span className="step-count">{task.pending.length} 项</span>}</div>
-      <p className="request-session" title={task.title}>{task.title}</p></header>
+    <header className="approval-header">
+      <div className="approval-headline">
+        <span className="approval-mark" aria-hidden="true"><Icon name="shield" /></span>
+        <div className="approval-titles">
+          <h1>{request ? '需要你的确认' : '目前没有待处理请求'}</h1>
+          {request && <p className="approval-summary">{request.reason || request.toolName}</p>}
+        </div>
+        {task.pending.length > 1 && <span className="step-count">{task.pending.length} 项</span>}
+      </div>
+      <p className="request-session" title={task.title}>{task.title}</p>
+    </header>
     {task.pending.length > 1 && <nav className="request-selector" aria-label="待处理请求队列">{task.pending.map((a, index) => <button key={requestKey(a)} data-request-id={a.requestId} className="quiet-button" aria-label={'查看请求 ' + (index + 1)} aria-current={a === request ? 'true' : undefined} onClick={() => setSelected(requestKey(a))}><span className="control-label">{index + 1}</span></button>)}</nav>}
     {request && <>
       <div className="approval-body"><article className="approval-card" key={key}>
@@ -44,8 +53,8 @@ export function ApprovalCard({ task, openDSH }: { task: Task; openDSH: () => voi
       <footer className="approval-footer" data-request-id={request.requestId} data-session-id={request.sessionId}>
         <p className="safety-note" id="approval-status" role="status">{task.status === 'disconnected' ? '连接已断开，暂不可提交。' : submission ? submission.text : actionable ? '仅对当前请求生效，等待 DSH 确认后结束。' : blocked.identity===key ? blocked.text : request.displayDetails !== 'complete' ? '仅供预览 · 完整参数缺失' : '当前请求只读 · 请在 DSH 中处理'}</p>
         <div className="decision-buttons">{actionable || busy ? <>
-          <button className="decision-reject" disabled={!actionable || busy} onClick={()=>void respond('rejected')}><span className="control-label">拒绝</span></button>
-          <button className="decision-allow" disabled={!actionable || busy} onClick={()=>void respond('allowed-once')}><span className="control-label">允许一次</span></button>
+          <button className="decision-reject" disabled={!actionable || busy} onClick={()=>void respond('rejected')}><Icon name="x"/><span className="control-label">拒绝</span></button>
+          <button className="decision-allow" disabled={!actionable || busy} onClick={()=>void respond('allowed-once')}><Icon name="check"/><span className="control-label">允许一次</span></button>
         </> : <><DecisionPreview label="拒绝" tone="reject" explain={()=>setBlocked({identity:key,text:'拒绝暂不可提交：当前请求为只读。'})}/><DecisionPreview label="允许一次" tone="allow" explain={()=>setBlocked({identity:key,text:'允许暂不可提交：当前请求为只读。'})}/></>}</div>
       </footer>
     </>}
