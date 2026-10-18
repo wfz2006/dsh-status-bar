@@ -321,3 +321,21 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .process-entry .entry-body{margin:0 0 5px 24px;font-size:11px;line-height:1.5;}
 .chrome-button{outline:none;}
 .chrome-button:focus-visible{outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 42%,transparent);}
+
+/* Design pass (2026-10-18): Liquoria clarity, Alcove motion, Raycast rhythm,
+   Liquid Glass Button lens controls. CSS only; no structural changes. */
+.task-capsule{transition:background-color 200ms var(--motion-settle),box-shadow 220ms var(--motion-settle);}
+.task-capsule:hover{box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),inset 0 1px 0 rgba(255,255,255,.30);}
+.task-capsule:active{box-shadow:inset 0 0 0 1px rgba(255,255,255,.20),inset 0 2px 6px rgba(0,0,0,.10);}
+.chrome-group{box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 1px 3px rgba(0,0,0,.06);}
+.task-tabs{padding:2px 3px;gap:2px;border-radius:999px;}
+.task-peek{padding-top:6px;gap:9px;}
+.task-expanded{padding-top:7px;}
+.task-tab{border-radius:999px;font-size:10.5px;letter-spacing:.01em;transition:background-color 160ms var(--motion-settle),color 160ms var(--motion-settle);}
+.task-tab[aria-selected=true]{background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,.10)),color-mix(in srgb,var(--accent) 10%,transparent);color:var(--action-ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.42);}
+.task-expanded .process-list .process-entry>summary{border-radius:7px;padding:3px 6px;margin:0 -6px;transition:background-color 150ms var(--motion-settle);}
+.task-expanded .process-list .process-entry>summary:hover{background:color-mix(in srgb,var(--fg) 4%,transparent);}
+.process-entry>summary>.ui-icon{opacity:.55;}
+.process-entry[open]>summary>.ui-icon:last-child{opacity:.9;}
+.settings-panel select,.picker-trigger{background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,0)),var(--control-bg);box-shadow:inset 0 1px 0 rgba(255,255,255,.32),0 1px 2px rgba(0,0,0,.05);transition:background 160ms var(--motion-settle),box-shadow 160ms var(--motion-settle);}
+.settings-panel select:hover,.picker-trigger:hover{background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.02)),var(--chrome-hover);}
