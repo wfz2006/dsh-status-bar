@@ -431,3 +431,10 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .task-expanded .process-list[data-fade-bottom=true]{mask-image:linear-gradient(to bottom,#000 calc(100% - 8px),rgba(0,0,0,.45) calc(100% - 3px),transparent);}
 .task-expanded .process-list[data-fade-top=true][data-fade-bottom=true]{mask-image:linear-gradient(to bottom,transparent,#000 10px,#000 calc(100% - 8px),rgba(0,0,0,.45) calc(100% - 3px),transparent);}
 .task-expanded .process-list[data-fade-top=true]:not([data-fade-bottom=true]){mask-image:linear-gradient(to bottom,transparent,#000 10px);}
+
+/* Dial the edge-hugging transcript back a touch; keep a little breathing room. */
+.task-expanded{padding-bottom:10px;}
+.task-expanded .process-list{margin-bottom:2px;}
+.task-expanded .process-list[data-fade-bottom=true]{mask-image:linear-gradient(to bottom,#000 calc(100% - 10px),rgba(0,0,0,.45) calc(100% - 4px),transparent);}
+.task-expanded .process-list[data-fade-top=true][data-fade-bottom=true]{mask-image:linear-gradient(to bottom,transparent,#000 10px,#000 calc(100% - 10px),rgba(0,0,0,.45) calc(100% - 4px),transparent);}
+.task-expanded .process-list[data-fade-top=true]:not([data-fade-bottom=true]){mask-image:linear-gradient(to bottom,transparent,#000 10px);}
