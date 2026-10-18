@@ -415,3 +415,12 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .task-expanded .process-list[data-fade-bottom=true]{mask-image:linear-gradient(to bottom,#000 calc(100% - 20px),rgba(0,0,0,.35) calc(100% - 8px),transparent);}
 .task-expanded .process-list[data-fade-top=true][data-fade-bottom=true]{mask-image:linear-gradient(to bottom,transparent,#000 14px,#000 calc(100% - 20px),rgba(0,0,0,.35) calc(100% - 8px),transparent);}
 .task-expanded .process-list[data-fade-top=true]:not([data-fade-bottom=true]){mask-image:linear-gradient(to bottom,transparent,#000 14px);}
+
+/* Pull the fade line closer to the edge and sit the peek transcript lower. */
+.task-expanded .process-list[data-fade-bottom=true]{mask-image:linear-gradient(to bottom,#000 calc(100% - 12px),rgba(0,0,0,.4) calc(100% - 5px),transparent);}
+.task-expanded .process-list[data-fade-top=true][data-fade-bottom=true]{mask-image:linear-gradient(to bottom,transparent,#000 10px,#000 calc(100% - 12px),rgba(0,0,0,.4) calc(100% - 5px),transparent);}
+.task-expanded .process-list[data-fade-top=true]:not([data-fade-bottom=true]){mask-image:linear-gradient(to bottom,transparent,#000 10px);}
+.task-expanded .process-list{margin-bottom:2px;}
+.task-peek{padding-bottom:2px;}
+.peek-process{margin-top:22px;}
+.peek-usage{margin-top:0;}
