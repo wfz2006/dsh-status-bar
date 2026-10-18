@@ -36,7 +36,7 @@ export function ApprovalCard({ task, openDSH }: { task: Task; openDSH: () => voi
     {request && <>
       <div className="approval-body"><article className="approval-card" key={key}>
         <div className="request-heading"><strong>{request.toolName === 'bash' ? '终端命令' : request.toolName}</strong><button className="text-button" onClick={() => void copy(request.sessionId, request.requestId)} disabled={!request.commandPreview}><span className="control-label">复制预览</span></button><button className="request-external" aria-label="打开 DSH" title="打开 DSH" onClick={openDSH}><Icon name="external"/></button></div>
-        <pre className="command-preview" tabIndex={0} aria-label="命令预览">{request.commandPreview ?? '参数暂不可用'}</pre>
+        <p className="approval-reason" aria-label="审批标题">{request.reason || '此操作需要你的确认'}</p>
         <details className="request-details"><summary><Icon name="code"/><span>查看完整命令与请求</span><Icon name="chevron"/></summary><pre className="command-full">{request.commandPreview ?? '参数暂不可用'}</pre><p>{request.reason}</p><dl><dt>Session</dt><dd>{request.sessionId}</dd><dt>Request</dt><dd>{request.requestId}</dd><dt>Call</dt><dd>{request.callId ?? '未提供'}</dd></dl></details>
       </article></div>
       <footer className="approval-footer" data-request-id={request.requestId} data-session-id={request.sessionId}>

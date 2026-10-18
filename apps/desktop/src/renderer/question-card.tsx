@@ -60,10 +60,7 @@ export function RequestPanel({task,openDSH}:{task:Task;openDSH:()=>void}) {
     <header className="approval-header">
       <div className="approval-headline">
         <span className="approval-mark" aria-hidden="true"><Icon name="shield" /></span>
-        <div className="approval-titles">
-          <h1>{displayed==='question' ? (question?'需要你的回答':'目前没有待回答问题') : (approval?'需要你的确认':'目前没有待处理请求')}</h1>
-          {displayed==='approval' && approval && <p className="approval-summary">{approval.reason || approval.toolName}</p>}
-        </div>
+        <h1>{displayed==='question' ? (question?'需要你的回答':'目前没有待回答问题') : (approval?'需要你的确认':'目前没有待处理请求')}</h1>
         {displayed==='approval' && task.pending.length>1 && <span className="step-count">{task.pending.length} 项</span>}
       </div>
       <p className="request-session" title={task.title}>{task.title}</p>

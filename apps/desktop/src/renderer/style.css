@@ -459,3 +459,11 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 
 /* Peek: nudge the status block a touch lower without reopening a hollow band. */
 .task-peek .current-step{margin-top:12px;}
+
+/* Approval: the title rides beside the shield, and the real request reason owns the box. */
+.approval-headline{align-items:center;}
+.approval-headline h1{margin:0;align-self:center;}
+.approval-reason{margin:8px 0;padding:10px 12px;border-radius:10px;background:var(--inner);border-left:3px solid var(--accent);font-size:12.5px;line-height:1.65;color:var(--fg);overflow-wrap:anywhere;}
+
+/* Peek: settle both content groups a little lower so the glass below is not empty. */
+.task-peek .peek-process{margin-top:16px;}
