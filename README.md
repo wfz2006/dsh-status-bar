@@ -61,6 +61,16 @@ pnpm start
 
 也可以直接双击 `启动预览.cmd`。开发热更新用 `pnpm dev`。默认是 **Mock 演示**；连接真实 DSH 见下。
 
+### 装成 DSH 插件（推荐）
+
+不用自己 `pnpm build`：插件包里带着构建好的桌面端和 Electron 运行时，装上就能开。开启 DSH 时它会自己把官方认证链接交给玻璃，不用再手动粘贴。
+
+```powershell
+dsh plugin --profile web add https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-glass-plugin.tgz
+```
+
+装好后重启 DSH，玻璃会跟着启动；不想要它自动开，就在 profile 补丁里写 `- id: dsh-glass-plugin` + `config: { autoLaunch: false }`。细节见 [packages/dsh-plugin/README.md](packages/dsh-plugin/README.md)。
+
 ### 连接真实 DSH（实验）
 
 设置 → 官方认证地址 → 粘贴 DSH 启动器输出的认证链接并连接。凭据只留在 Main 内存，断线即失效、不落盘。
@@ -89,7 +99,7 @@ apps/desktop          Electron 悬浮窗（main / renderer / shared + 光学取�
 packages/protocol     自研本地协议与数据类型
 packages/bridge       宿主桥接
 packages/adapters     dsh（真实 Host）/ mock（演示数据源）
-packages/dsh-plugin   DSH 插件市场入口（占位）
+packages/dsh-plugin   DSH 插件（bundle：启动桌面端并把认证链接交过去）
 tests                 单元测试
 scripts               构建、验收、截图与联调脚本
 docs                  产品 / 架构 / 协议 / 安全 / 决策文档

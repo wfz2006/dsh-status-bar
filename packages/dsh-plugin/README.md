@@ -1,50 +1,42 @@
 # dsh-glass-plugin
 
-Local DSH bundle wrapper for the DSH Glass desktop companion.
+DSH bundle for **DSH Status Bar** — a floating glass status bar for DeepSeek Harness.
 
-## What this is
+## What it does
 
-`dsh-glass-plugin` is the installable shape of DSH Glass for the DSH plugin
-market. The market installs umbrella bundles (packages that declare
-`dsh.bundle.patch`), so this package declares the bundle patch and mounts a
-small host plugin. The Electron app in `apps/desktop` stays a separate process.
-
-## Launcher hand-off
-
-At boot the host plugin waits for the local web server, asks the `connection`
-service for the authenticated host URL (`authenticatedUrl(origin)`), and starts
-the desktop app with:
+The plugin mounts one host row in DSH. At boot it waits for the local web server,
+asks the `connection` service for the authenticated host URL
+(`connection.authenticatedUrl(origin)`), and starts the desktop app with that link:
 
 ```text
-electron apps/desktop --dsh-link=<authenticated url>
+electron <app dir> --dsh-link=<authenticated url> --launcher-pid=<host pid>
 ```
 
-Glass connects to that link on launch, so the user does not paste anything. If
-Glass is already running, the second launch hits its single-instance lock: the
+Glass connects with that link on launch, so nothing has to be pasted. The link
+travels only in the process arguments and is never logged — the plugin prints
+`[dsh-glass-plugin] Glass desktop companion launched (authenticated link redacted)`.
+The app rejects non-loopback links, credentials, hashes and sub-paths before it
+touches the network. `--launcher-pid` makes the companion exit when the DSH
+process it belongs to disappears; disposing the plugin kills the spawned tree.
+
+If Glass is already running, the second launch hits its single-instance lock: the
 existing window is focused and re-connected with the new link.
 
-The link is only passed through the process argument and is never logged; the
-plugin prints `[dsh-glass-plugin] Glass desktop companion launched (authenticated
-link redacted)`. `apps/desktop` rejects non-loopback links, credentials, hashes
-and sub-paths before touching the network.
+## Install
 
-### Configuration
+From the plugin market (once listed), or directly from the release tarball:
 
-The bundle patch sets `autoLaunch: true`. To keep the plugin installed but stop
-it from starting Glass, override the row config in the profile patch:
-
-```yaml
-- id: dsh-glass-plugin
-  config:
-    autoLaunch: false
+```sh
+dsh plugin --profile web add https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-glass-plugin.tgz
 ```
 
-`electronBinary` can point at a specific electron executable instead of the one
-resolved from `apps/desktop` (`createRequire(...)('electron/package.json')`).
+The tarball is self-contained: it ships the built desktop app in `app/` and the
+Electron runtime in `electron/dist/`, so nothing is compiled or downloaded at
+install time.
 
-## Manual install (development)
+### From a checkout (development)
 
-The desktop profile can link the package instead of publishing it:
+The desktop profile can link the package instead of installing it:
 
 ```jsonc
 // <profile>/package.json
@@ -52,7 +44,38 @@ The desktop profile can link the package instead of publishing it:
 "dsh": { "profile": { "bundles": [/* ... */ "dsh-glass-plugin"] } }
 ```
 
-Point a junction/symlink at `node_modules/dsh-glass-plugin` if pnpm did not run,
-then restart the app. The bundle shows up in the market as an installed local
-plugin. Do not copy this package into another checkout; use `link:` so edits
-take effect after a rebuild/restart.
+In a checkout the plugin uses `apps/desktop/out` as the app directory and the
+workspace `electron` package, so run `pnpm build` first. Point a junction or
+symlink at `node_modules/dsh-glass-plugin` if pnpm did not run, then restart DSH.
+
+## Configuration
+
+The bundle patch sets `autoLaunch: true`. To keep the plugin installed but stop it
+from starting Glass, override the row config in the profile patch:
+
+```yaml
+- id: dsh-glass-plugin
+  config:
+    autoLaunch: false
+```
+
+Other overrides, all optional:
+
+| key | meaning |
+|:--|:--|
+| `appDir` | directory holding `out/main/index.js` |
+| `electronBinary` | path to an Electron executable |
+| `autoReload` | relaunch the companion when the desktop bundle changes (default `true`) |
+
+`DSH_GLASS_APP` and `DSH_GLASS_ELECTRON` do the same two paths through the environment.
+
+## Requirements
+
+- Windows 11 x64 (the glass refraction reads the screen behind the window).
+- The desktop app is a separate Electron process; it needs a GPU-backed Electron
+  runtime, which the release tarball provides.
+
+## License
+
+MIT. The bundled Electron runtime keeps its own license files
+(`electron/dist/LICENSE`, `LICENSES.chromium.html`).

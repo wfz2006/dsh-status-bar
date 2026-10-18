@@ -1,16 +1,43 @@
 {
   "name": "dsh-glass-plugin",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.2.0",
+  "description": "Floating glass status bar for DeepSeek Harness: a frameless always-on-top window that shows session progress, pending approvals and questions.",
   "license": "MIT",
-  "description": "DSH bundle wrapper that lists the DSH Glass desktop companion in the plugin market.",
+  "author": "wfz2006",
   "type": "module",
   "main": "lib/index.js",
-  "files": [
-    "lib/index.js",
-    "cordis.patch.yml",
-    "README.md"
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "glass",
+    "status-bar",
+    "desktop",
+    "electron",
+    "windows"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wfz2006/dsh-status-bar.git",
+    "directory": "packages/dsh-plugin"
+  },
+  "homepage": "https://github.com/wfz2006/dsh-status-bar",
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "assets",
+    "screenshots.json",
+    "app",
+    "electron"
+  ],
+  "scripts": {
+    "pack:release": "node ../../scripts/pack-plugin-release.mjs"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
