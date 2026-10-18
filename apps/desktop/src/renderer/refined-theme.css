@@ -1,31 +1,31 @@
 /* Approved direction: one clear surface, neutral content, one action accent. */
 .glass[data-theme] {
   --fg:#12151b; --ink-2:#454c59; --ink-3:#6b7482; --muted:#454c59; --line:rgba(20,24,32,.10);
-  --accent:#4a63d8; --action-ink:#2d47b8; --warning:#8a5a06; --success:#16744e; --danger:#a52f47; --code-ink:var(--fg);
-  --accent-soft:rgba(74,99,216,.10); --success-soft:rgba(22,116,78,.12); --warning-soft:rgba(138,90,6,.10); --danger-soft:rgba(165,47,71,.10);
+  --accent:#2f62e9; --action-ink:#2447c4; --warning:#8a5a06; --success:#16744e; --danger:#a52f47; --code-ink:var(--fg);
+  --accent-soft:rgba(47,98,233,.10); --success-soft:rgba(22,116,78,.12); --warning-soft:rgba(138,90,6,.10); --danger-soft:rgba(165,47,71,.10);
   --surface-edge:rgba(20,24,32,.13); --surface-hover:rgba(255,255,255,.16);
   --surface-glint:rgba(255,255,255,.30); --neutral-fill:rgba(255,255,255,.05);
 }
 @media(prefers-color-scheme:dark) {
   .glass[data-theme=auto]:not([data-backdrop-tone=light]) {
-    --fg:#f4f6fa; --ink-2:#c3c9d4; --ink-3:#9aa3b2; --muted:#c3c9d4; --line:rgba(235,240,248,.11); --accent:#8ea2ff;
-    --action-ink:#b8c4ff; --warning:#f0c98a; --success:#8ad8b0; --danger:#ffa6b6;
-    --accent-soft:rgba(142,162,255,.14); --success-soft:rgba(138,216,176,.12); --warning-soft:rgba(240,201,138,.12); --danger-soft:rgba(255,166,182,.12);
+    --fg:#f4f6fa; --ink-2:#c3c9d4; --ink-3:#9aa3b2; --muted:#c3c9d4; --line:rgba(235,240,248,.11); --accent:#8fb8ff;
+    --action-ink:#c2d6ff; --warning:#f0c98a; --success:#8ad8b0; --danger:#ffa6b6;
+    --accent-soft:rgba(143,184,255,.14); --success-soft:rgba(138,216,176,.12); --warning-soft:rgba(240,201,138,.12); --danger-soft:rgba(255,166,182,.12);
     --surface-edge:rgba(235,240,248,.16); --surface-hover:rgba(255,255,255,.07);
     --surface-glint:rgba(255,255,255,.16); --neutral-fill:rgba(255,255,255,.03);
   }
 }
 .glass[data-theme=dark],.glass[data-theme=auto][data-backdrop-tone=dark] {
-  --fg:#f4f6fa; --ink-2:#c3c9d4; --ink-3:#9aa3b2; --muted:#c3c9d4; --line:rgba(235,240,248,.11); --accent:#8ea2ff;
-  --action-ink:#b8c4ff; --warning:#f0c98a; --success:#8ad8b0; --danger:#ffa6b6;
-  --accent-soft:rgba(142,162,255,.14); --success-soft:rgba(138,216,176,.12); --warning-soft:rgba(240,201,138,.12); --danger-soft:rgba(255,166,182,.12);
+  --fg:#f4f6fa; --ink-2:#c3c9d4; --ink-3:#9aa3b2; --muted:#c3c9d4; --line:rgba(235,240,248,.11); --accent:#8fb8ff;
+  --action-ink:#c2d6ff; --warning:#f0c98a; --success:#8ad8b0; --danger:#ffa6b6;
+  --accent-soft:rgba(143,184,255,.14); --success-soft:rgba(138,216,176,.12); --warning-soft:rgba(240,201,138,.12); --danger-soft:rgba(255,166,182,.12);
   --surface-edge:rgba(235,240,248,.16); --surface-hover:rgba(255,255,255,.07);
   --surface-glint:rgba(255,255,255,.16); --neutral-fill:rgba(255,255,255,.03);
 }
 .glass[data-theme=light],.glass[data-theme=auto][data-backdrop-tone=light] {
   --fg:#12151b; --ink-2:#454c59; --ink-3:#6b7482; --muted:#454c59; --line:rgba(20,24,32,.10);
-  --accent:#4a63d8; --action-ink:#2d47b8; --warning:#8a5a06; --success:#16744e; --danger:#a52f47;
-  --accent-soft:rgba(74,99,216,.10); --success-soft:rgba(22,116,78,.12); --warning-soft:rgba(138,90,6,.10); --danger-soft:rgba(165,47,71,.10);
+  --accent:#2f62e9; --action-ink:#2447c4; --warning:#8a5a06; --success:#16744e; --danger:#a52f47;
+  --accent-soft:rgba(47,98,233,.10); --success-soft:rgba(22,116,78,.12); --warning-soft:rgba(138,90,6,.10); --danger-soft:rgba(165,47,71,.10);
   --surface-edge:rgba(20,24,32,.13); --surface-hover:rgba(255,255,255,.16);
   --surface-glint:rgba(255,255,255,.30); --neutral-fill:rgba(255,255,255,.05);
 }
@@ -33,8 +33,8 @@
 .glass[data-theme][data-strength=readable] { --neutral-fill:rgba(255,255,255,.18); }
 .glass[data-theme=dark][data-strength=readable],.glass[data-theme=auto][data-backdrop-tone=dark][data-strength=readable] { --neutral-fill:rgba(18,22,30,.18); }
 @media(prefers-color-scheme:dark) { .glass[data-theme=auto][data-strength=readable]:not([data-backdrop-tone=light]) { --neutral-fill:rgba(18,22,30,.18); } }
-.glass[data-theme] .glass-rim { box-shadow:inset 0 0 0 1.5px #ffffff14,inset 0 1px 2px #ffffff52; }
-.glass[data-theme] .glass-rim::before { background:linear-gradient(140deg,#fffffff0,#ffffff55 25%,#ffffff0a 48%,#ffffff22 70%,#ffffffaa); }
+.glass[data-theme] .glass-rim { box-shadow:inset 0 0 0 1px #ffffff24,inset 0 1px 2px #ffffff52; }
+.glass[data-theme] .glass-rim::before { background:linear-gradient(138deg,#ffffffe8,#ffffff44 26%,#ffffff08 46%,#d8ecff33 66%,#ffe9c766 88%,#ffffffaa); }
 .glass[data-theme] h1 { font-size:16px; font-weight:500; line-height:1.5; letter-spacing:0; }
 .glass[data-theme] .chrome-group { border-color:var(--surface-edge); background:transparent; box-shadow:inset 0 1px 0 #ffffff16; }
 .glass[data-theme] .chrome-button,.glass[data-theme] .back-button { color:var(--muted); background:transparent; }

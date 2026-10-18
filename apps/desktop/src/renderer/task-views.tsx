@@ -67,7 +67,7 @@ export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; ex
       {recent.length > 0 && <div className="peek-process">
         {recent.map(row => <div className="peek-entry" key={row.key}><Icon name={row.icon} /><span className="peek-entry-title">{row.label}</span><span className="peek-entry-text">{row.text}</span></div>)}
       </div>}
-      <div className="current-step"><StatusOrb task={task} /><span>{failure ? task.label + '，当前内容可能已过时' : task.current.map(t => t.content).join('、') || task.label}</span></div>
+      <div className="current-step"><StatusOrb task={task} /><span>{failure ? task.label + '，当前内容可能已过时' : task.current.map(t => t.content).join('、') || task.label}</span>{task.status === 'running' && task.current.length === 0 && <Icon name="whale" className="whale-tail" />}</div>
       {metrics && <div className="peek-usage">
         <div className="peek-stats">
           <span><b>{metrics.turns}</b> 轮 · <b>{metrics.steps}</b> 步{metrics.tokensPerSecond !== undefined ? ' · ' + metrics.tokensPerSecond + ' tok/s' : ''}</span>
@@ -151,7 +151,7 @@ export function TaskExpanded({ task, projection, selected, select, approval, rec
   return <section className="task-expanded">
     <div className="task-heading"><h1 title={task.title}>{task.title}</h1></div>
     {Object.keys(projection.sessions).length > 1 && <div className="task-picker-row"><SessionPicker sessions={Object.values(projection.sessions).map(session => ({ sessionId: session.sessionId, title: session.title }))} selected={selected} select={select} /></div>}
-    <div className="task-meta"><StatusOrb task={task} /><span>{task.label}{projection.stale ? ' · 状态可能过时' : ''}</span>{task.total > 0 && <span className="step-count">{task.completed}/{task.total} 步骤</span>}</div>
+    <div className="task-meta"><StatusOrb task={task} /><span>{task.label}{projection.stale ? ' · 状态可能过时' : ''}</span>{task.status === 'running' && <Icon name="whale" className="whale-tail" />}{task.total > 0 && <span className="step-count">{task.completed}/{task.total} 步骤</span>}</div>
     {metrics && <div className="task-metrics">
       <span><b>{metrics.turns}</b> 轮 · <b>{metrics.steps}</b> 步</span>
       {metrics.tokensPerSecond !== undefined && <span><b>{metrics.tokensPerSecond}</b> tok/s</span>}

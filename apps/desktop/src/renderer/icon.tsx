@@ -1,4 +1,4 @@
-export type IconName = 'collapse' | 'more' | 'back' | 'chevron' | 'chevron-right' | 'code' | 'external' | 'file' | 'image' | 'terminal' | 'pencil' | 'search' | 'globe' | 'list' | 'wrench' | 'brain' | 'chat' | 'user' | 'shield' | 'check' | 'x';
+export type IconName = 'collapse' | 'more' | 'back' | 'chevron' | 'chevron-right' | 'code' | 'external' | 'file' | 'image' | 'terminal' | 'pencil' | 'search' | 'globe' | 'list' | 'wrench' | 'brain' | 'chat' | 'user' | 'shield' | 'check' | 'x' | 'whale';
 const paths: Record<Exclude<IconName, 'more'>, React.ReactNode> = {
   collapse: <path d="m7 10 5 5 5-5" />,
   chevron: <path d="m7 10 5 5 5-5" />,
@@ -20,9 +20,10 @@ const paths: Record<Exclude<IconName, 'more'>, React.ReactNode> = {
   shield: <><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Z" /><path d="M12 8.5v4.5" /><circle cx="12" cy="16.5" r=".9" fill="currentColor" stroke="none" /></>,
   check: <path d="m5 12 4.5 4.5L19 7" />,
   x: <path d="m6 6 12 12M18 6 6 18" />,
+  whale: <path d="M12 21c-2.9-2.3-4.5-5-4.7-8.2 1.6 1.3 2.9 2.9 3.8 4.7.3-2.8 1-5.2 2.1-7.5 1.1 2.3 1.8 4.7 2.1 7.5.9-1.8 2.2-3.4 3.8-4.7-.2 3.2-1.8 5.9-4.7 8.2Z" fill="currentColor" stroke="none" />,
 };
-export function Icon({ name }: { name: IconName }) {
-  return <svg className="ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+export function Icon({ name, className }: { name: IconName; className?: string }) {
+  return <svg className={className ? 'ui-icon ' + className : 'ui-icon'} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
     {name === 'more' ? <><circle cx="5" cy="12" r="1.3" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.3" fill="currentColor" stroke="none" /></> : paths[name]}
   </svg>;
 }

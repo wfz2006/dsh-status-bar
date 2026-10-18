@@ -467,3 +467,14 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 
 /* Peek: settle both content groups a little lower so the glass below is not empty. */
 .task-peek .peek-process{margin-top:16px;}
+
+/* DSH whale: a small blue fluke that rides beside the running status. */
+.whale-tail{width:14px;height:14px;color:var(--accent);transform-origin:50% 85%;filter:drop-shadow(0 2px 6px color-mix(in srgb,var(--accent) 42%,transparent));animation:whale-bob 3.4s ease-in-out infinite;}
+@keyframes whale-bob{0%,100%{transform:translateY(0) rotate(-3deg)}45%{transform:translateY(-1px) rotate(4deg)}70%{transform:translateY(0) rotate(1deg)}}
+.task-peek .current-step>span{color:var(--ink-2);}
+.glass[data-state=running] .current-step>span{color:var(--fg);}
+
+/* Type: the task title carries a quiet blue tail of its own. */
+.task-peek .task-heading h1,.task-expanded .task-heading h1{font-weight:600;letter-spacing:-.01em;background:linear-gradient(96deg,var(--fg) 42%,color-mix(in srgb,var(--accent) 55%,var(--fg)));-webkit-background-clip:text;background-clip:text;color:transparent;}
+
+@media (prefers-reduced-motion:reduce){.whale-tail{animation:none;}}
