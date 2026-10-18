@@ -453,3 +453,9 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .task-peek .current-step{margin-top:6px;}
 .task-peek .peek-usage{margin-top:3px;}
 .task-peek .task-heading h1{line-height:1.3;}
+
+/* Peek: fade the clipped preview text instead of ending it with an ellipsis. */
+.task-peek .peek-entry-text{text-overflow:clip;padding-right:2px;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 18px),transparent);}
+
+/* Peek: nudge the status block a touch lower without reopening a hollow band. */
+.task-peek .current-step{margin-top:12px;}
