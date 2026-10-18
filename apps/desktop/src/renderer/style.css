@@ -438,3 +438,10 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .task-expanded .process-list[data-fade-bottom=true]{mask-image:linear-gradient(to bottom,#000 calc(100% - 10px),rgba(0,0,0,.45) calc(100% - 4px),transparent);}
 .task-expanded .process-list[data-fade-top=true][data-fade-bottom=true]{mask-image:linear-gradient(to bottom,transparent,#000 10px,#000 calc(100% - 10px),rgba(0,0,0,.45) calc(100% - 4px),transparent);}
 .task-expanded .process-list[data-fade-top=true]:not([data-fade-bottom=true]){mask-image:linear-gradient(to bottom,transparent,#000 10px);}
+
+/* Peek: three rows of process, and lift the status block plus the attention bar off the edge. */
+.task-peek{padding-bottom:6px;}
+.task-peek .attention-link{margin-bottom:4px;}
+.peek-process{margin-top:20px;}
+.peek-process .peek-entry{min-height:14px;}
+.task-peek .peek-usage{margin-top:2px;}

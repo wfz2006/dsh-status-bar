@@ -13,8 +13,8 @@ it('defaults to a calm task capsule and validates persisted preferences', () => 
   expect(normalizeSettings({ animation: 'invalid', theme: 'light', autoApproval: true }).theme).toBe('light');
   expect(normalizeSettings({ animation: 'invalid' }).animation).toBe('full');
   expect(viewSize('capsule')).toEqual({ width: 288, height: 50 });
-  expect(viewSize('peek')).toEqual({ width: 340, height: 168 });
-  expect(viewSize('peek', true)).toEqual({ width: 340, height: 208 });
+  expect(viewSize('peek')).toEqual({ width: 340, height: 190 });
+  expect(viewSize('peek', true)).toEqual({ width: 340, height: 236 });
   expect(viewSize('expanded')).toEqual({ width: 400, height: 360 });
   expect(viewForSize(330, 180, 'expanded')).toBe('peek');
   expect(viewForSize(400, 320, 'approval')).toBe('approval');

@@ -58,7 +58,7 @@ export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; ex
     return [
       ...notes.map(note => ({ key: note.id, seq: note.sourceSeq, icon: noteIcons[note.kind], label: noteLabels[note.kind], text: note.text })),
       ...activities.map(activity => ({ key: 'tool:' + activity.callId, seq: activity.sourceSeq ?? 0, icon: toolIcon(activity.toolName), label: activity.toolName, text: activity.summary })),
-    ].sort((a, b) => b.seq - a.seq).slice(0, 2);
+    ].sort((a, b) => b.seq - a.seq).slice(0, 3);
   }, [task.session]);
   return <section className="task-peek" data-attention={task.attentionCount > 0}>
     <button className="peek-main" aria-label="展开任务详情" onClick={expand}>
