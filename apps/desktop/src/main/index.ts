@@ -44,6 +44,16 @@ let dsh: ReturnType<typeof createDshAdapter> | undefined;
 let source: SourceState = { mode: smoke ? 'mock' : 'dsh', connection: 'disconnected', endpoint: null, error: null };
 let sourceGeneration = 0;
 const responses = new Set<string>();
+// Coalesce projection pushes: the adapter can publish several frames for one
+// adapter turn (status, transcript, approval) and the renderer only needs the
+// newest projection per animation frame.
+let pendingState: typeof state | undefined;
+let stateTimer: ReturnType<typeof setTimeout> | undefined;
+function flushState() {
+  stateTimer = undefined;
+  const next = pendingState; pendingState = undefined;
+  if (next && win && !win.isDestroyed()) win.webContents.send('glass:update', next);
+}
 
 function sourceName() { return source.mode === 'mock' ? '数据源：Mock 演示 · 非真实会话' : `数据源：DeepSeek Harness · ${source.connection === 'connected' ? '已连接' : source.connection === 'connecting' ? '连接中' : '未连接'}`; }
 function publishSource() {
@@ -119,7 +129,8 @@ function update(event: Frame | LocalEvent) {
     const connection = state.connection === 'connected' ? 'connected' : state.connection === 'connecting' || state.connection === 'reconnecting' ? 'connecting' : 'disconnected';
     if (source.connection !== connection) { source = { ...source, connection }; publishSource(); }
   }
-  if (win && !win.isDestroyed()) win.webContents.send('glass:update', state);
+  pendingState = state;
+  stateTimer ??= setTimeout(flushState, 16);
   refreshFacts();
 }
 function connect() {

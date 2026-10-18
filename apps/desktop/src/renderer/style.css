@@ -339,3 +339,40 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .process-entry[open]>summary>.ui-icon:last-child{opacity:.9;}
 .settings-panel select,.picker-trigger{background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,0)),var(--control-bg);box-shadow:inset 0 1px 0 rgba(255,255,255,.32),0 1px 2px rgba(0,0,0,.05);transition:background 160ms var(--motion-settle),box-shadow 160ms var(--motion-settle);}
 .settings-panel select:hover,.picker-trigger:hover{background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.02)),var(--chrome-hover);}
+
+/* Motion pass (2026-10-18): feedback that explains state; nothing runs forever
+   without a reason. Everything here honours the animation setting and the
+   system reduced-motion preference. */
+.process-entry .entry-status-done{color:var(--success);font-weight:500;letter-spacing:.01em;}
+.process-entry{content-visibility:auto;contain-intrinsic-size:auto 24px;animation:entry-in 220ms var(--motion-settle) both;}
+@keyframes entry-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.task-panel{animation:panel-in 180ms var(--motion-settle) both;}
+@keyframes panel-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes sheen-sweep{0%{transform:translateX(-130%)}60%,100%{transform:translateX(230%)}}
+.glass[data-mode=capsule][data-state=running] .task-capsule{overflow:hidden;}
+.glass[data-mode=capsule][data-state=running] .task-capsule::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(100deg,transparent 36%,rgba(255,255,255,.16) 50%,transparent 64%);animation:sheen-sweep 5.8s ease-in-out infinite;}
+@keyframes attention-breathe{0%,100%{box-shadow:inset 0 0 0 1px transparent}50%{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warning) 30%,transparent),inset 0 1px 0 rgba(255,255,255,.16)}}
+.attention-link{animation:attention-breathe 3.6s ease-in-out infinite;}
+@keyframes completion-bloom{0%{box-shadow:inset 0 0 0 1px transparent}38%{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--success) 44%,transparent),inset 0 0 34px color-mix(in srgb,var(--success) 12%,transparent)}100%{box-shadow:inset 0 0 0 1px transparent}}
+.glass[data-completion=true] .glass-rim{animation:completion-bloom .9s var(--motion-settle);}
+.chrome-button{transition:transform 150ms var(--motion-spring),background-color 150ms var(--motion-settle);}
+.chrome-button:hover{transform:scale(1.05);}
+.chrome-button:active{transform:scale(.94);}
+.glass[data-animation=off] .process-entry,.glass[data-animation=off] .task-panel,.glass[data-animation=off] .attention-link,.glass[data-animation=off] .task-capsule::after,.glass[data-animation=off] .glass-rim{animation:none;}
+.glass[data-animation=reduced] .process-entry,.glass[data-animation=reduced] .task-panel{animation-duration:1ms;}
+@media (prefers-reduced-motion:reduce){.process-entry,.task-panel,.attention-link,.glass[data-completion=true] .glass-rim{animation:none;}.glass[data-mode=capsule][data-state=running] .task-capsule::after{display:none;}.chrome-button:hover,.chrome-button:active{transform:none;}}
+
+/* A few more state cues: work in motion, a pop on completion, a card that
+   arrives instead of appearing. Zero dependencies; every effect is transform
+   or opacity so it stays on the compositor. */
+@keyframes progress-flow{from{background-position:0% 0}to{background-position:-200% 0}}
+.glass[data-state=running] .task-progress>span{background-image:linear-gradient(90deg,#79b8ff77,#79b8ff,#b4d9ffcc,#79b8ff);background-size:200% 100%;animation:progress-flow 2.6s linear infinite;}
+@keyframes orb-ripple{0%{box-shadow:0 0 0 0 color-mix(in srgb,#79b8ff 42%,transparent)}70%,100%{box-shadow:0 0 0 5px transparent}}
+.glass[data-state=running] .status-orb.running{animation:orb-breathe 4s ease-in-out infinite,orb-ripple 2.8s ease-out infinite;}
+@keyframes orb-pop{0%{transform:scale(.72)}55%{transform:scale(1.22)}100%{transform:scale(1)}}
+.glass[data-state=completed] .status-orb.completed{animation:orb-pop 460ms var(--motion-spring);}
+@keyframes card-rise{from{opacity:0;transform:translateY(6px) scale(.995)}to{opacity:1;transform:none}}
+.approval-card{animation:card-rise 240ms var(--motion-settle) both;}
+.todo{animation:entry-in 200ms var(--motion-settle) both;}
+.glass[data-animation=off] .task-progress>span,.glass[data-animation=off] .status-orb.running,.glass[data-animation=off] .approval-card,.glass[data-animation=off] .todo{animation:none;}
+@media (prefers-reduced-motion:reduce){.glass[data-state=running] .task-progress>span,.glass[data-state=running] .status-orb.running,.glass[data-state=completed] .status-orb.completed,.approval-card,.todo{animation:none;}}

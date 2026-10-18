@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Projection } from '@glass/protocol';
 import { formatTokens, taskMetrics, type deriveTask } from '../shared/view-model';
 import { Icon, type IconName } from './icon';
@@ -84,26 +84,28 @@ function toolIcon(name: string): IconName {
   return 'wrench';
 }
 function ProcessList({ task }: { task: Task }) {
-  const notes = task.session?.notes ?? [];
-  const activities = task.session?.activities ?? [];
-  const rows = [
-    ...notes.map(note => ({ kind: 'note' as const, key: note.id, sourceSeq: note.sourceSeq, note })),
-    ...activities.map(activity => ({ kind: 'tool' as const, key: activity.callId, sourceSeq: activity.sourceSeq ?? 0, activity })),
-  ].sort((a, b) => b.sourceSeq - a.sourceSeq);
+  const notes = task.session?.notes;
+  const activities = task.session?.activities;
+  // The adapter emits the whole session on every change; only re-merge when the
+  // transcript or activity arrays actually changed.
+  const rows = useMemo(() => [
+    ...(notes ?? []).map(note => ({ kind: 'note' as const, key: note.id, sourceSeq: note.sourceSeq, note })),
+    ...(activities ?? []).map(activity => ({ kind: 'tool' as const, key: activity.callId, sourceSeq: activity.sourceSeq ?? 0, activity })),
+  ].sort((a, b) => b.sourceSeq - a.sourceSeq), [notes, activities]);
   if (!rows.length) return <p className="empty-state">此会话尚无过程；开始工作后，这里会按时间出现思考与工具调用。</p>;
   return <div className="activity-list process-list" role="tabpanel" aria-label="AI 工作过程">
-    {rows.map(row => row.kind === 'note'
-      ? <details className="process-entry" data-kind={row.note.kind} key={row.key}>
+    {rows.map((row, index) => row.kind === 'note'
+      ? <details className="process-entry" data-kind={row.note.kind} key={row.key} style={{ animationDelay: `${Math.min(index, 10) * 16}ms` }}>
         <summary>
           <span className="entry-icon" aria-hidden="true"><Icon name={noteIcons[row.note.kind]} /></span>
           <span className="entry-title">{noteLabels[row.note.kind]}</span>
           <span className="entry-preview">{row.note.text}</span>
-          <span className="entry-status entry-status-quiet">{row.note.kind === 'user' ? '已发送' : '已完成'}</span>
+          <span className={row.note.kind === 'user' ? 'entry-status entry-status-quiet' : 'entry-status entry-status-done'}>{row.note.kind === 'user' ? '已发送' : '已完成'}</span>
           <Icon name="chevron" />
         </summary>
         <p className="entry-body">{row.note.text}</p>
       </details>
-      : <details className="process-entry" data-kind="tool" data-tool-status={row.activity.status ?? 'running'} key={row.key}>
+      : <details className="process-entry" data-kind="tool" data-tool-status={row.activity.status ?? 'running'} key={row.key} style={{ animationDelay: `${Math.min(index, 10) * 16}ms` }}>
         <summary>
           <span className="entry-icon" aria-hidden="true"><Icon name={toolIcon(row.activity.toolName)} /></span>
           <span className="entry-title">{row.activity.toolName}</span>
@@ -139,10 +141,12 @@ export function TaskExpanded({ task, projection, selected, select, approval, rec
       <button className="task-tab" role="tab" aria-selected={tab === 'process'} onClick={() => setTab('process')}>过程</button>
       <button className="task-tab" role="tab" aria-selected={tab === 'steps'} onClick={() => setTab('steps')}>步骤{task.total > 0 ? ' ' + task.completed + '/' + task.total : ''}</button>
     </div>
-    {tab === 'process' ? <ProcessList task={task} /> : <>
-      <ol className="todo-list" aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span>{todo.content}</span></li>)}</ol>
-      {!todos.length && <p className="empty-state">此会话尚无 Todo，不显示百分比。</p>}
-    </>}
+    <div className="task-panel" key={tab}>
+      {tab === 'process' ? <ProcessList task={task} /> : <>
+        <ol className="todo-list" aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span>{todo.content}</span></li>)}</ol>
+        {!todos.length && <p className="empty-state">此会话尚无 Todo，不显示百分比。</p>}
+      </>}
+    </div>
     {task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}
     {(task.status === 'disconnected' || task.status === 'error') && <button className="attention-link" onClick={reconnect}><span className="control-label">检查连接并重试</span> <span aria-hidden="true">↗</span></button>}
   </section>;
