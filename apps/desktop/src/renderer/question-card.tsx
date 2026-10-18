@@ -53,20 +53,23 @@ function QuestionCard({task}:{task:Task}) {
 }
 export function RequestPanel({task,openDSH}:{task:Task;openDSH:()=>void}) {
   const [kind,setKind]=useState<'approval'|'question'>('approval');
-  const displayed=task.pending.length && task.questions.length?kind:task.questions.length?'question':'approval';
-  const approval=task.pending[0];
+  const approvalCount=Math.max(0,task.pending.length-task.questions.length);
+  const hasApproval=approvalCount>0;
+  const hasQuestion=task.questions.length>0;
+  const displayed=hasApproval&&hasQuestion?kind:hasQuestion?'question':'approval';
+  const approval=task.pending.length&&hasApproval?task.pending[0]:undefined;
   const question=task.questions[0];
   return <section className="approval-view request-panel" aria-label="待处理请求">
     <header className="approval-header">
       <div className="approval-headline">
         <span className="approval-mark" aria-hidden="true"><Icon name="shield" /></span>
         <h1>{displayed==='question' ? (question?'需要你的回答':'目前没有待回答问题') : (approval?'需要你的确认':'目前没有待处理请求')}</h1>
-        {displayed==='approval' && task.pending.length>1 && <span className="step-count">{task.pending.length} 项</span>}
+        {displayed==='approval' && approvalCount>1 && <span className="step-count">{approvalCount} 项</span>}
       </div>
       <p className="request-session" title={task.title}>{task.title}</p>
     </header>
-    {task.pending.length>0 && task.questions.length>0 && <nav className="request-kind" aria-label="请求类型">
-      <button className="text-button" aria-pressed={displayed==='approval'} onClick={()=>setKind('approval')}><span className="control-label">确认 {task.pending.length}</span></button>
+    {hasApproval && hasQuestion && <nav className="request-kind" aria-label="请求类型">
+      <button className="text-button" aria-pressed={displayed==='approval'} onClick={()=>setKind('approval')}><span className="control-label">确认 {approvalCount}</span></button>
       <button className="text-button" aria-pressed={displayed==='question'} onClick={()=>setKind('question')}><span className="control-label">回答 {task.questions.length}</span></button>
     </nav>}
     <div className="request-content" hidden={displayed!=='approval'}><ApprovalCard task={task} openDSH={openDSH}/></div>
