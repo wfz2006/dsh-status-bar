@@ -1,72 +1,122 @@
-# DSH Glass — Codex-ready 开发规格包
+# DSH Status Bar
 
-> 版本：v1.0 | 文档日期：2026-10-17 | 目标平台：Windows 11 优先 | 目标产品：DeepSeek Harness (`dsh`) 桌面悬浮伴侣
+> **把 DSH（DeepSeek Harness）的任务进度，装进一块会折射的桌面玻璃里。**
 
-**一句话定义**：以液态玻璃为视觉语言、可自由移动与伸缩的桌面窗口，让用户查看 DSH 会话任务、Todo、工具活动，并在已验证的授权通道中直接处理审批和结构化提问，无需切回 DSH 主窗口。
+像手机上的「灵动岛」：平时是个安静的小胶囊，有事时自己长大，没事时乖乖待着。你可以随手把它拖到屏幕任何角落、拉成顺手的大小。它只是看板 + 传话筒，不抢戏、不越权。
 
-原始输入是开发规格包。现有 Electron 窗口支持真实 DSH Host 和显式 Mock 演示。当前版本通过 DSH 0.2.1-rc.2 的 `/connect?interactions=answer` 建立独立 operator 连接，并适配会话增删、Todo/统计/工具活动与结果、任务终止状态、归档、审批和结构化问题；真实 Host 联调已验证 operator 认证、会话/Todo 同步、断开清理与错误 token 拒绝。审批只在收到匹配的 `approval/decided` 后确认，提问只在权威回执后确认；无法验证的参数或旧式无持久调用 ID 的问题保持只读。真实用户 Desktop 任务与模型驱动审批/提问尚未验收，不能视为实机闭环通过。运行方式见 [RUNNING.md](docs/RUNNING.md)，证据范围见 [支持矩阵](docs/integration-matrix.md) 与 [ADR 004](docs/adr/004-authenticated-host.md)。原始完整规格保留在下文及 MASTER_SPEC。
+📖 **图文介绍页**：[介绍.html](介绍.html)（可直接用浏览器打开，长图版本见 [介绍.png](介绍.png)）
 
-2026-10-17 按 [Liquid UI 重设计规范](DSH_Glass_Liquid_UI_Redesign_Spec.md) 完成四形态 UI 重构：任务胶囊、速览、紧凑详情与独立审批，移除常驻品牌/连接底栏，功能迁至菜单/设置；新增偏好持久化、自动行为与手动尺寸保护。实际验证与尚未覆盖项见 [分阶段记录](docs/redesign-audit.md)。
+---
 
-同日按 UI Improvement Pack 做一轮集中整改：去除正常任务子卡片、默认薄透、审批固定操作栏、内容先退场再收起。真实桌面截图/录屏、材质矩阵、性能记录及尚待用户评价的Gate A见 [验收包](reports/electron-redesign/decision.md)；未擅自迁移技术栈。
+## 📖 这是什么？（30 秒版）
 
-最新状态：已删除整面蓝灰染色和字体白边/阴影，加实字重。旧材质验收失败后完成 Tauri 原生对照；在用户明确授权后，新增**默认关闭的限定区域取样**，让同源透镜实际处理窗后画面。真实原生条纹输入已验证13物理像素偏折及RGB分离，隐藏/停用/实色/异常退出回归通过；见 [真实折射验收](reports/desktop-optics/README.md)。正式入口仍为 Electron。DSH 真实 Host 联调已改为验证 0.2.1-rc.2 独立 `/connect` operator（302/Cookie），同步会话/Todo并验证断开清理与错误 token 拒绝。120 项单测、类型检查、lint、桌面构建通过；真实 Host 联调见 `docs/evidence/live-dsh/`。真实用户 Desktop 任务及审批/问答仍待实机验收，见 [ADR 004](docs/adr/004-authenticated-host.md)。
+你让 DSH 干活的时候，是不是总得反复切窗口看「跑完没」？**DSH Status Bar** 就是来解决这件小事的——一块液态玻璃小悬浮窗，一直陪你在桌面上：任务跑到哪、下一步干什么、有没有事等你拍板，瞟一眼全知道。
 
-Glass 另以本地 DSH bundle（`packages/dsh-plugin`）接入插件市场：profile 以 `link:` 依赖声明并加入 `dsh.profile.bundles`，重启后市场「已安装」可见。当前插件入口只是空载占位（启动日志一行），Electron 伴侣仍由桌面单独启动；见 [packages/dsh-plugin/README.md](packages/dsh-plugin/README.md)。
+Windows 11 优先，Electron 实现，单实例常驻，不注册托盘图标、不占任务栏。
 
-## 推荐阅读顺序
+## 🫧 四副面孔：从小胶囊到审批台
 
-最新运行版本已落地用户确认的统一视觉方向：清透玻璃、黑白内容、单冷蓝强调、状态色按需，任务/审批/设置共享一套层次。见 [本轮实际样张](reports/refined-ui/README.md)。
+| | |
+|:--|:--|
+| ![胶囊](reports/intro-shots/capsule.png)<br>**胶囊 · 平时**：小鲸鱼标志 + 一行任务名 + 「3 轮 · 42 步」的小字进度。小到可以贴着屏幕边缘安静待着。 | ![速览](reports/intro-shots/peek.png)<br>**速览 · 瞟一眼**：会话转录（思考 / DSH / 你）、当前步骤，外加吞吐与缓存这些小仪表。 |
+| ![详情](reports/intro-shots/expanded.png)<br>**紧凑详情 · 看全程**：「过程 / 步骤」双标签，思考、工具调用、消息一条条排开，谁已完成谁已发送一目了然。 | ![审批](reports/intro-shots/approval.png)<br>**独立审批 · 拍板时**：「需要你的确认 2 项」，命令先预览再点「拒绝 / 允许一次」，拿不准还能跳回 DSH 原窗口处理。 |
 
-内部色块已按后续反馈改为薄透彩色玻璃，保留实色文字与功能色。真实条纹穿透按钮的对照见 [晶透控件验收](reports/crystal-controls/README.md)。
+胶囊 288×50 DIP 起，点击长大成速览，再点进入详情；有请求待处理时直接打开审批视图。扩展约 320ms，收起先 80ms 内容退场、再 260ms 原生窗口连续变化。
 
-最新截图反馈修订：去掉装饰短横条与独立蓝色角落按钮，改为内缩透明操作组和SVG详情展开行；旧Acrylic对照因系统方角已停用并迁回薄透。设计参考与原生角像素证据见 [三处细节重设计](reports/chrome-redesign/README.md)。
+## 📖 这块玻璃是「真」玻璃
 
-本轮补充：修复150% DPI拖动尺寸持续增长，改为原生只移动；窗口内亮边微增至1.5px，控件/命令使用更鲜明的局部色底，文字按功能区分蓝/紫/绿/红/琥珀，主标题与普通正文保持实色，提供可见收起/菜单。实测边界见 [移动尺寸](reports/move-size/README.md) 与 [可读性样张](reports/ui-clarity/README.md)。
+普通悬浮窗只是把背景涂白假装透明；这块玻璃是真的会「看穿」它背后的东西——只取窗后一小块画面（**不保存、不上传**），再用同一套透镜把它折射出来：窗后内容被压弯约 **13 个物理像素**，边缘还带着一丝丝彩虹（RGB 色散）。
 
-1. [AGENTS.md](AGENTS.md)：Codex 必须遵守的工程规则。
-2. [docs/00_PRODUCT_PRD.md](docs/00_PRODUCT_PRD.md)：产品边界、用户场景和验收条件。
-3. [docs/01_ARCHITECTURE.md](docs/01_ARCHITECTURE.md)：总体架构、组件边界和交互控制方案。
-4. [docs/02_PROTOCOL.md](docs/02_PROTOCOL.md)：本项目**自定义**本地协议与数据类型。
-5. [docs/03_UX_DESIGN.md](docs/03_UX_DESIGN.md)：交互状态、尺寸断点、设计系统。
-6. [docs/04_DSH_INTEGRATION.md](docs/04_DSH_INTEGRATION.md)：官方已验证接口、可行性实验与待确认项。
-7. [docs/05_SECURITY_TESTING.md](docs/05_SECURITY_TESTING.md)：威胁模型、测试矩阵和验收标准。
-8. [docs/06_EXECUTION_PLAN.md](docs/06_EXECUTION_PLAN.md)：里程碑、先后关系、停工条件。
-9. [docs/07_DECISIONS.md](docs/07_DECISIONS.md)：架构决策记录。
-10. [docs/08_STATE_MODEL.md](docs/08_STATE_MODEL.md)：会话投影、状态机、乱序处理。
-11. [docs/09_SOURCES.md](docs/09_SOURCES.md)：官方源地址、已确认事实与易变点。
-12. [TASKS.md](TASKS.md)：Codex 实施清单。
-13. [PROMPT_FOR_CODEX.md](PROMPT_FOR_CODEX.md)：新 Codex 会话的启动提示词。
+![折射对照](reports/desktop-optics/comparison.png)
 
-## 范围约束
+> 对照实验（实测存档）：左「零位移」，右「开启折射与 RGB 色散」。拿真实窗后条纹做的实测，不是效果图。
 
-- 第一版主要服务 **Windows 11 x64**；macOS/Linux 暂不承诺。
-- **不替代 DSH 本体**：不写代理模型、会话引擎、工具运行器。
-- **观察先行，审批最后接入**：DSH Desktop 的交互所有权必须先验证。
-- **不默认能接管 Desktop 审批**：`approval/request` 是 waterfall，不是广播。
-- **不做未经证实的自动审批**；任何批准都需明确的人类点击。
-- **无障碍与性能优先**：动态折射 Shader 为可选增强，不作为 MVP 阻塞项。
+这项能力默认**关闭**，要在设置里手动打开；关闭、隐藏窗口或程序退出时立刻停用。隐私条款就一句话：只看该看的那块，别的不碰。
 
-## 优先级说明
+![设置](reports/intro-shots/settings.png)
 
-`P0` 必须实现：插件加载、会话观察、Todo、窗口拖拽缩放、自适应密度、连接/故障显示、真实审批可行性验证。
+## 📖 定下的死规矩：按钮永远是你按的
 
-`P1`：真正的审批闭环（仅在 M1 通过后）、结构化提问、通知、跨屏/窗口恢复、多会话切换。
+玻璃只是传话筒，不是代理人：
 
-`P2`：动态边缘折射、主题市场、时间线高级搜索、跨平台支持。
+- 审批必须等 DSH 回了正式「已决定」才算数，**绝不抢答**；
+- 断线、过期、撤销、参数看不懂？那就只读展示，**绝不自动放行**——任何一次批准都来自你明确的一次点击；
+- 连不上就明说连不上，不装作一切正常。
 
-## 启动方式（给 Codex）
+## 📊 数字小卡片
 
-在空项目目录放置全部文件，然后在 Codex 中打开此目录，粘贴 [PROMPT_FOR_CODEX.md](PROMPT_FOR_CODEX.md) 中的首轮指令。**先执行 M0（环境与 DSH 接口核验），不要第一步直接写审批桥。**
+| 132 | 4 | 13 px | 0 |
+|:--:|:--:|:--:|:--:|
+| 单测全绿（另有类型检查、lint、桌面构建） | 副面孔：胶囊 / 速览 / 详情 / 审批 | 真实折射偏折（实测物理像素） | 次自动放行（永远是 0） |
 
-建议初始技术栈：pnpm workspace、TypeScript strict、Electron、electron-vite、React、Tailwind、Zustand、Zod、Vitest、Playwright（桌面 E2E 实测视环境而定）。具体版本锁定到实际兼容版本后写入锁文件，避免套用未经验证的模板版本。
+## 🚀 快速开始
 
-## 验收的最终定义
+要求：Windows 11 x64、Node.js、pnpm（`packageManager: pnpm@12.4.1`）。
 
-1. DSH 主窗口不在前台时，Glass 仍能展示实际任务状态。
-2. Todo 更新及时且恢复连接后不会回退到旧状态。
-3. 悬浮窗按空间重排信息，安全操作始终可访问。
-4. 已验证授权模式下，允许/拒绝可反馈真实的 DSH 决策；失联、过期、撤销请求绝不自动放行。
-5. Windows DPI、显示器切换、休眠唤醒、关闭恢复、重复启动下稳定运行。
+```powershell
+pnpm install
+pnpm build
+pnpm start
+```
 
-见 [验收测试](docs/05_SECURITY_TESTING.md) 与 [执行路线](docs/06_EXECUTION_PLAN.md)。
+也可以直接双击 `启动预览.cmd`。开发热更新用 `pnpm dev`。默认是 **Mock 演示**；连接真实 DSH 见下。
+
+### 连接真实 DSH（实验）
+
+设置 → 官方认证地址 → 粘贴 DSH 启动器输出的认证链接并连接。凭据只留在 Main 内存，断线即失效、不落盘。
+
+```powershell
+pnpm test:live   # 隔离 DSH_HOME 下的真实 Host 联调（需要本机已安装 DSH）
+```
+
+真实官方 Desktop 的当前任务与真实审批仍未验收，状态以 [支持矩阵](docs/integration-matrix.md) 与 [ADR 004](docs/adr/004-authenticated-host.md) 为准。
+
+## 🛠️ 技术积木
+
+| 组件 | 说明 |
+|:--|:--|
+| Electron 44 + electron-vite 6 | 悬浮窗本体（`apps/desktop`） |
+| React 19 + Zustand 5 | 界面与状态管理 |
+| TypeScript（strict） | 全套类型约束 |
+| 自研工作包 | `protocol` / `bridge` / `adapters/dsh` / `adapters/mock` / `dsh-plugin` |
+| Vitest + Playwright | 单元测试 + 桌面实测脚本 |
+| ws | 本地 WebSocket 通信 |
+
+## 📁 项目结构
+
+```
+apps/desktop          Electron 悬浮窗（main / renderer / shared + 光学取样助手）
+packages/protocol     自研本地协议与数据类型
+packages/bridge       宿主桥接
+packages/adapters     dsh（真实 Host）/ mock（演示数据源）
+packages/dsh-plugin   DSH 插件市场入口（占位）
+tests                 单元测试
+scripts               构建、验收、截图与联调脚本
+docs                  产品 / 架构 / 协议 / 安全 / 决策文档
+reports               每轮真实验收记录与截图（23 个目录）
+experiments           Tauri 原生材质对照等实验
+```
+
+## 📚 文档索引
+
+- [运行与验收](docs/RUNNING.md)：怎么跑、怎么验、当前材质与偏好
+- [产品边界与验收条件](docs/00_PRODUCT_PRD.md)
+- [总体架构](docs/01_ARCHITECTURE.md) ｜ [自定义本地协议](docs/02_PROTOCOL.md) ｜ [状态模型](docs/08_STATE_MODEL.md)
+- [DSH 集成与已验证接口](docs/04_DSH_INTEGRATION.md) ｜ [安全测试](docs/05_SECURITY_TESTING.md)
+- [决策记录](docs/07_DECISIONS.md) ｜ [执行计划](docs/06_EXECUTION_PLAN.md)
+- [规格原文](docs/README_SPEC.md) ｜ [实现清单](TASKS.md) ｜ [开发规格](DSH_GLASS_MASTER_SPEC.md) ｜ [UI 重设计规范](DSH_Glass_Liquid_UI_Redesign_Spec.md)
+- 真实截图与验收：`reports/`（材质矩阵、四形态、录屏、折射实测、性能、动效等）
+
+## 📌 当前状态
+
+- 四形态 UI（任务胶囊 / 速览 / 紧凑详情 / 独立审批）已落地，偏好本地持久化，手动尺寸不被新请求覆盖。
+- 150% DPI 下拖动「窗口自己越长越大」的 bug 已修复：移动只挪位置，不再改动尺寸。
+- 真实折射与 RGB 色散已用真实窗后条纹实测（13 px 偏折），隐藏 / 停用 / 实色 / 异常退出均有回归；正式入口仍为 Electron。
+- 审批只在收到匹配的 `approval/decided` 后确认；提问只在权威回执后确认；无法验证的参数保持只读。
+- 仍有未验区域：真实用户 Desktop 任务、模型驱动的审批/提问尚未完成实机闭环，见 [ADR 004](docs/adr/004-authenticated-host.md)。
+
+## 说明
+
+- 主要服务 Windows 11 x64；macOS / Linux 暂不承诺。
+- 不替代 DSH 本体：不写代理模型、会话引擎、工具运行器。
+- 本项目未附加开源许可证文件，如需对外分发请先补充 License。
