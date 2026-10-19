@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Assembles the self-contained release tarball for `dsh-glass-plugin`.
+// Assembles the self-contained release tarball for `dsh-status-bar`.
 //
 // The plugin has to work when the market installs it into an arbitrary profile:
 // nothing is built or downloaded at install time. So the tarball carries
@@ -12,9 +12,9 @@
 //
 //   node scripts/pack-plugin-release.mjs [--no-build] [--out <dir>] [--stage <dir>]
 //
-// The resulting file is renamed to `dsh-glass-plugin.tgz` so a release asset can
-// keep a version-free name (releases/latest/download/dsh-glass-plugin.tgz).
-// `--stage` assembles somewhere other than `packages/dsh-plugin`, which is needed
+// The resulting file is renamed to `dsh-status-bar.tgz` so a release asset can
+// keep a version-free name (releases/latest/download/dsh-status-bar.tgz).
+// `--stage` assembles somewhere other than `packages/dsh-status-bar`, which is needed
 // while a DSH profile runs the checkout install (that keeps `app/` and
 // `electron/dist/` locked on Windows).
 import { spawnSync } from 'node:child_process';
@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const desktopDir = join(repoRoot, 'apps', 'desktop');
-const pluginDir = join(repoRoot, 'packages', 'dsh-plugin');
+const pluginDir = join(repoRoot, 'packages', 'dsh-status-bar');
 const args = process.argv.slice(2);
 const noBuild = args.includes('--no-build');
 const outIndex = args.indexOf('--out');
@@ -117,8 +117,8 @@ cpSync(distSource, electronTarget, { recursive: true });
 // 4. npm pack, then give the artifact a version-free release name.
 mkdirSync(outDir, { recursive: true });
 run('npm', ['pack', '--pack-destination', outDir], stageDir);
-const packed = join(outDir, `dsh-glass-plugin-${version}.tgz`);
-const releaseName = join(outDir, 'dsh-glass-plugin.tgz');
+const packed = join(outDir, `${JSON.parse(readFileSync(join(stageDir, 'package.json'), 'utf8')).name}-${version}.tgz`);
+const releaseName = join(outDir, 'dsh-status-bar.tgz');
 if (existsSync(packed)) {
   rmSync(releaseName, { force: true });
   renameSync(packed, releaseName);

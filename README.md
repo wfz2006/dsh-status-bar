@@ -67,13 +67,13 @@ pnpm start
 
 ```powershell
 # npm 包只有 870 kB，首次启动自取 155 MB 运行时（缓存到版本目录，之后不再下载）
-dsh plugin --profile web add dsh-glass-plugin
+dsh plugin --profile web add dsh-status-bar-plugin
 
 # 或者自包含 tarball：155 MB 一次装完，运行期不再联网
-dsh plugin --profile web add https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-glass-plugin.tgz
+dsh plugin --profile web add https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-status-bar.tgz
 ```
 
-装好后重启 DSH，玻璃会跟着启动；不想要它自动开，就在 profile 补丁里写 `- id: dsh-glass-plugin` + `config: { autoLaunch: false }`。细节见 [packages/dsh-plugin/README.md](packages/dsh-plugin/README.md)。
+装好后重启 DSH，玻璃会跟着启动；不想要它自动开，就在 profile 补丁里写 `- id: dsh-status-bar-plugin` + `config: { autoLaunch: false }`。细节见 [packages/dsh-status-bar/README.md](packages/dsh-status-bar/README.md)。
 
 ### 连接真实 DSH（实验）
 
@@ -92,7 +92,7 @@ pnpm test:live   # 隔离 DSH_HOME 下的真实 Host 联调（需要本机已安
 | Electron 44 + electron-vite 6 | 悬浮窗本体（`apps/desktop`） |
 | React 19 + Zustand 5 | 界面与状态管理 |
 | TypeScript（strict） | 全套类型约束 |
-| 自研工作包 | `protocol` / `bridge` / `adapters/dsh` / `adapters/mock` / `dsh-plugin` |
+| 自研工作包 | `protocol` / `bridge` / `adapters/dsh` / `adapters/mock` / `dsh-status-bar` |
 | Vitest + Playwright | 单元测试 + 桌面实测脚本 |
 | ws | 本地 WebSocket 通信 |
 
@@ -103,7 +103,7 @@ apps/desktop          Electron 悬浮窗（main / renderer / shared + 光学取�
 packages/protocol     自研本地协议与数据类型
 packages/bridge       宿主桥接
 packages/adapters     dsh（真实 Host）/ mock（演示数据源）
-packages/dsh-plugin   DSH 插件（bundle：启动桌面端并把认证链接交过去）
+packages/dsh-status-bar  DSH 插件（bundle：启动桌面端并把认证链接交过去）
 tests                 单元测试
 scripts               构建、验收、截图与联调脚本
 docs                  产品 / 架构 / 协议 / 安全 / 决策文档

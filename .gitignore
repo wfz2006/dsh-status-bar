@@ -11,6 +11,6 @@ docs/evidence/upstream/
 experiments/tauri-glass/target/
 experiments/tauri-glass/gen/
 apps/desktop/native/*.exe
-packages/dsh-plugin/app/
-packages/dsh-plugin/electron/
-packages/dsh-plugin/*.tgz
+packages/dsh-status-bar/app/
+packages/dsh-status-bar/electron/
+packages/dsh-status-bar/*.tgz

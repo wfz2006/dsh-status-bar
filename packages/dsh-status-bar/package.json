@@ -1,6 +1,6 @@
 {
-  "name": "dsh-glass-plugin",
-  "version": "0.2.2",
+  "name": "dsh-status-bar-plugin",
+  "version": "0.2.3",
   "description": "Floating glass status bar for DeepSeek Harness: a frameless always-on-top window that shows session progress, pending approvals and questions.",
   "license": "MIT",
   "author": "wfz2006",
@@ -12,9 +12,12 @@
   "keywords": [
     "dsh",
     "dsh-plugin",
+    "dsh-status-bar",
     "deepseek-harness",
     "glass",
+    "glassmorphism",
     "status-bar",
+    "approval",
     "desktop",
     "electron",
     "windows"
@@ -22,7 +25,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wfz2006/dsh-status-bar.git",
-    "directory": "packages/dsh-plugin"
+    "directory": "packages/dsh-status-bar"
   },
   "homepage": "https://github.com/wfz2006/dsh-status-bar",
   "files": [

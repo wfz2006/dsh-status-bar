@@ -1,12 +1,12 @@
-# dsh-glass-plugin bundle patch
+# dsh-status-bar-plugin bundle patch
 #
 # This is the `dsh.bundle.patch` layer of the local bundle package. When the
 # package is declared in a profile's dependencies, adding it to
 # `dsh.profile.bundles` mounts the row below at boot. The row resolves
-# `dsh-glass-plugin` from the profile's node_modules, where the `link:`
+# `dsh-status-bar-plugin` from the profile's node_modules, where the `link:`
 # dependency points back at this directory.
 - insert:
-    - id: dsh-glass-plugin
-      name: 'dsh-glass-plugin'
+    - id: dsh-status-bar-plugin
+      name: 'dsh-status-bar-plugin'
       config:
         autoLaunch: true

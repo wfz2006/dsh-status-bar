@@ -25,14 +25,25 @@ import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const name = 'dsh-glass-plugin';
+export const name = 'dsh-status-bar-plugin';
 export const inject = ['connection', 'webServer'];
 
 /** Package root: `lib/index.js` -> the directory that holds `package.json`. */
 const pluginRoot = fileURLToPath(new URL('../', import.meta.url));
 
 /** Where the light npm package writes the runtime it downloads on first run. */
-const DEFAULT_RUNTIME_URL = 'https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-glass-plugin.tgz';
+const DEFAULT_RUNTIME_URL = 'https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-status-bar.tgz';
+
+/** The download URL the published manifest advertises, if any. */
+function manifestRuntimeUrl() {
+  try {
+    const manifest = JSON.parse(readFileSync(join(pluginRoot, 'package.json'), 'utf8'));
+    const url = manifest?.dsh?.statusBar?.runtime;
+    return typeof url === 'string' && url.length > 0 ? url : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /** Electron's binary sits at these relative paths inside a `dist/` directory. */
 function electronExecutables() {
@@ -72,6 +83,7 @@ function packageVersion() {
 function resolveAppDir(config) {
   return firstFile([
     config.appDir,
+    process.env.DSH_STATUS_BAR_APP,
     process.env.DSH_GLASS_APP,
     join(pluginRoot, 'app'),
     join(pluginRoot, '..', '..', 'apps', 'desktop'),
@@ -79,7 +91,7 @@ function resolveAppDir(config) {
 }
 
 function resolveElectron(config, appDir) {
-  const explicit = firstFile([config.electronBinary, process.env.DSH_GLASS_ELECTRON].filter(value => typeof value === 'string'));
+  const explicit = firstFile([config.electronBinary, process.env.DSH_STATUS_BAR_ELECTRON, process.env.DSH_GLASS_ELECTRON].filter(value => typeof value === 'string'));
   if (explicit) return explicit;
 
   // Release tarball: the runtime travels with the package.
@@ -111,10 +123,11 @@ function resolveInstalled(config) {
 
 function runtimeRoot(config) {
   const base = config.runtimeDir
+    ?? process.env.DSH_STATUS_BAR_RUNTIME
     ?? process.env.DSH_GLASS_RUNTIME
     ?? (process.platform === 'win32'
-      ? join(process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local'), 'dsh-glass-plugin')
-      : join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'dsh-glass-plugin'));
+      ? join(process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local'), 'dsh-status-bar')
+      : join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'dsh-status-bar'));
   return join(base, `runtime-${packageVersion()}`);
 }
 
@@ -152,7 +165,7 @@ function download(url, destination, { redirects = 5 } = {}) {
           const percent = Math.floor((received / total) * 100);
           if (percent >= reported + 10) {
             reported = percent - (percent % 10);
-            console.info(`[dsh-glass-plugin] downloading the Glass runtime: ${reported}% of ${Math.round(total / (1024 * 1024))} MB`);
+            console.info(`[dsh-status-bar] downloading the Glass runtime: ${reported}% of ${Math.round(total / (1024 * 1024))} MB`);
           }
         }
       });
@@ -184,19 +197,19 @@ function extract(tarball, directory) {
  * returns the same `{ appDir, electron }` shape as a bundled install.
  */
 async function fetchRuntime(config) {
-  const url = config.downloadUrl ?? process.env.DSH_GLASS_RUNTIME_URL ?? DEFAULT_RUNTIME_URL;
+  const url = config.downloadUrl ?? process.env.DSH_STATUS_BAR_RUNTIME_URL ?? process.env.DSH_GLASS_RUNTIME_URL ?? manifestRuntimeUrl() ?? DEFAULT_RUNTIME_URL;
   const root = runtimeRoot(config);
   const cached = { appDir: join(root, 'app'), electron: distBinary(join(root, 'electron', 'dist')) };
   if (hasApp(cached.appDir) && cached.electron) return cached;
 
   const staging = `${root}.staging`;
-  const tarball = join(tmpdir(), `dsh-glass-plugin-${process.pid}-${Date.now()}.tgz`);
+  const tarball = join(tmpdir(), `dsh-status-bar-${process.pid}-${Date.now()}.tgz`);
   rmSync(staging, { recursive: true, force: true });
   mkdirSync(staging, { recursive: true });
-  console.info(`[dsh-glass-plugin] first run: fetching the ~155 MB Glass runtime from ${url}`);
+  console.info(`[dsh-status-bar] first run: fetching the ~155 MB Glass runtime from ${url}`);
   try {
     const bytes = await download(url, tarball);
-    console.info(`[dsh-glass-plugin] unpacking the Glass runtime (${Math.round(bytes / (1024 * 1024))} MB)`);
+    console.info(`[dsh-status-bar] unpacking the Glass runtime (${Math.round(bytes / (1024 * 1024))} MB)`);
     extract(tarball, staging);
     const unpacked = join(staging, 'package');
     if (!hasApp(join(unpacked, 'app')) || !distBinary(join(unpacked, 'electron', 'dist'))) {
@@ -257,11 +270,11 @@ export function apply(ctx, config = {}) {
     preparing = true;
     fetchRuntime(config).then((next) => {
       preparing = false;
-      console.info(`[dsh-glass-plugin] Glass runtime ready at ${next.appDir}`);
+      console.info(`[dsh-status-bar] Glass runtime ready at ${next.appDir}`);
       useTarget(next);
     }, (error) => {
       preparing = false;
-      fatal = `[dsh-glass-plugin] could not prepare the Glass runtime: ${describeError(error)}`;
+      fatal = `[dsh-status-bar] could not prepare the Glass runtime: ${describeError(error)}`;
       console.warn(fatal);
       stopClock();
     });
@@ -278,7 +291,7 @@ export function apply(ctx, config = {}) {
     attempts += 1;
     if (attempts > 600) {
       stopClock();
-      console.warn('[dsh-glass-plugin] no web server origin after 150s; the Glass companion was not started');
+      console.warn('[dsh-status-bar] no web server origin after 150s; the Glass companion was not started');
       return;
     }
     let origin;
@@ -300,7 +313,7 @@ export function apply(ctx, config = {}) {
     spawned.unref();
     bundleStamp = bundleMtimeOf(target.appDir);
     stopClock();
-    console.info('[dsh-glass-plugin] Glass desktop companion launched (authenticated link redacted)');
+    console.info('[dsh-status-bar] Glass desktop companion launched (authenticated link redacted)');
   };
 
   if (typeof ctx.effect === 'function') {
@@ -328,7 +341,7 @@ export function apply(ctx, config = {}) {
       const stamp = bundleMtimeOf(target.appDir);
       if (!child || !stamp || bundleStamp === 0 || stamp === bundleStamp) return;
       bundleStamp = stamp;
-      console.info('[dsh-glass-plugin] desktop bundle changed; relaunching the Glass companion');
+      console.info('[dsh-status-bar] desktop bundle changed; relaunching the Glass companion');
       killChild(child);
       child = undefined;
       startClock();
