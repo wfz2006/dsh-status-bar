@@ -14,7 +14,11 @@ export function DesktopBackdrop({paused,autoTheme,appearance}:{paused:boolean;au
     const surface=canvas.current!;
     const context=surface.getContext('2d');
     const root=surface.closest<HTMLElement>('main');let tone:BackdropTone|undefined;
-    const clear=()=>{last=null;placement='';tone=undefined;if(root)delete root.dataset.backdropTone;context?.clearRect(0,0,surface.width,surface.height);surface.style.visibility='hidden';delete surface.dataset.frame;delete surface.dataset.coverage;};
+    const clear=()=>{last=null;placement='';tone=undefined;if(root)delete root.dataset.backdropTone;
+      // clearRect keeps the bitmap/texture allocated. A stopped or hidden
+      // capture has no pixels to display; release that backing store too.
+      if(surface.width!==0 || surface.height!==0){surface.width=0;surface.height=0;}
+      surface.style.visibility='hidden';delete surface.dataset.frame;delete surface.dataset.coverage;};
     function position(bounds:DesktopOpticsBounds) {
       if(!last){surface.style.visibility='hidden';return;}
       const expanding=root?.dataset.morph==='expanding';

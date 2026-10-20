@@ -82,7 +82,11 @@
       }
     }
     ctx.putImageData(im, 0, 0);
-    return cv.toDataURL("image/png");
+    var href = cv.toDataURL("image/png");
+    // The cache owns the encoded map, not a live Canvas backing store for
+    // every intermediate morph size. Do not wait for GC to release those.
+    cv.width = cv.height = 0;
+    return href;
   }
 
   /* ---------------- SVG 滤镜 ---------------- */
@@ -292,17 +296,29 @@
       var ck = (lite ? "L," : "N,") + geo;
       var previousId = el.__lgId;
       if (partial && previousId) delete used[previousId];
-      var filterNode = previousId && el.__lgKey === ck ? document.getElementById(previousId) : null;
-      if (filterNode) {
+      var filterNode = previousId ? document.getElementById(previousId) : null;
+      if (filterNode && el.__lgKey === ck) {
         id = previousId;
       } else {
-        id = "lgf" + (++uid);
+        // Keep a stable filter graph across native morph sizes. Replacing its
+        // URL/id each tick leaves retired SVG/GPU resources awaiting eviction.
+        var reuse = filterNode && filterNode.__lgLite === lite;
+        id = reuse ? previousId : "lgf" + (++uid);
         owner[id] = el;
         /* 色散仅影响滤镜链，不影响贴图；按实际生成参数复用像素数据。 */
         var mapGeo = [W, H, radius, band, strength].join(",");
-        var nextFilter = lite
-          ? buildFilterLite(id, getMap(mapGeo, W, H, radius, band, strength), strength)
-          : buildFilter(id, getMap(mapGeo, W, H, radius, band, strength), strength, disp);
+        var href = getMap(mapGeo, W, H, radius, band, strength);
+        var nextFilter = reuse ? filterNode : lite
+          ? buildFilterLite(id, href, strength)
+          : buildFilter(id, href, strength, disp);
+        nextFilter.__lgLite = lite;
+        if (reuse) {
+          nextFilter.firstChild.setAttribute("href", href);
+          nextFilter.firstChild.setAttributeNS(XL, "xlink:href", href);
+          var maps = nextFilter.querySelectorAll("feDisplacementMap");
+          var factors = lite ? [1] : [1, 1 - disp * 0.05, 1 - disp * 0.10];
+          for (var j = 0; j < maps.length; j++) maps[j].setAttribute("scale", String(Math.max(1, strength * 2) * factors[j]));
+        }
         /* feImage 的百分比按 SVG 视口解析，不是卡片边界。
            必须与 dispMap 使用同一组局部像素尺寸，否则移动时中部也会
            读到边缘位移或透明贴图，产生横带及未接触元素的错误采样。
@@ -311,7 +327,7 @@
         var mapImage = nextFilter.firstChild;
         mapImage.setAttribute("x", "0"); mapImage.setAttribute("y", "0");
         mapImage.setAttribute("width", String(W)); mapImage.setAttribute("height", String(H));
-        defs.appendChild(nextFilter);
+        if (!reuse) defs.appendChild(nextFilter);
         el.__lgId = id;
         el.__lgKey = ck;
       }
@@ -443,7 +459,9 @@
         }
       }
       ctx.putImageData(im, 0, 0);
-      return cv.toDataURL("image/png");
+      var href = cv.toDataURL("image/png");
+      cv.width = cv.height = 0;
+      return href;
     },
     /* 用固定 id 挂一个滤镜（不参与自动回收）。
        同一 id 重复调用时只更新贴图，不重建整个滤镜链。 */

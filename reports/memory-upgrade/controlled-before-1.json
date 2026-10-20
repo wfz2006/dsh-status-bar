@@ -1,0 +1,2155 @@
+{
+  "label": "controlled-before-1",
+  "scenarios": [
+    {
+      "name": "capsule-no-capture",
+      "samples": [
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 39628800,
+              "workingSet": 121139200,
+              "privateBytes": 49885184,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 186503168,
+              "workingSet": 275677184,
+              "privateBytes": 216899584,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7880704,
+              "workingSet": 57528320,
+              "privateBytes": 12689408,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 63029248,
+              "workingSet": 141058048,
+              "privateBytes": 76394496,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 19492864,
+              "workingSet": 106246144,
+              "privateBytes": 29380608,
+              "helper": false,
+              "type": "Tab"
+            }
+          ],
+          "totalPrivateWorkingSet": 316534784,
+          "totalPrivateBytes": 385249280,
+          "node": {
+            "rss": 118292480,
+            "heapTotal": 14348288,
+            "heapUsed": 11095016,
+            "external": 4399086,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 5445620,
+          "paints": 0,
+          "width": 400,
+          "height": 300,
+          "canvas": [
+            300,
+            150
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 39743488,
+              "workingSet": 121290752,
+              "privateBytes": 49930240,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 185417728,
+              "workingSet": 274509824,
+              "privateBytes": 215625728,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7880704,
+              "workingSet": 57540608,
+              "privateBytes": 12689408,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 63660032,
+              "workingSet": 141713408,
+              "privateBytes": 77103104,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 19492864,
+              "workingSet": 106246144,
+              "privateBytes": 29380608,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6172672,
+              "workingSet": 97705984,
+              "privateBytes": 10797056,
+              "helper": false,
+              "type": "Utility"
+            }
+          ],
+          "totalPrivateWorkingSet": 322367488,
+          "totalPrivateBytes": 395526144,
+          "node": {
+            "rss": 121217024,
+            "heapTotal": 11726848,
+            "heapUsed": 9753628,
+            "external": 4395636,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 5586572,
+          "paints": 0,
+          "width": 400,
+          "height": 300,
+          "canvas": [
+            300,
+            150
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 39743488,
+              "workingSet": 121290752,
+              "privateBytes": 49930240,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 185155584,
+              "workingSet": 274247680,
+              "privateBytes": 215363584,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7884800,
+              "workingSet": 57552896,
+              "privateBytes": 12693504,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 63766528,
+              "workingSet": 141832192,
+              "privateBytes": 77180928,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 19492864,
+              "workingSet": 106246144,
+              "privateBytes": 29380608,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6172672,
+              "workingSet": 97705984,
+              "privateBytes": 10797056,
+              "helper": false,
+              "type": "Utility"
+            }
+          ],
+          "totalPrivateWorkingSet": 322215936,
+          "totalPrivateBytes": 395345920,
+          "node": {
+            "rss": 121290752,
+            "heapTotal": 11726848,
+            "heapUsed": 9834988,
+            "external": 4396180,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 5648512,
+          "paints": 0,
+          "width": 400,
+          "height": 300,
+          "canvas": [
+            300,
+            150
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 36810752,
+              "workingSet": 118374400,
+              "privateBytes": 46534656,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 173228032,
+              "workingSet": 262320128,
+              "privateBytes": 203423744,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7884800,
+              "workingSet": 57552896,
+              "privateBytes": 12693504,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 63778816,
+              "workingSet": 141848576,
+              "privateBytes": 77189120,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 19492864,
+              "workingSet": 106246144,
+              "privateBytes": 29380608,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6172672,
+              "workingSet": 97705984,
+              "privateBytes": 10797056,
+              "helper": false,
+              "type": "Utility"
+            }
+          ],
+          "totalPrivateWorkingSet": 307367936,
+          "totalPrivateBytes": 380018688,
+          "node": {
+            "rss": 121290752,
+            "heapTotal": 11726848,
+            "heapUsed": 9918396,
+            "external": 4396726,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 5687012,
+          "paints": 0,
+          "width": 400,
+          "height": 300,
+          "canvas": [
+            300,
+            150
+          ],
+          "filters": 3
+        }
+      ]
+    },
+    {
+      "name": "capsule-native",
+      "samples": [
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 99934208,
+              "workingSet": 182841344,
+              "privateBytes": 110759936,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 185987072,
+              "workingSet": 276529152,
+              "privateBytes": 216510464,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7884800,
+              "workingSet": 57552896,
+              "privateBytes": 12693504,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 90136576,
+              "workingSet": 170123264,
+              "privateBytes": 103727104,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 19705856,
+              "workingSet": 106459136,
+              "privateBytes": 29523968,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6172672,
+              "workingSet": 97710080,
+              "privateBytes": 10797056,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 8437760,
+              "workingSet": 27385856,
+              "privateBytes": 22093824,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 418258944,
+          "totalPrivateBytes": 506105856,
+          "node": {
+            "rss": 136314880,
+            "heapTotal": 9629696,
+            "heapUsed": 8041168,
+            "external": 21232896,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4368708,
+          "paints": 129,
+          "width": 400,
+          "height": 300,
+          "canvas": [
+            672,
+            522
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 62058496,
+              "workingSet": 145010688,
+              "privateBytes": 72482816,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 185638912,
+              "workingSet": 276185088,
+              "privateBytes": 216133632,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7884800,
+              "workingSet": 57552896,
+              "privateBytes": 12693504,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 98193408,
+              "workingSet": 178196480,
+              "privateBytes": 111820800,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 19705856,
+              "workingSet": 106459136,
+              "privateBytes": 29523968,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6172672,
+              "workingSet": 97710080,
+              "privateBytes": 10797056,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 11247616,
+              "workingSet": 30195712,
+              "privateBytes": 24903680,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 390901760,
+          "totalPrivateBytes": 478355456,
+          "node": {
+            "rss": 136491008,
+            "heapTotal": 9891840,
+            "heapUsed": 8052776,
+            "external": 21232896,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4347404,
+          "paints": 178,
+          "width": 400,
+          "height": 300,
+          "canvas": [
+            672,
+            522
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 47095808,
+              "workingSet": 130052096,
+              "privateBytes": 57495552,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 185593856,
+              "workingSet": 276144128,
+              "privateBytes": 216117248,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7884800,
+              "workingSet": 57552896,
+              "privateBytes": 12693504,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 75882496,
+              "workingSet": 155897856,
+              "privateBytes": 89616384,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 19705856,
+              "workingSet": 106459136,
+              "privateBytes": 29523968,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6172672,
+              "workingSet": 97710080,
+              "privateBytes": 10797056,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 11251712,
+              "workingSet": 30199808,
+              "privateBytes": 24903680,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 353587200,
+          "totalPrivateBytes": 441147392,
+          "node": {
+            "rss": 117424128,
+            "heapTotal": 9629696,
+            "heapUsed": 8019672,
+            "external": 71746272,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4362880,
+          "paints": 227,
+          "width": 400,
+          "height": 300,
+          "canvas": [
+            672,
+            522
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 51478528,
+              "workingSet": 134434816,
+              "privateBytes": 61730816,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 185708544,
+              "workingSet": 276275200,
+              "privateBytes": 216223744,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7852032,
+              "workingSet": 57520128,
+              "privateBytes": 12627968,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 106983424,
+              "workingSet": 187015168,
+              "privateBytes": 120881152,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 20635648,
+              "workingSet": 108036096,
+              "privateBytes": 30035968,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6172672,
+              "workingSet": 97710080,
+              "privateBytes": 10797056,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 9711616,
+              "workingSet": 28659712,
+              "privateBytes": 23363584,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 388542464,
+          "totalPrivateBytes": 475660288,
+          "node": {
+            "rss": 130113536,
+            "heapTotal": 9629696,
+            "heapUsed": 8064988,
+            "external": 17023448,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4348352,
+          "paints": 277,
+          "width": 400,
+          "height": 300,
+          "canvas": [
+            672,
+            522
+          ],
+          "filters": 3
+        }
+      ]
+    },
+    {
+      "name": "expanded-native",
+      "samples": [
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 76693504,
+              "workingSet": 162291712,
+              "privateBytes": 86818816,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 209719296,
+              "workingSet": 302968832,
+              "privateBytes": 240607232,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7852032,
+              "workingSet": 57520128,
+              "privateBytes": 12627968,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 97644544,
+              "workingSet": 181907456,
+              "privateBytes": 111652864,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 20680704,
+              "workingSet": 108154880,
+              "privateBytes": 30089216,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6160384,
+              "workingSet": 97742848,
+              "privateBytes": 10768384,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 9297920,
+              "workingSet": 28803072,
+              "privateBytes": 22925312,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 428048384,
+          "totalPrivateBytes": 515489792,
+          "node": {
+            "rss": 138694656,
+            "heapTotal": 9629696,
+            "heapUsed": 8083416,
+            "external": 22490840,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4474476,
+          "paints": 438,
+          "width": 400,
+          "height": 360,
+          "canvas": [
+            672,
+            612
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 68632576,
+              "workingSet": 154247168,
+              "privateBytes": 78872576,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 206356480,
+              "workingSet": 299610112,
+              "privateBytes": 237240320,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7852032,
+              "workingSet": 57520128,
+              "privateBytes": 12627968,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 95768576,
+              "workingSet": 180461568,
+              "privateBytes": 109694976,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21426176,
+              "workingSet": 108904448,
+              "privateBytes": 30896128,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6160384,
+              "workingSet": 97742848,
+              "privateBytes": 10768384,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 7782400,
+              "workingSet": 27291648,
+              "privateBytes": 21409792,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 413978624,
+          "totalPrivateBytes": 501510144,
+          "node": {
+            "rss": 130428928,
+            "heapTotal": 9629696,
+            "heapUsed": 8080224,
+            "external": 14265520,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4481272,
+          "paints": 491,
+          "width": 400,
+          "height": 360,
+          "canvas": [
+            672,
+            612
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 53485568,
+              "workingSet": 139124736,
+              "privateBytes": 63561728,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 207937536,
+              "workingSet": 301195264,
+              "privateBytes": 239034368,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7852032,
+              "workingSet": 57520128,
+              "privateBytes": 12627968,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 100532224,
+              "workingSet": 185245696,
+              "privateBytes": 114085888,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21426176,
+              "workingSet": 108904448,
+              "privateBytes": 30896128,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6168576,
+              "workingSet": 97742848,
+              "privateBytes": 10792960,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 7786496,
+              "workingSet": 27308032,
+              "privateBytes": 21409792,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 405188608,
+          "totalPrivateBytes": 492408832,
+          "node": {
+            "rss": 139124736,
+            "heapTotal": 9629696,
+            "heapUsed": 8153584,
+            "external": 22490840,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4533252,
+          "paints": 547,
+          "width": 400,
+          "height": 360,
+          "canvas": [
+            672,
+            612
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 58904576,
+              "workingSet": 144547840,
+              "privateBytes": 68993024,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 206725120,
+              "workingSet": 299991040,
+              "privateBytes": 237600768,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7852032,
+              "workingSet": 57520128,
+              "privateBytes": 12627968,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 109809664,
+              "workingSet": 194531328,
+              "privateBytes": 124137472,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21426176,
+              "workingSet": 108904448,
+              "privateBytes": 30896128,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6168576,
+              "workingSet": 97742848,
+              "privateBytes": 10792960,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 9285632,
+              "workingSet": 28815360,
+              "privateBytes": 22896640,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 420171776,
+          "totalPrivateBytes": 507944960,
+          "node": {
+            "rss": 129568768,
+            "heapTotal": 9629696,
+            "heapUsed": 8128316,
+            "external": 12954800,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4587580,
+          "paints": 601,
+          "width": 400,
+          "height": 360,
+          "canvas": [
+            672,
+            612
+          ],
+          "filters": 3
+        }
+      ]
+    },
+    {
+      "name": "expanded-changing-background",
+      "samples": [
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 44822528,
+              "workingSet": 131022848,
+              "privateBytes": 54939648,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 207937536,
+              "workingSet": 301223936,
+              "privateBytes": 238829568,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7852032,
+              "workingSet": 57520128,
+              "privateBytes": 12627968,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 78544896,
+              "workingSet": 163282944,
+              "privateBytes": 91570176,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 22335488,
+              "workingSet": 109850624,
+              "privateBytes": 32333824,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6168576,
+              "workingSet": 97742848,
+              "privateBytes": 10792960,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 7770112,
+              "workingSet": 27299840,
+              "privateBytes": 21381120,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 375431168,
+          "totalPrivateBytes": 462475264,
+          "node": {
+            "rss": 144080896,
+            "heapTotal": 9891840,
+            "heapUsed": 8157396,
+            "external": 27426048,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4537884,
+          "paints": 758,
+          "width": 400,
+          "height": 360,
+          "canvas": [
+            672,
+            612
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 59691008,
+              "workingSet": 145891328,
+              "privateBytes": 69853184,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 209633280,
+              "workingSet": 302923776,
+              "privateBytes": 240594944,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7852032,
+              "workingSet": 57520128,
+              "privateBytes": 12627968,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 97685504,
+              "workingSet": 182439936,
+              "privateBytes": 110641152,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 22360064,
+              "workingSet": 109875200,
+              "privateBytes": 32342016,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6168576,
+              "workingSet": 97742848,
+              "privateBytes": 10792960,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 12578816,
+              "workingSet": 32108544,
+              "privateBytes": 26198016,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 415969280,
+          "totalPrivateBytes": 503050240,
+          "node": {
+            "rss": 140922880,
+            "heapTotal": 9891840,
+            "heapUsed": 8156384,
+            "external": 24135936,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4552864,
+          "paints": 816,
+          "width": 400,
+          "height": 360,
+          "canvas": [
+            672,
+            612
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 70135808,
+              "workingSet": 156344320,
+              "privateBytes": 80158720,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 208592896,
+              "workingSet": 301895680,
+              "privateBytes": 239607808,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57413632,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 110219264,
+              "workingSet": 194998272,
+              "privateBytes": 122974208,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21258240,
+              "workingSet": 108777472,
+              "privateBytes": 31334400,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6168576,
+              "workingSet": 97742848,
+              "privateBytes": 10792960,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 7770112,
+              "workingSet": 27299840,
+              "privateBytes": 21381120,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 431853568,
+          "totalPrivateBytes": 518713344,
+          "node": {
+            "rss": 159793152,
+            "heapTotal": 9891840,
+            "heapUsed": 8123524,
+            "external": 48811976,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4569016,
+          "paints": 872,
+          "width": 400,
+          "height": 360,
+          "canvas": [
+            672,
+            612
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 33382400,
+              "workingSet": 119590912,
+              "privateBytes": 43286528,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 208834560,
+              "workingSet": 302141440,
+              "privateBytes": 239853568,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57413632,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 114933760,
+              "workingSet": 199720960,
+              "privateBytes": 128245760,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21274624,
+              "workingSet": 108793856,
+              "privateBytes": 31334400,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6168576,
+              "workingSet": 97742848,
+              "privateBytes": 10792960,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 12578816,
+              "workingSet": 32108544,
+              "privateBytes": 26198016,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 404881408,
+          "totalPrivateBytes": 492175360,
+          "node": {
+            "rss": 137818112,
+            "heapTotal": 9891840,
+            "heapUsed": 8153320,
+            "external": 22490840,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4538768,
+          "paints": 929,
+          "width": 400,
+          "height": 360,
+          "canvas": [
+            672,
+            612
+          ],
+          "filters": 3
+        }
+      ]
+    },
+    {
+      "name": "expanded-after-18-transitions",
+      "samples": [
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 101072896,
+              "workingSet": 187383808,
+              "privateBytes": 111112192,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 696967168,
+              "workingSet": 790745088,
+              "privateBytes": 729108480,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57454592,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 88350720,
+              "workingSet": 174530560,
+              "privateBytes": 101433344,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21295104,
+              "workingSet": 108814336,
+              "privateBytes": 31342592,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6152192,
+              "workingSet": 97726464,
+              "privateBytes": 10772480,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 9314304,
+              "workingSet": 28864512,
+              "privateBytes": 22896640,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 930861056,
+          "totalPrivateBytes": 1019129856,
+          "node": {
+            "rss": 152735744,
+            "heapTotal": 9891840,
+            "heapUsed": 8229316,
+            "external": 37296464,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4717508,
+          "paints": 1216,
+          "width": 400,
+          "height": 360,
+          "canvas": [
+            672,
+            612
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 53796864,
+              "workingSet": 140107776,
+              "privateBytes": 63979520,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 546295808,
+              "workingSet": 640081920,
+              "privateBytes": 578396160,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57454592,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 101093376,
+              "workingSet": 187281408,
+              "privateBytes": 114507776,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21295104,
+              "workingSet": 108814336,
+              "privateBytes": 31342592,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6152192,
+              "workingSet": 97726464,
+              "privateBytes": 10772480,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 11091968,
+              "workingSet": 30642176,
+              "privateBytes": 24682496,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 747433984,
+          "totalPrivateBytes": 836145152,
+          "node": {
+            "rss": 162877440,
+            "heapTotal": 9891840,
+            "heapUsed": 8170512,
+            "external": 53747184,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4721756,
+          "paints": 1272,
+          "width": 400,
+          "height": 360,
+          "canvas": [
+            672,
+            612
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 84459520,
+              "workingSet": 170770432,
+              "privateBytes": 94466048,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 522326016,
+              "workingSet": 616120320,
+              "privateBytes": 554151936,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57454592,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 107458560,
+              "workingSet": 193654784,
+              "privateBytes": 120680448,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21303296,
+              "workingSet": 108822528,
+              "privateBytes": 31350784,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6152192,
+              "workingSet": 97726464,
+              "privateBytes": 10772480,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 9318400,
+              "workingSet": 28868608,
+              "privateBytes": 22896640,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 758726656,
+          "totalPrivateBytes": 846782464,
+          "node": {
+            "rss": 131039232,
+            "heapTotal": 9891840,
+            "heapUsed": 8219352,
+            "external": 14265520,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4702708,
+          "paints": 1331,
+          "width": 400,
+          "height": 360,
+          "canvas": [
+            672,
+            612
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 50573312,
+              "workingSet": 136884224,
+              "privateBytes": 60514304,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 522522624,
+              "workingSet": 616325120,
+              "privateBytes": 554319872,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57454592,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 105021440,
+              "workingSet": 191242240,
+              "privateBytes": 118124544,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21303296,
+              "workingSet": 108822528,
+              "privateBytes": 31350784,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6152192,
+              "workingSet": 97726464,
+              "privateBytes": 10772480,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 11096064,
+              "workingSet": 30646272,
+              "privateBytes": 24682496,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 724377600,
+          "totalPrivateBytes": 812228608,
+          "node": {
+            "rss": 154484736,
+            "heapTotal": 9891840,
+            "heapUsed": 8283376,
+            "external": 38941748,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4708416,
+          "paints": 1387,
+          "width": 400,
+          "height": 360,
+          "canvas": [
+            672,
+            612
+          ],
+          "filters": 3
+        }
+      ]
+    },
+    {
+      "name": "recollapsed-native",
+      "samples": [
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 46944256,
+              "workingSet": 133267456,
+              "privateBytes": 57851904,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 533184512,
+              "workingSet": 626634752,
+              "privateBytes": 564944896,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57454592,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 64016384,
+              "workingSet": 149897216,
+              "privateBytes": 77299712,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21303296,
+              "workingSet": 108822528,
+              "privateBytes": 31350784,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6152192,
+              "workingSet": 97726464,
+              "privateBytes": 10772480,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 6123520,
+              "workingSet": 22761472,
+              "privateBytes": 19718144,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 685432832,
+          "totalPrivateBytes": 774402048,
+          "node": {
+            "rss": 167804928,
+            "heapTotal": 10416128,
+            "heapUsed": 8459524,
+            "external": 50301812,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4686400,
+          "paints": 1533,
+          "width": 288,
+          "height": 44,
+          "canvas": [
+            504,
+            138
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 87601152,
+              "workingSet": 173924352,
+              "privateBytes": 101625856,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 478375936,
+              "workingSet": 571834368,
+              "privateBytes": 510054400,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57454592,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 93126656,
+              "workingSet": 179015680,
+              "privateBytes": 108101632,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21303296,
+              "workingSet": 108822528,
+              "privateBytes": 31350784,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6152192,
+              "workingSet": 97726464,
+              "privateBytes": 10772480,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 5873664,
+              "workingSet": 22511616,
+              "privateBytes": 19439616,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 700141568,
+          "totalPrivateBytes": 793808896,
+          "node": {
+            "rss": 153047040,
+            "heapTotal": 10153984,
+            "heapUsed": 8382660,
+            "external": 36112524,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4784724,
+          "paints": 1579,
+          "width": 288,
+          "height": 44,
+          "canvas": [
+            504,
+            138
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 63213568,
+              "workingSet": 149536768,
+              "privateBytes": 75395072,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 442281984,
+              "workingSet": 535748608,
+              "privateBytes": 473849856,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57454592,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 73695232,
+              "workingSet": 159592448,
+              "privateBytes": 87187456,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21303296,
+              "workingSet": 108822528,
+              "privateBytes": 31350784,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6152192,
+              "workingSet": 97726464,
+              "privateBytes": 10772480,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 6463488,
+              "workingSet": 23101440,
+              "privateBytes": 20062208,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 620818432,
+          "totalPrivateBytes": 711081984,
+          "node": {
+            "rss": 128069632,
+            "heapTotal": 10153984,
+            "heapUsed": 8242904,
+            "external": 11907080,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4711064,
+          "paints": 1628,
+          "width": 288,
+          "height": 44,
+          "canvas": [
+            504,
+            138
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 36216832,
+              "workingSet": 122540032,
+              "privateBytes": 46522368,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 442302464,
+              "workingSet": 535777280,
+              "privateBytes": 473878528,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57454592,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 104312832,
+              "workingSet": 190218240,
+              "privateBytes": 119447552,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21303296,
+              "workingSet": 108822528,
+              "privateBytes": 31350784,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6152192,
+              "workingSet": 97726464,
+              "privateBytes": 10772480,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 26752,
+              "privateWorkingSet": 6213632,
+              "workingSet": 22851584,
+              "privateBytes": 19783680,
+              "helper": true,
+              "type": "Capture helper"
+            }
+          ],
+          "totalPrivateWorkingSet": 624209920,
+          "totalPrivateBytes": 714219520,
+          "node": {
+            "rss": 168710144,
+            "heapTotal": 10416128,
+            "heapUsed": 8517236,
+            "external": 51136476,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4826624,
+          "paints": 1677,
+          "width": 288,
+          "height": 44,
+          "canvas": [
+            504,
+            138
+          ],
+          "filters": 3
+        }
+      ]
+    },
+    {
+      "name": "hidden",
+      "samples": [
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 46055424,
+              "workingSet": 132505600,
+              "privateBytes": 57044992,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 430211072,
+              "workingSet": 523698176,
+              "privateBytes": 462524416,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57454592,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 49750016,
+              "workingSet": 135667712,
+              "privateBytes": 62341120,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21303296,
+              "workingSet": 108822528,
+              "privateBytes": 31350784,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6152192,
+              "workingSet": 97726464,
+              "privateBytes": 10772480,
+              "helper": false,
+              "type": "Utility"
+            }
+          ],
+          "totalPrivateWorkingSet": 561180672,
+          "totalPrivateBytes": 636497920,
+          "node": {
+            "rss": 132386816,
+            "heapTotal": 10153984,
+            "heapUsed": 8342144,
+            "external": 16080776,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4632532,
+          "paints": 1695,
+          "width": 288,
+          "height": 44,
+          "canvas": [
+            504,
+            138
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 33112064,
+              "workingSet": 119570432,
+              "privateBytes": 42733568,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 430211072,
+              "workingSet": 523698176,
+              "privateBytes": 462524416,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57454592,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 49750016,
+              "workingSet": 135667712,
+              "privateBytes": 62341120,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21303296,
+              "workingSet": 108822528,
+              "privateBytes": 31350784,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6152192,
+              "workingSet": 97726464,
+              "privateBytes": 10772480,
+              "helper": false,
+              "type": "Utility"
+            }
+          ],
+          "totalPrivateWorkingSet": 548237312,
+          "totalPrivateBytes": 622186496,
+          "node": {
+            "rss": 119148544,
+            "heapTotal": 9105408,
+            "heapUsed": 8133320,
+            "external": 4395104,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4660712,
+          "paints": 1695,
+          "width": 288,
+          "height": 44,
+          "canvas": [
+            504,
+            138
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 32927744,
+              "workingSet": 119386112,
+              "privateBytes": 42430464,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 430211072,
+              "workingSet": 523698176,
+              "privateBytes": 462524416,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57454592,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 49848320,
+              "workingSet": 135766016,
+              "privateBytes": 62390272,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21303296,
+              "workingSet": 108822528,
+              "privateBytes": 31350784,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6152192,
+              "workingSet": 97726464,
+              "privateBytes": 10772480,
+              "helper": false,
+              "type": "Utility"
+            }
+          ],
+          "totalPrivateWorkingSet": 548151296,
+          "totalPrivateBytes": 621932544,
+          "node": {
+            "rss": 119570432,
+            "heapTotal": 9105408,
+            "heapUsed": 8102348,
+            "external": 4395292,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4689772,
+          "paints": 1695,
+          "width": 288,
+          "height": 44,
+          "canvas": [
+            504,
+            138
+          ],
+          "filters": 3
+        },
+        {
+          "processes": [
+            {
+              "pid": 26140,
+              "privateWorkingSet": 33013760,
+              "workingSet": 119472128,
+              "privateBytes": 42516480,
+              "helper": false,
+              "type": "Browser"
+            },
+            {
+              "pid": 2916,
+              "privateWorkingSet": 430211072,
+              "workingSet": 523698176,
+              "privateBytes": 462524416,
+              "helper": false,
+              "type": "GPU"
+            },
+            {
+              "pid": 29964,
+              "privateWorkingSet": 7708672,
+              "workingSet": 57454592,
+              "privateBytes": 12464128,
+              "helper": false,
+              "type": "Utility"
+            },
+            {
+              "pid": 31260,
+              "privateWorkingSet": 49856512,
+              "workingSet": 135774208,
+              "privateBytes": 62390272,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 30960,
+              "privateWorkingSet": 21303296,
+              "workingSet": 108822528,
+              "privateBytes": 31350784,
+              "helper": false,
+              "type": "Tab"
+            },
+            {
+              "pid": 36432,
+              "privateWorkingSet": 6152192,
+              "workingSet": 97726464,
+              "privateBytes": 10772480,
+              "helper": false,
+              "type": "Utility"
+            }
+          ],
+          "totalPrivateWorkingSet": 548245504,
+          "totalPrivateBytes": 622018560,
+          "node": {
+            "rss": 119390208,
+            "heapTotal": 9105408,
+            "heapUsed": 8166328,
+            "external": 4395480,
+            "arrayBuffers": 0
+          },
+          "jsHeapUsed": 4718004,
+          "paints": 1695,
+          "width": 288,
+          "height": 44,
+          "canvas": [
+            504,
+            138
+          ],
+          "filters": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "units": "bytes",
+  "note": "Isolated production Electron build, same 150% display, no debugger GC or working-set trimming. Includes only this app and its RegionCapture children; excludes DSH Host. Native sampled pixels stay in memory."
+}

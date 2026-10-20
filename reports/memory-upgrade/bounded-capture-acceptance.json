@@ -1,0 +1,17 @@
+{
+  "input": {
+    "width": 584,
+    "height": 357,
+    "min": 24,
+    "max": 238,
+    "colored": 0,
+    "total": 208488
+  },
+  "stopVerified": true,
+  "arrivalHz": 16.164584864070537,
+  "hideResume": true,
+  "solidStops": true,
+  "helperCrashFailClosed": true,
+  "fourModes": true,
+  "renderedOptics": "See pixel-analysis.json"
+}

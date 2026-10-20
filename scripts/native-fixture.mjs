@@ -10,10 +10,10 @@ export const backgrounds = {
   dark: 'linear-gradient(120deg,#101d33,#253c4b)',
   busy: 'repeating-linear-gradient(35deg,transparent 0 36px,#ffffff30 36px 38px),conic-gradient(#70add5,#faf2c8,#87bca6,#70add5)',
 };
-export async function fixture(extraEnv = {}, extraArgs = []) {
+export async function fixture(extraEnv = {}, extraArgs = [], appDirectory = resolve('apps/desktop')) {
   const profile = await mkdtemp(join(tmpdir(), 'dsh-glass-audit-'));
   const env = { ...process.env, GLASS_SMOKE:'1', GLASS_USER_DATA_DIR:profile, ...extraEnv }; delete env.ELECTRON_RUN_AS_NODE;
-  const app = await electron.launch({ executablePath:createRequire(resolve('apps/desktop/package.json'))('electron'), args:[...extraArgs,resolve('apps/desktop')], env });
+  const app = await electron.launch({ executablePath:createRequire(resolve('apps/desktop/package.json'))('electron'), args:[...extraArgs,appDirectory], env });
   const page = await app.firstWindow();
   await page.locator('main').waitFor();
   await expect.poll(async () => (await page.evaluate(() => window.glass.getState())).connection).toBe('connected');

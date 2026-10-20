@@ -1,0 +1,12 @@
+{
+  "result": "PASS",
+  "checks": [
+    "tab lens and content swap",
+    "picker open and Escape without window collapse",
+    "animation off",
+    "system reduced motion",
+    "read-only approval remains disabled"
+  ],
+  "nativeCapture": false,
+  "rendererErrors": []
+}

@@ -41,7 +41,12 @@ try {
   await page.screenshot({path:out+'/zero.png'});
   await page.evaluate(()=>document.querySelectorAll('#glass-defs feDisplacementMap').forEach(n=>n.setAttribute('scale',n.dataset.originalScale)));
   const sampleStart=await page.evaluate(()=>window.__opticalFrames);const sampleTime=Date.now();
-  await page.waitForTimeout(2200);
+  // An unchanged desktop now skips identical payloads; require fresh geometry
+  // throughout this capture-cadence probe rather than counting duplicates.
+  for(let n=0;n<44;n++){
+    await app.evaluate(({BrowserWindow},{id,n})=>BrowserWindow.fromId(id).setPosition(233+n%2,150),{id:mainId,n});
+    await page.waitForTimeout(50);
+  }
   const arrivalHz=(await page.evaluate(()=>window.__opticalFrames)-sampleStart)/((Date.now()-sampleTime)/1000);
   assert.ok(arrivalHz>8 && arrivalHz<=26,'Bounded frame arrival Hz: '+arrivalHz);
   // Move the real HWND while sampling; wait for a fresh frame at the new ROI.

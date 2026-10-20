@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-20",
+  "baselineCommit": "fe5a7af609c8091ebe748ee1797091a6256012b8",
+  "electron": "44.8.0",
+  "node": "v24.15.0",
+  "buildScope": "Final built runtime after fast-move rejected-frame retry guard. Four-round memory matrix was sampled immediately before that final guard; final visual/native/rapid-move checks were rerun.",
+  "sha256": {
+    "baselineMain": "31185fae5cfdf7c44a67e9f3a7e340ee2296c9c2ce238a9f847419e1f1f8cbee",
+    "baselineHelper": "2a5f14a692cfc9eefbf2a0c3ef138557c1a86246f1c69bbc86f47d39ebe55599",
+    "finalMain": "5134739aa1082f5758bf211919980dfc3e3c065b280f805d6bea5ec3cea48b5e",
+    "finalPreload": "92b8a547b815de66f4247c6e393d871e4266e3eb7c50fa814b9feaa6a428ac80",
+    "finalHelper": "edbeadff8db491c3b8ab8e16d9af52bfa2d8c09545a866c6fda3a6174c9e2006"
+  }
+}

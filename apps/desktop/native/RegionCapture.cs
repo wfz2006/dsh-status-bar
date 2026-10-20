@@ -16,6 +16,35 @@ public static class RegionCapture {
   [DllImport("user32.dll")] static extern int GetSystemMetrics(int index);
   [DllImport("dwmapi.dll")] static extern int DwmFlush();
   [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr window,IntPtr insertAfter,int x,int y,int width,int height,uint flags);
+  // Keep one exact-sized bitmap and byte buffer while the rectangle is stable.
+  // Allocating a large managed array per frame leaves work for the LOH/Gen2 GC.
+  sealed class CaptureBuffer : IDisposable {
+    public Bitmap Bitmap; public byte[] Pixels;
+    byte[] previous; bool hasPrevious; int lastLeft,lastTop; RECT lastWindow;
+    public void Resize(int width,int height) {
+      if(Bitmap!=null && Bitmap.Width==width && Bitmap.Height==height)return;
+      Dispose();
+      Bitmap=new Bitmap(width,height,PixelFormat.Format32bppArgb);
+      Pixels=new byte[width*height*4];
+      previous=new byte[Pixels.Length];
+    }
+    public bool Unchanged(int left,int top,RECT window) {
+      if(!hasPrevious || left!=lastLeft || top!=lastTop || window.Left!=lastWindow.Left || window.Top!=lastWindow.Top || window.Right!=lastWindow.Right || window.Bottom!=lastWindow.Bottom)return false;
+      // Exact byte comparison, no hash collisions or tolerance/quality loss.
+      for(int i=0;i<Pixels.Length;i++)if(Pixels[i]!=previous[i])return false;
+      return true;
+    }
+    public void Remember(int left,int top,RECT window) {
+      Array.Copy(Pixels,previous,Pixels.Length);
+      lastLeft=left;lastTop=top;lastWindow=window;hasPrevious=true;
+    }
+    public void Dispose() {
+      if(Pixels!=null)Array.Clear(Pixels,0,Pixels.Length);
+      if(previous!=null)Array.Clear(previous,0,previous.Length);
+      Pixels=null;previous=null;hasPrevious=false;
+      if(Bitmap!=null)Bitmap.Dispose();Bitmap=null;
+    }
+  }
   static int PositionOnly(string[] args) {
     if(args.Length!=3)return 2;
     var window=new IntPtr(long.Parse(args[1]));uint expected=uint.Parse(args[2]);
@@ -42,8 +71,11 @@ public static class RegionCapture {
       if(args.Length!=2)return 2;
       var window=new IntPtr(long.Parse(args[0]));uint expected=uint.Parse(args[1]);
       SetProcessDpiAwarenessContext(new IntPtr(-4));
+      using(var capture=new CaptureBuffer())
       using(var output=new BinaryWriter(Console.OpenStandardOutput())) {
-        while(Console.ReadLine()=="frame") {
+        string line;
+        while((line=Console.ReadLine())!=null) {
+          if(line!="frame" && line!="frame-force")return 2;
           uint owner;GetWindowThreadProcessId(window,out owner);
           uint affinity;if(!GetWindowDisplayAffinity(window,out affinity) || affinity!=0x11)return 7;
           RECT r;if(owner!=expected || !IsWindowVisible(window) || !GetWindowRect(window,out r))return 3;
@@ -56,10 +88,13 @@ public static class RegionCapture {
           int width=Math.Min(sx+sw,r.Right+margin)-left,height=Math.Min(sy+sh,r.Bottom+margin)-top;
           if(width>4096 || height>4096 || (long)width*height*4>24*1024*1024)return 5;
           DwmFlush();
-          using(var bitmap=new Bitmap(width,height,PixelFormat.Format32bppArgb)) {
+          capture.Resize(width,height);
+          {
+            var bitmap=capture.Bitmap;
+            // Finish the GDI+ drawing before LockBits reads the reused bitmap.
             using(var graphics=Graphics.FromImage(bitmap))graphics.CopyFromScreen(left,top,0,0,new Size(width,height),CopyPixelOperation.SourceCopy);
             var bits=bitmap.LockBits(new Rectangle(0,0,width,height),ImageLockMode.ReadOnly,PixelFormat.Format32bppArgb);
-            var rgba=new byte[width*height*4];
+            var rgba=capture.Pixels;
             try {for(int y=0;y<height;y++)Marshal.Copy(IntPtr.Add(bits.Scan0,y*bits.Stride),rgba,y*width*4,width*4);}
             finally {bitmap.UnlockBits(bits);}
             try {
@@ -71,9 +106,15 @@ public static class RegionCapture {
               // covered. Main reprojects and crops to its current allowed ROI.
               Array.Clear(rgba,0,rgba.Length);output.Write(new byte[]{68,83,72,83});output.Write(new byte[36]);output.Flush();continue;
             }
+            if(line!="frame-force" && capture.Unchanged(left,top,r)) {
+              // Still sample and validate the current HWND at the same cadence;
+              // only identical IPC payloads and redundant GPU uploads are skipped.
+              output.Write(new byte[]{68,83,72,83});output.Write(new byte[36]);output.Flush();continue;
+            }
             output.Write(new byte[]{68,83,72,71});output.Write(rgba.Length);output.Write(width);output.Write(height);
             output.Write(left);output.Write(top);output.Write(r.Left);output.Write(r.Top);output.Write(ww);output.Write(wh);
             output.Write(rgba);output.Flush();
+            capture.Remember(left,top,r);
             } finally {Array.Clear(rgba,0,rgba.Length);}
           }
         }

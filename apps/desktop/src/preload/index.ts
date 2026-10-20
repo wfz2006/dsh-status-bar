@@ -29,6 +29,9 @@ const api: GlassAPI = {
   subscribeOpticsFrame:callback=>{
     const listener=(_event:Electron.IpcRendererEvent,value:DesktopOpticsFrame)=>callback(value);
     ipcRenderer.on('glass:optics-frame',listener);
+    // A static desktop may emit only one frame. Subscribe before asking for
+    // a fresh snapshot so late mounts/theme changes cannot miss that image.
+    void ipcRenderer.invoke('glass:optics-refresh').catch(()=>{});
     return ()=>ipcRenderer.removeListener('glass:optics-frame',listener);
   },
   getState: () => ipcRenderer.invoke('glass:state'),

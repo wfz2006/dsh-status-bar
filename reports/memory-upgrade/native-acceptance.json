@@ -1,0 +1,41 @@
+{
+  "result": "PASS",
+  "checks": [
+    "real static background keeps the previous image without duplicate IPC or canvas uploads",
+    "late subscribers receive a forced fresh frame even on a static desktop",
+    "each real native background colour change reaches the renderer; no refresh-rate/quality reduction",
+    "dragging over an identical-colour background still sends fresh world geometry",
+    "rapid leave-and-return movement recovers current full coverage rather than deduplicating a rejected frame",
+    "tint changes on a static background still refresh automatic text tone",
+    "six native morphs reuse one optical graph and preserve three RGB passes/current coverage",
+    "renderer reload recovers the same static backdrop through a forced fresh frame",
+    "hide/show and solid material release/recreate the native and canvas resources"
+  ],
+  "changes": [
+    {
+      "rgb": [
+        220,
+        140,
+        80
+      ],
+      "paintCommandToObservedMs": 103.60109999999986
+    },
+    {
+      "rgb": [
+        35,
+        70,
+        130
+      ],
+      "paintCommandToObservedMs": 62.0333999999998
+    },
+    {
+      "rgb": [
+        170,
+        170,
+        170
+      ],
+      "paintCommandToObservedMs": 61.207900000000336
+    }
+  ],
+  "fastChangingFramesIn1200ms": 23
+}

@@ -239,6 +239,7 @@ else {
       menuChanged: () => {},
     });
     optics=createDesktopOptics(win,join(here,'../../native/RegionCapture.exe'));
+    win.webContents.on('did-finish-load',()=>optics?.refresh());
     const opticsBinary = join(here, '../../native/RegionCapture.exe');
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', event => event.preventDefault());
@@ -279,6 +280,7 @@ else {
       finally { responses.delete(key); }
     });
     ipcMain.handle('glass:optics-state',event=>{assertSender(event);return optics!.state();});
+    ipcMain.handle('glass:optics-refresh',event=>{assertSender(event);optics!.refresh();});
     ipcMain.handle('glass:optics-enable',(event,value:unknown)=>{
       assertSender(event);if(typeof value!=='boolean')throw new Error('Invalid optics setting');
       if(value && ui!.state().settings.material==='solid')ui!.setSettings({material:'transparent'});
@@ -292,6 +294,9 @@ else {
     });
     ipcMain.handle('glass:settings', (event, value: unknown) => {
       assertSender(event);const next=ui!.setSettings(value);
+      // Tint/theme changes need a fresh tone evaluation even when every
+      // sampled desktop pixel is unchanged. Coalesce into the next capture.
+      optics!.refresh();
       if(optics!.state().enabled && (next.settings.material==='solid' || next.settings.material==='acrylic'))optics!.enable(false);
       // Frosted glass blurs the sampled desktop; start the worker when it is
       // picked at runtime instead of waiting for the next launch.

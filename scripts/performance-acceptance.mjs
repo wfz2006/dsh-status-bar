@@ -26,7 +26,13 @@ try {
       window.__pixelChecks.push(equal);
     });
   });
-  await expect.poll(()=>page.evaluate(()=>window.__pixelChecks)).toEqual([true,true,true]);
+  // Stable desktop pixels no longer produce duplicate IPC payloads. Move the
+  // real window to require three fresh, differently positioned native frames.
+  for(let n=0;n<3;n++){
+    await app.evaluate(({BrowserWindow},{id,n})=>BrowserWindow.fromId(id).setPosition(302+n*2,200),{id:mainId,n});
+    await expect.poll(()=>page.evaluate(()=>window.__pixelChecks.length)).toBeGreaterThanOrEqual(n+1);
+  }
+  assert.deepEqual(await page.evaluate(()=>window.__pixelChecks),[true,true,true]);
   await page.evaluate(()=>window.__offPixels());
   checks.push('received RGBA bytes match the painted canvas, including alpha');
 
