@@ -1,0 +1,58 @@
+name: Release bundle
+
+# Builds the self-contained plugin tarball on a GitHub runner and attaches it to
+# an existing release. Local uploads of the 155 MB asset kept dying around 80–91 MB
+# on this connection, so the build and the upload both happen server-side.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to attach the bundle to'
+        required: true
+        default: 'v0.2.4'
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the native region helper
+        shell: pwsh
+        run: ./scripts/build-region-capture.ps1
+
+      - name: Build the desktop bundle
+        run: pnpm --filter @glass/desktop build
+
+      - name: Pack the self-contained plugin
+        run: node scripts/pack-plugin-release.mjs --no-build --out dist
+
+      - name: Add the compatibility asset name
+        shell: pwsh
+        run: Copy-Item dist/dsh-status-bar.tgz dist/dsh-glass-plugin.tgz
+
+      - name: Upload the release assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release upload $env:TAG dist/dsh-status-bar.tgz dist/dsh-glass-plugin.tgz --clobber --repo ${{ github.repository }}
+          gh release view $env:TAG --repo ${{ github.repository }} --json assets --jq '.assets[] | {name, size}'
