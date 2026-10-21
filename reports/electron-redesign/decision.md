@@ -19,7 +19,7 @@
 | 连续形变 | 15 | 待评价录屏 |
 | 多背景可读 | 10 | 待评价 |
 
-建议先看 screenshots/busy-peek.png、light-approval.png、dark-peek.png 与 recordings/morph.mp4、approval-scroll.mp4；before对应screenshots/baseline。
+建议先看 screenshots/busy-peek.png、light-approval.png、dark-peek.png；录屏（morph.mp4、approval-scroll.mp4）与旧的 before 对照图集（screenshots/baseline/）因体积原因未入库，复现参数见 tests.md 与 material-matrix.md。
 
 ## 不能算作已通过的项目
 

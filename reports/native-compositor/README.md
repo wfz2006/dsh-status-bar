@@ -12,7 +12,7 @@
 
 ## 已执行的原生实验
 
-独立 `experiments/tauri-glass`，Tauri 2.12.4 Release；UI/CSS直接从当前Electron Mock渲染器导出，340×168 DIP、150%系统DPI。背景是测试拥有的独立原生窗口，黑白竖线用于排除壁纸色彩和观察偏折；没有采集其他应用。截图使用实际HWND物理矩形与遮挡检查。
+独立 `experiments/tauri-glass`（该实验目录未入库），Tauri 2.12.4 Release；UI/CSS直接从当前Electron Mock渲染器导出，340×168 DIP、150%系统DPI。背景是测试拥有的独立原生窗口，黑白竖线用于排除壁纸色彩和观察偏折；没有采集其他应用。截图使用实际HWND物理矩形与遮挡检查。
 
 | 对照 | 实机结果 | 能力结论 |
 | --- | --- | --- |

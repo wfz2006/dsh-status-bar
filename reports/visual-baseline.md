@@ -22,6 +22,6 @@ Windows 11 10.0.26300，单显示器实际缩放 150%；Electron 44.8.0 / Chromi
 
 注意：启动早期 getGPUFeatureStatus 曾返回 disabled_software，这个 API 只有 GPU 信息初始化后才有意义。后续 await getGPUInfo('complete') 后记录到 hardwareAcceleration=true、gpu_compositing/rasterization/WebGL 均 enabled，见 native-results.json；不能把早期值当作“应用关闭硬件加速”的根因。
 
-实际原生四形态基线：`electron-redesign/screenshots/baseline/busy-{capsule,peek,expanded,approval}.png`。原生采集曾被用户前台窗口遮挡；已拒绝这些样本并在用户同意保持前台后重新采集覆盖。采集只用于验收，不进入应用渲染路径。
+实际原生四形态基线：`electron-redesign/screenshots/baseline/busy-{capsule,peek,expanded,approval}.png`（该图集未入库）。原生采集曾被用户前台窗口遮挡；已拒绝这些样本并在用户同意保持前台后重新采集覆盖。采集只用于验收，不进入应用渲染路径。
 
 基线静止胶囊采样 300691ms，60 个 5 秒采样，进程 CPU 百分比之和的算术均值 0.1081、工作集之和均值 547279KB（约534.5MiB）。工作集包含共享页，不是私有内存，也不是显存。采样时有其他桌面任务，不能用于宣称性能排名。

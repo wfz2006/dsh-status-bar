@@ -50,7 +50,7 @@ pnpm test:native-redesign
 
 32 项单元测试覆盖协议、桥、投影、Mock、展示模型、同源透镜位移和区域帧边界。Electron 回归实际操作胶囊拖动、四形态、缩放、设置、会话切换、并发队列、重连、完成/断线、减少动画、隐藏/恢复和安全配置。偏好验收使用两次实际启动，确认手动尺寸及设置跨重启保留且不被审批覆盖。
 
-用户拒绝旧材质后完成 `experiments/tauri-glass` 原生对照，backdrop位移被系统拒绝。随后用户明确授权限定区域取样，已实装并验证真实输入上的偏折/RGB分离；最新证据见 `reports/desktop-optics/`。正式入口没有迁移。开启折射时系统录屏可能不显示本窗，这是排除自身、防止画面递归的机制。
+用户拒绝旧材质后完成 `experiments/tauri-glass` 原生对照（该实验目录未入库），backdrop位移被系统拒绝。随后用户明确授权限定区域取样，已实装并验证真实输入上的偏折/RGB分离；最新证据见 `reports/desktop-optics/`。正式入口没有迁移。开启折射时系统录屏可能不显示本窗，这是排除自身、防止画面递归的机制。
 
 `pnpm build` / `pnpm dev` 自动用本机 .NET Framework 编译小型区域取样助手，不另装编译器。普通启动必须在“设置 → 真实折射与色散”手动开启。也可显式 `pnpm --filter @glass/desktop exec electron . --desktop-optics` 为本次启动开启；该参数/开关状态不写入偏好。
 

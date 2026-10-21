@@ -1,6 +1,6 @@
 # E1：同条件材质矩阵
 
-脚本：`node scripts/visual-baseline.mjs`。在修改前构建运行，12 张受控桌面原生截图，位于 screenshots/baseline/{A,B,C,D}-{light,dark,busy}.png；同一实际窗口尺寸400×340 DIP、同一审批内容（含旧裁切）、同一150%显示缩放。
+脚本：`node scripts/visual-baseline.mjs`。在修改前构建运行，12 张受控桌面原生截图，位于 screenshots/baseline/{A,B,C,D}-{light,dark,busy}.png（该对照图集未入库）；同一实际窗口尺寸400×340 DIP、同一审批内容（含旧裁切）、同一150%显示缩放。
 
 | 方案 | 实际改动 | 从截图可观察的结果 |
 | --- | --- | --- |

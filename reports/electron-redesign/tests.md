@@ -20,6 +20,6 @@
 
 ## 录屏复现
 
-`recordings/morph.mp4`：FFmpeg gdigrab裁切600×510物理像素，对应自建背景覆盖的400×340 DIP测试区域，30Hz录制，无音频；20次原生窗口展开/收起。`recordings/approval-scroll.mp4`：31行Mock预览、完整预览尾标记、正文来回滚动，决策footer不动。原始时序与rAF间隔在native-results.json。
+`recordings/morph.mp4`：FFmpeg gdigrab裁切600×510物理像素，对应自建背景覆盖的400×340 DIP测试区域，30Hz录制，无音频；20次原生窗口展开/收起。`recordings/approval-scroll.mp4`：31行Mock预览、完整预览尾标记、正文来回滚动，决策footer不动。原始时序与rAF间隔在native-results.json。（这两个录屏文件未入库，复现参数保留在本节。）
 
 录制程序位于项目忽略目录.tools/media，未安装到全局。复现时用工作区Python：`python -m pip install --target .tools/media imageio-ffmpeg==0.6.0`，或设置GLASS_FFMPEG为本机FFmpeg绝对路径。编码器日志中的30fps是录制采样设置/输出速率，不是应用呈现帧率。
