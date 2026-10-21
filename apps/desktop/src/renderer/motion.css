@@ -43,7 +43,7 @@
 .glass[data-theme] .task-tab[aria-selected=true] { background:transparent; box-shadow:none; }
 .task-tab { position:relative; z-index:1; transition:color var(--motion-control) var(--motion-enter)!important; }
 .task-panel { animation:motion-arrive 280ms var(--motion-enter) both; }
-.task-panel .process-entry:nth-child(-n+8),.task-panel .todo:nth-child(-n+8) { animation:motion-row 260ms var(--motion-enter) both; }
+.task-panel .process-entry:nth-child(-n+8),.task-panel .todo:nth-child(-n+8) { animation:motion-row 260ms var(--motion-enter) backwards; }
 .task-panel .process-entry[data-streaming] { animation:none; }
 .task-panel .todo:nth-child(2),.task-panel .process-entry:nth-child(2) { animation-delay:25ms; }
 .task-panel .todo:nth-child(3),.task-panel .process-entry:nth-child(3) { animation-delay:50ms; }

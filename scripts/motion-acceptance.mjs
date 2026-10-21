@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 import { fixture } from './native-fixture.mjs';
 
-const output = resolve('reports/motion-upgrade');
+const output = resolve(process.env.GLASS_REPORT_DIR ?? 'reports/motion-upgrade');
 const native = process.argv.includes('--native');
 await mkdir(output, { recursive: true });
 const f = await fixture();

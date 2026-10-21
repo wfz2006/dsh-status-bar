@@ -7,7 +7,7 @@ import { fixture } from './native-fixture.mjs';
 
 const label=process.argv[2]??'after';
 if(!/^[a-z0-9-]+$/.test(label))throw new Error('Invalid label');
-const f=await fixture({},[],process.env.GLASS_AUDIT_APP),output=resolve('reports/memory-upgrade');
+const f=await fixture({},[],process.env.GLASS_AUDIT_APP),output=resolve(process.env.GLASS_REPORT_DIR ?? 'reports/memory-upgrade');
 const report={label,checks:[],surfaces:[]};
 const hash=value=>createHash('sha256').update(value).digest('hex');
 try {

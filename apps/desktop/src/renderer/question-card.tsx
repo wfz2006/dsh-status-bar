@@ -53,7 +53,7 @@ function QuestionCard({task}:{task:Task}) {
 }
 export function RequestPanel({task,openDSH}:{task:Task;openDSH:()=>void}) {
   const [kind,setKind]=useState<'approval'|'question'>('approval');
-  const approvalCount=Math.max(0,task.pending.length-task.questions.length);
+  const approvalCount=task.pending.length;
   const hasApproval=approvalCount>0;
   const hasQuestion=task.questions.length>0;
   const displayed=hasApproval&&hasQuestion?kind:hasQuestion?'question':'approval';

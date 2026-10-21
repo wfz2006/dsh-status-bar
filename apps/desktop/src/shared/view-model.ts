@@ -35,23 +35,31 @@ export function observeFacts(state: ViewState, facts: AttentionFacts, settings: 
   if (!facts.pending.length && state.returnMode && !state.manual) next = { ...next, mode: state.returnMode, returnMode: null };
   return next;
 }
+function describeSession(p: Projection, session: Session | undefined, pending: boolean, questions: boolean) {
+  const status = p.connection !== 'connected' || p.stale ? 'disconnected' : !session ? 'empty' : session.phase === 'error' ? 'error'
+    : session.phase === 'finished' ? 'completed' : session.phase === 'cancelled' ? 'cancelled' : session.phase === 'archived' ? 'archived'
+    : session.phase === 'limit-reached' ? 'limit_reached'
+    : pending || session.phase === 'waiting-approval' ? 'waiting_approval' : questions || session.phase === 'waiting-question' ? 'waiting_answer'
+    : session.agentStatus === 'running' ? 'running' : session.agentStatus === 'starting' ? 'starting' : session.agentStatus === 'stopping' ? 'stopping'
+    : session.agentStatus === 'idle' ? 'idle' : 'unknown';
+  const labels = { disconnected: p.connection === 'connecting' || p.connection === 'reconnecting' ? '正在重连' : p.connection === 'incompatible' ? '协议不兼容' : '连接已断开',
+    waiting_approval: '等待确认', error: '任务出错', completed: '已完成', limit_reached: '达到输出上限', waiting_answer: '等待回答', running: '进行中', starting: '正在启动', stopping: '正在停止',
+    idle: '空闲', unknown: '状态待同步', empty: '尚无会话', cancelled: '已取消', archived: '已归档' };
+  return { status, label: labels[status] };
+}
+export function deriveSessionSummary(p: Projection, id: string) {
+  const session = Object.hasOwn(p.sessions, id) ? p.sessions[id] : undefined;
+  const matches = (request: Projection['questions'][number] | Projection['approvals'][number]) => request.sessionId === id && request.runtimeId === p.runtimeId && request.sourceEpoch === p.epoch && (request.status === 'pending' || request.status === 'submitting');
+  return { sessionId: id, title: session?.title || '尚无任务', ...describeSession(p, session, p.approvals.some(matches), p.questions.some(matches)) };
+}
 export function deriveTask(p: Projection, selected: string) {
   const session = Object.hasOwn(p.sessions, selected) ? p.sessions[selected] : undefined;
   const todos = session?.todos ?? [];
   const terminal = !!session && ['finished', 'limit-reached', 'error', 'cancelled', 'archived'].includes(session.phase);
   const pending = terminal ? [] : p.approvals.filter(a => a.sessionId === selected && a.runtimeId === p.runtimeId && a.sourceEpoch === p.epoch && (a.status === 'pending' || a.status === 'submitting'));
   const questions = terminal ? [] : p.questions.filter(q => q.sessionId === selected && q.runtimeId === p.runtimeId && q.sourceEpoch === p.epoch && (q.status === 'pending' || q.status === 'submitting'));
-  const status = p.connection !== 'connected' || p.stale ? 'disconnected' : !session ? 'empty' : session.phase === 'error' ? 'error'
-    : session.phase === 'finished' ? 'completed' : session.phase === 'cancelled' ? 'cancelled' : session.phase === 'archived' ? 'archived'
-    : session.phase === 'limit-reached' ? 'limit_reached'
-    : pending.length || session.phase === 'waiting-approval' ? 'waiting_approval' : questions.length || session.phase === 'waiting-question' ? 'waiting_answer'
-    : session.agentStatus === 'running' ? 'running' : session.agentStatus === 'starting' ? 'starting' : session.agentStatus === 'stopping' ? 'stopping'
-    : session.agentStatus === 'idle' ? 'idle' : 'unknown';
-  const labels = { disconnected: p.connection === 'connecting' || p.connection === 'reconnecting' ? '正在重连' : p.connection === 'incompatible' ? '协议不兼容' : '连接已断开',
-    waiting_approval: '等待确认', error: '任务出错', completed: '已完成', limit_reached: '达到输出上限', waiting_answer: '等待回答', running: '进行中', starting: '正在启动', stopping: '正在停止',
-    idle: '空闲', unknown: '状态待同步', empty: '尚无会话', cancelled: '已取消', archived: '已归档' };
   return { session, title: session?.title || '尚无任务', todos, current: todos.filter(t => t.status === 'in_progress'), completed: todos.filter(t => t.status === 'completed').length,
-    total: todos.length, pending, questions, attentionCount: pending.length + questions.length, status, label: labels[status] };
+    total: todos.length, pending, questions, attentionCount: pending.length + questions.length, ...describeSession(p, session, pending.length > 0, questions.length > 0) };
 }
 /** Compact token counts in the same 1.3M / 432K shape DSH's own status bar uses. */
 export function formatTokens(value: number): string {

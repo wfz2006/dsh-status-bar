@@ -5,7 +5,7 @@ import { expect } from '@playwright/test';
 import { fixture } from './native-fixture.mjs';
 import { FakeHost } from '../tests/helpers/dsh-host.ts';
 
-const output = resolve('reports/process-latency');
+const output = resolve(process.env.GLASS_REPORT_DIR ?? 'reports/process-latency');
 await mkdir(output, { recursive:true });
 const host = new FakeHost(); host.sessions = [{ sessionId:'latency-fixture', title:'实时过程同步', running:true }];
 await host.start();

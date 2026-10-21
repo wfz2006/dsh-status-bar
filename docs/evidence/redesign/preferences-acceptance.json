@@ -1,5 +1,0 @@
-{
-  "result": "PASS",
-  "launches": 2,
-  "scope": "Isolated profile: theme/strength/manual bounds survive restart and pending snapshot does not replace custom geometry"
-}

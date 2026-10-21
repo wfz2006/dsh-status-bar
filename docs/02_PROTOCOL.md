@@ -192,6 +192,18 @@ type UserQuestionView = {
 
 已有 `glass:move` 仍仅接受 x/y。Windows Main 转为物理坐标，通过固定本窗 HWND/PID 的助手 `--position` 模式移动并等待确认；原生 SWP_NOSIZE 避免 DPI 尺寸回写增长。此模式不取样，空闲退出，隐藏/最小化/关闭停止；不提供 renderer 指定 HWND 的能力。
 
-用户明确授权后新增：`getOpticsState`、`setOpticsEnabled(boolean)`、`subscribeOpticsState`、`subscribeOpticsFrame`。仅受信主frame可调用；renderer不能指定取样HWND、PID或矩形。默认关闭且不持久化，显式启动参数或设置勾选才开启。
+用户明确授权后新增：`getOpticsState`、`setOpticsEnabled(boolean)`、`subscribeOpticsState`、`subscribeOpticsFrame`。仅受信主frame可调用；renderer不能指定取样HWND、PID或矩形。普通启动在原生助手可用且非实色材质时默认开启，可在本次运行关闭；该开关不持久化。隐藏暂停、显示恢复，退出或切换实色停止。
 
 Main给助手固定本窗HWND/本进程PID；助手校验owner、可见性与WDA_EXCLUDEFROMCAPTURE，读取物理矩形加24 DIP（最多48物理px）边距。私有管道为40字节DSHG头+定长RGBA；移动后取样不覆盖当前窗才发送DSHS跳帧。Main再次验证长度/边距，并仅在完整覆盖时重投影、裁剪到当前窗每侧最多48物理px。单向`subscribeOpticsPosition`在移动/缩放时通知当前物理矩形，画布按世界坐标调整，无覆盖即隐藏旧纹理。单帧24MiB上限、单帧在途，主窗隐藏/关闭/异常停止。帧只在Main→本窗renderer本地IPC内传递，不经Bridge/WS，不写文件或网络，不包含审批授权能力。
+
+## 11. 本地业务投影 IPC（2026-10-21）
+
+这层只压缩 Main 已接受的 `Projection`，不修改 Host/Bridge 帧、认证、审批身份校验或 `GlassAPI` 的返回类型。`glass:state` 内部返回 `{kind:'snapshot',revision,projection}`；preload 解包后，`getState()` 和订阅仍提供完整 `Projection`。
+
+`glass:update` 使用快照或 `{kind:'delta',revision,baseRevision,fields,sessions,removed,seen}`。`sessions` 只包含发生变化的会话，`removed` 删除会话；请求数组改变时整体替换，绝不合成请求权限。`seen` 追加尾部 ID，失去重叠时整体替换。传输 revision 独立于 DSH 事件 seq，严格按 baseRevision 衔接；丢帧时先让界面 stale、请求不可操作，再重新获取完整基线。重复/迟到消息忽略；换 runtime/epoch、显示隐藏窗口及每 300 次更新发送完整基线。隐藏期间保留 Main 最新投影，不主动推送业务更新。
+
+preload 在结构化克隆后复用字段完全相同的 Todo、活动与摘要对象，以减少 React 无效工作；不以对象身份判断审批授权。renderer 无额外 Node/文件/网络权限。
+
+Adapter 每种请求保留最多 100 条已结束历史，未结束请求不因历史增长被裁掉；投影的 100 项请求窗口优先保留未结束项。工具参数摘要按会话最多 256 项，当前待审批调用另行保护；会话删除、断线会清理相关缓存。真实 turn 边界让遗留请求 unavailable；历史 follow 快照原子回放，只发布最终状态，不能因中间历史终态撤销当前 delivery，也不能恢复已结束请求的操作权。
+
+Host 实时物理通道以 15 秒 Ping/下一周期存活检查检测半开连接；正常流量也可证明连接仍活着。单会话 audit 子流结束会撤销其请求并在会话列表确认仍可用后重新订阅，不关闭其他子流。列表暂时失败以 10–60 秒退避重试；认证失败或关键子流结束仍断线，禁止自动重放一次性 token。

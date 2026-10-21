@@ -1,6 +1,6 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { Projection } from '@glass/protocol';
-import { formatTokens, taskUsage, deriveTask } from '../shared/view-model';
+import { formatTokens, taskUsage, deriveTask, deriveSessionSummary } from '../shared/view-model';
 import { Icon, type IconName } from './icon';
 import { WhaleCompanion, WhaleEmpty } from './whale-companion';
 export type Task = ReturnType<typeof deriveTask>;
@@ -19,16 +19,26 @@ function ContextRing({ percent }: { percent: number }) {
     <b>{value}%</b>
   </span>;
 }
-function SessionPicker({ sessions, selected, select }: { sessions: { sessionId: string; title: string; status: string; label: string }[]; selected: string; select: (id: string) => void }) {
+function SessionPicker({ projection, selected, select }: { projection: Projection; selected: string; select: (id: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const root = useRef<HTMLDivElement>(null);
   const pendingFocus = useRef<number | null>(null);
   const menuId = useId();
-  const current = sessions.find(session => session.sessionId === selected);
-  useEffect(() => () => { if (pendingFocus.current !== null) cancelAnimationFrame(pendingFocus.current); }, []);
+  const ids = Object.keys(projection.sessions);
+  const current = projection.sessions[selected];
+  const sessions = useMemo(() => open || closing ? Object.keys(projection.sessions).map(id => deriveSessionSummary(projection, id)) : [], [projection, open, closing]);
+  useEffect(() => () => { clearTimeout(closeTimer.current); if (pendingFocus.current !== null) cancelAnimationFrame(pendingFocus.current); }, []);
+  function show() { clearTimeout(closeTimer.current); setClosing(false); setOpen(true); }
   function dismiss() {
+    if (!open && !closing) return;
     if (pendingFocus.current !== null) cancelAnimationFrame(pendingFocus.current);
     pendingFocus.current = null; setOpen(false);
+    setClosing(true); clearTimeout(closeTimer.current);
+    // Preserve the existing 240ms close transition, then release the hidden
+    // options instead of reconciling 100 invisible buttons for every token.
+    closeTimer.current = setTimeout(() => setClosing(false), 250);
   }
   function close() { dismiss(); root.current?.querySelector<HTMLButtonElement>('.picker-trigger')?.focus(); }
   function focusOption(index: number) {
@@ -44,14 +54,14 @@ function SessionPicker({ sessions, selected, select }: { sessions: { sessionId: 
       event.preventDefault(); event.stopPropagation();
       const options = Array.from(root.current?.querySelectorAll<HTMLButtonElement>('[role=option]') ?? []);
       const index = options.findIndex(option => option === document.activeElement);
-      const selectedIndex = Math.max(0, sessions.findIndex(session => session.sessionId === selected));
-      const next = !open ? selectedIndex : event.key === 'Home' ? 0 : event.key === 'End' ? sessions.length - 1
-        : index < 0 ? selectedIndex : (index + (event.key === 'ArrowDown' ? 1 : -1) + sessions.length) % sessions.length;
-      setOpen(true); focusOption(next);
+      const selectedIndex = Math.max(0, ids.indexOf(selected));
+      const next = !open ? selectedIndex : event.key === 'Home' ? 0 : event.key === 'End' ? ids.length - 1
+        : index < 0 ? selectedIndex : (index + (event.key === 'ArrowDown' ? 1 : -1) + ids.length) % ids.length;
+      show(); focusOption(next);
     }
   }}>
-    <button type="button" className="picker-trigger" aria-haspopup="listbox" aria-controls={menuId} aria-expanded={open} aria-label={'选择会话' + (current ? '：' + current.title : '')} title={current?.title} onClick={() => { if (open) dismiss(); else setOpen(true); }}>
-      <span className="picker-label">{current?.title ?? '选择会话'}</span><span className="picker-count" aria-hidden="true">{sessions.length}</span><Icon name="chevron" />
+    <button type="button" className="picker-trigger" aria-haspopup="listbox" aria-controls={menuId} aria-expanded={open} aria-label={'选择会话' + (current ? '：' + current.title : '')} title={current?.title} onClick={() => { if (open) dismiss(); else show(); }}>
+      <span className="picker-label">{current?.title ?? '选择会话'}</span><span className="picker-count" aria-hidden="true">{ids.length}</span><Icon name="chevron" />
     </button>
     <ul id={menuId} className="picker-menu" role="listbox" aria-label="选择会话" aria-hidden={!open} inert={!open}>
       {sessions.map(session => <li key={session.sessionId} role="presentation"><button type="button" role="option" tabIndex={-1} aria-selected={session.sessionId === selected} className="picker-option" onClick={() => { select(session.sessionId); close(); }}>
@@ -65,10 +75,13 @@ export function TaskCapsule({ task, activate }: { task: Task; activate: () => vo
   const metrics = taskUsage(task);
   const metricsTitle = metrics ? (metrics.stale ? '离线快照 · ' : '') + metrics.turns + ' 轮 · ' + metrics.steps + ' 次执行' + (metrics.speedText ? ' · ' + metrics.speedText : '') : '';
   const working = task.status === 'running' || task.status === 'starting';
+  // Only the leading characters can be visible in a 288px capsule; animating
+  // the clipped tail of a long session title wastes style and paint work.
+  const titleChars = working ? Array.from(title) : [];
   const titleNode = working
-    ? <span className="capsule-title" aria-hidden="true">{Array.from(title).map((char, index) => char === ' '
+    ? <span className="capsule-title" aria-hidden="true">{titleChars.slice(0, 32).map((char, index) => char === ' '
       ? <span className="wave-char wave-space" key={index} />
-      : <span className="wave-char" key={index} style={{ animationDelay: (index % 24) * 0.045 + 's' }}>{char}</span>)}</span>
+      : <span className="wave-char" key={index} style={{ animationDelay: (index % 24) * 0.045 + 's' }}>{char}</span>)}{titleChars.length > 32 && titleChars.slice(32).join('')}</span>
     : <span className="capsule-title">{title}</span>;
   return <button className="task-capsule" aria-label={task.attentionCount ? '展开待处理请求' : '展开速览'} aria-description="可拖动；右键打开菜单。数据来源与调试状态见设置。" title={title + ' · ' + task.label + (metricsTitle ? ' · ' + metricsTitle : '') + (task.attentionCount ? ' · ' + task.attentionCount + ' 项待处理' : '')} onClick={activate}>
     <WhaleCompanion state={task.status}><StatusOrb task={task} /></WhaleCompanion>{titleNode}
@@ -124,6 +137,49 @@ function toolIcon(name: string): IconName {
   if (/code/.test(value)) return 'code';
   return 'wrench';
 }
+type ProcessRowData =
+  | { kind: 'note'; key: string; sourceSeq: number; note: NonNullable<NonNullable<Task['session']>['notes']>[number] }
+  | { kind: 'tool'; key: string; sourceSeq: number; activity: NonNullable<NonNullable<Task['session']>['activities']>[number] };
+
+const ProcessRow = memo(function ProcessRow({ row, index }: { row: ProcessRowData; index: number }) {
+  // The entry animation only runs on mount; shifting list positions must not
+  // rewrite every row's delay, so capture the first index once.
+  const delay = useRef(Math.min(index, 10) * 16).current;
+  return row.kind === 'note'
+    ? <details className="process-entry" data-kind={row.note.kind} data-streaming={row.note.streaming} style={{ animationDelay: `${delay}ms` }}>
+      <summary>
+        <span className="entry-icon" aria-hidden="true"><Icon name={noteIcons[row.note.kind]} /></span>
+        <span className="entry-title">{noteLabels[row.note.kind]}</span>
+        <span className="entry-preview">{row.note.text}</span>
+        <span className={row.note.streaming ? 'entry-status' : row.note.kind === 'user' ? 'entry-status entry-status-quiet' : 'entry-status entry-status-done'}>{row.note.streaming ? '生成中' : row.note.kind === 'user' ? '已发送' : '已完成'}</span>
+        <Icon name="chevron" />
+      </summary>
+      <p className="entry-body">{row.note.text}</p>
+    </details>
+    : <details className="process-entry" data-kind="tool" data-tool-status={row.activity.status ?? 'running'} style={{ animationDelay: `${delay}ms` }}>
+      <summary>
+        <span className="entry-icon" aria-hidden="true"><Icon name={toolIcon(row.activity.toolName)} /></span>
+        <span className="entry-title">{row.activity.toolName}</span>
+        <span className="entry-preview">{row.activity.summary}</span>
+        <span className="entry-status">{activityLabels[row.activity.status ?? 'running']}</span>
+        <Icon name="chevron" />
+      </summary>
+      <div className="entry-body">
+        <p>{row.activity.summary}</p>
+        {row.activity.resultSummary && <p className="activity-result">{row.activity.resultSummary}</p>}
+      </div>
+    </details>;
+}, (before, after) => {
+  if (before.row.kind !== after.row.kind || before.row.key !== after.row.key) return false;
+  if (before.row.kind === 'note') {
+    const previous = before.row.note, next = (after.row as Extract<ProcessRowData, { kind: 'note' }>).note;
+    return previous.id === next.id && previous.text === next.text && previous.kind === next.kind && previous.streaming === next.streaming;
+  }
+  const previous = before.row.activity, next = (after.row as Extract<ProcessRowData, { kind: 'tool' }>).activity;
+  return previous.callId === next.callId && previous.toolName === next.toolName && previous.summary === next.summary
+    && previous.status === next.status && previous.resultSummary === next.resultSummary;
+});
+
 function ProcessList({ task }: { task: Task }) {
   const notes = task.session?.notes;
   const activities = task.session?.activities;
@@ -147,39 +203,20 @@ function ProcessList({ task }: { task: Task }) {
   useEffect(() => { syncFade(); }, [rows]);
   if (!rows.length) return <WhaleEmpty>此会话尚无过程；开始工作后，这里会按时间出现思考与工具调用。</WhaleEmpty>;
   return <div ref={listRef} onScroll={syncFade} data-fade-top={fade.top ? 'true' : undefined} data-fade-bottom={fade.bottom ? 'true' : undefined} className="activity-list process-list" role="tabpanel" aria-label="AI 工作过程">
-    {rows.map((row, index) => row.kind === 'note'
-      ? <details className="process-entry" data-kind={row.note.kind} data-streaming={row.note.streaming} key={row.key} style={{ animationDelay: `${Math.min(index, 10) * 16}ms` }}>
-        <summary>
-          <span className="entry-icon" aria-hidden="true"><Icon name={noteIcons[row.note.kind]} /></span>
-          <span className="entry-title">{noteLabels[row.note.kind]}</span>
-          <span className="entry-preview">{row.note.text}</span>
-          <span className={row.note.streaming ? 'entry-status' : row.note.kind === 'user' ? 'entry-status entry-status-quiet' : 'entry-status entry-status-done'}>{row.note.streaming ? '生成中' : row.note.kind === 'user' ? '已发送' : '已完成'}</span>
-          <Icon name="chevron" />
-        </summary>
-        <p className="entry-body">{row.note.text}</p>
-      </details>
-      : <details className="process-entry" data-kind="tool" data-tool-status={row.activity.status ?? 'running'} key={row.key} style={{ animationDelay: `${Math.min(index, 10) * 16}ms` }}>
-        <summary>
-          <span className="entry-icon" aria-hidden="true"><Icon name={toolIcon(row.activity.toolName)} /></span>
-          <span className="entry-title">{row.activity.toolName}</span>
-          <span className="entry-preview">{row.activity.summary}</span>
-          <span className="entry-status">{activityLabels[row.activity.status ?? 'running']}</span>
-          <Icon name="chevron" />
-        </summary>
-        <div className="entry-body">
-          <p>{row.activity.summary}</p>
-          {row.activity.resultSummary && <p className="activity-result">{row.activity.resultSummary}</p>}
-        </div>
-      </details>)}
+    {rows.map((row, index) => <ProcessRow row={row} index={index} key={row.key} />)}
   </div>;
 }
+const TodoList = memo(function TodoList({ todos }: { todos: Task['todos'] }) {
+  if (!todos.length) return <WhaleEmpty>此会话尚无 Todo，不显示百分比。</WhaleEmpty>;
+  return <ol className="todo-list" aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span className="todo-text">{todo.content}</span>{todo.status === 'completed' && <span className="todo-note">已完成</span>}</li>)}</ol>;
+});
 export function TaskExpanded({ task, projection, selected, select, approval, reconnect }: { task: Task; projection: Projection; selected: string; select: (id: string) => void; approval: () => void; reconnect: () => void }) {
   const [tab, setTab] = useState<'process' | 'steps'>('process');
   const metrics = taskUsage(task);
   const todos = task.todos;
   return <section className="task-expanded">
     <div className="task-heading"><h1 title={task.title}>{task.title}</h1></div>
-    {Object.keys(projection.sessions).length > 1 && <div className="task-picker-row"><SessionPicker sessions={Object.values(projection.sessions).map(session => { const item = deriveTask(projection, session.sessionId); return { sessionId: session.sessionId, title: session.title, status: item.status, label: item.label }; })} selected={selected} select={select} /></div>}
+    {Object.keys(projection.sessions).length > 1 && <div className="task-picker-row"><SessionPicker projection={projection} selected={selected} select={select} /></div>}
     <div className="task-meta"><StatusOrb task={task} /><span>{task.label}{projection.stale ? ' · 状态可能过时' : ''}</span>{task.status === 'running' && <Icon name="whale" className="whale-tail" />}{task.total > 0 && <span className="step-count">任务 {task.completed}/{task.total}</span>}</div>
     {metrics && <div className="task-metrics">
       <div className="metrics-primary"><span><b>{metrics.turns}</b> 轮 · 执行 <b>{metrics.steps}</b> 次</span>
@@ -198,10 +235,7 @@ export function TaskExpanded({ task, projection, selected, select, approval, rec
       <button className="task-tab" role="tab" aria-selected={tab === 'steps'} onClick={() => setTab('steps')}>步骤{task.total > 0 ? ' ' + task.completed + '/' + task.total : ''}</button>
     </div>
     <div className="task-panel" key={tab}>
-      {tab === 'process' ? <ProcessList task={task} /> : <>
-        {todos.length > 0 && <ol className="todo-list" aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span className="todo-text">{todo.content}</span>{todo.status === 'completed' && <span className="todo-note">已完成</span>}</li>)}</ol>}
-        {!todos.length && <WhaleEmpty>此会话尚无 Todo，不显示百分比。</WhaleEmpty>}
-      </>}
+      {tab === 'process' ? <ProcessList task={task} /> : <TodoList todos={todos} />}
     </div>
     {task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}
     {(task.status === 'disconnected' || task.status === 'error') && <button className="attention-link" onClick={reconnect}><span className="control-label">检查连接并重试</span> <span aria-hidden="true">↗</span></button>}

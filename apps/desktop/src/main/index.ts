@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, globalShortcut, shell, clipboard } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, globalShortcut, clipboard } from 'electron';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -16,6 +16,8 @@ import { assertApprovalResponse, assertQuestionResponse } from './request-gate';
 import { createWindowController } from './window-controller';
 import { createDesktopOptics } from './desktop-optics';
 import {createWindowPositioner} from './window-positioner';
+import { createDshLauncher } from './dsh-launcher';
+import { ProjectionPublisher } from '../shared/projection-channel';
 
 const here = dirname(fileURLToPath(import.meta.url));
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -26,7 +28,6 @@ const customDataDirectory = process.env.GLASS_USER_DATA_DIR;
 if (customDataDirectory && isAbsolute(customDataDirectory)) {
   mkdirSync(customDataDirectory, { recursive: true }); app.setPath('userData', customDataDirectory);
 }
-const originalDSH = 'D:/DSH/DeepSeek Harness.exe';
 let win: BrowserWindow;
 let ui: ReturnType<typeof createWindowController> | undefined;
 let optics:ReturnType<typeof createDesktopOptics> | undefined;
@@ -50,10 +51,13 @@ const responses = new Set<string>();
 // newest projection per animation frame.
 let pendingState: typeof state | undefined;
 let stateTimer: ReturnType<typeof setTimeout> | undefined;
+const projectionPublisher = new ProjectionPublisher();
 function flushState() {
   stateTimer = undefined;
+  if (!win || win.isDestroyed() || !win.isVisible()) return;
   const next = pendingState; pendingState = undefined;
-  if (next && win && !win.isDestroyed()) win.webContents.send('glass:update', next);
+  const message = next && projectionPublisher.next(next);
+  if (message) win.webContents.send('glass:update', message);
 }
 
 function sourceName() { return source.mode === 'mock' ? '数据源：Mock 演示 · 非真实会话' : `数据源：DeepSeek Harness · ${source.connection === 'connected' ? '已连接' : source.connection === 'connecting' ? '连接中' : '未连接'}`; }
@@ -235,11 +239,15 @@ else {
       sourceName,
       reconnect: () => { if (source.mode === 'mock') mockAction('reconnect'); else ui?.request('settings'); },
       mock: action => { if (source.mode === 'mock') mockAction(action); else void useMock().then(() => mockAction(action)); }, quit: () => app.quit(),
-      canOpenDSH: existsSync(originalDSH), openDSH: () => { void shell.openPath(originalDSH); },
+      canOpenDSH: true, openDSH: createDshLauncher(win, app.getPath('userData')),
       menuChanged: () => {},
     });
     optics=createDesktopOptics(win,join(here,'../../native/RegionCapture.exe'));
     win.webContents.on('did-finish-load',()=>optics?.refresh());
+    win.on('show', () => {
+      clearTimeout(stateTimer); stateTimer = undefined; pendingState = undefined;
+      win.webContents.send('glass:update', projectionPublisher.snapshot(state));
+    });
     const opticsBinary = join(here, '../../native/RegionCapture.exe');
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', event => event.preventDefault());
@@ -256,7 +264,7 @@ else {
         optics!.enable(true);
       }
     });
-    ipcMain.handle('glass:state', event => { assertSender(event); return state; });
+    ipcMain.handle('glass:state', event => { assertSender(event); return projectionPublisher.snapshot(state); });
     ipcMain.handle('glass:source-state', event => { assertSender(event); return source; });
     ipcMain.handle('glass:dsh-connect', (event, value: unknown) => { assertSender(event); return connectDSH(value); });
     ipcMain.handle('glass:dsh-disconnect', event => { assertSender(event); resetSource('dsh'); });

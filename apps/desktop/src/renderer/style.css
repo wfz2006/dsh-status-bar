@@ -344,7 +344,7 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
    without a reason. Everything here honours the animation setting and the
    system reduced-motion preference. */
 .process-entry .entry-status-done{color:var(--success);font-weight:500;letter-spacing:.01em;}
-.process-entry{content-visibility:auto;contain-intrinsic-size:auto 24px;animation:entry-in 220ms var(--motion-settle) both;}
+.process-entry{content-visibility:auto;contain-intrinsic-size:auto 24px;animation:entry-in 220ms var(--motion-settle) backwards;}
 @keyframes entry-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 .task-panel{animation:panel-in 180ms var(--motion-settle) both;}
 @keyframes panel-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -373,7 +373,7 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .glass[data-state=completed] .status-orb.completed{animation:orb-pop 460ms var(--motion-spring);}
 @keyframes card-rise{from{opacity:0;transform:translateY(6px) scale(.995)}to{opacity:1;transform:none}}
 .approval-card{animation:card-rise 240ms var(--motion-settle) both;}
-.todo{animation:entry-in 200ms var(--motion-settle) both;}
+.todo{animation:entry-in 200ms var(--motion-settle) backwards;}
 .glass[data-animation=off] .task-progress>span,.glass[data-animation=off] .status-orb.running,.glass[data-animation=off] .approval-card,.glass[data-animation=off] .todo{animation:none;}
 @media (prefers-reduced-motion:reduce){.glass[data-state=running] .task-progress>span,.glass[data-state=running] .status-orb.running,.glass[data-state=completed] .status-orb.completed,.approval-card,.todo{animation:none;}}
 

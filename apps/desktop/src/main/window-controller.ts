@@ -1,4 +1,4 @@
-import { app, Menu, nativeTheme, screen, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
+import { Menu, nativeTheme, screen, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createPresentation } from './presentation';
@@ -46,8 +46,9 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   function publish() {
     if (win.isDestroyed()) return;
     win.webContents.send('glass:window-update', state());
-    Menu.setApplicationMenu(menu());
-    hooks.menuChanged(menu());
+    const applicationMenu = menu();
+    Menu.setApplicationMenu(applicationMenu);
+    hooks.menuChanged(applicationMenu);
   }
   function safeBounds(bounds: Bounds) { return clampBounds(bounds, screen.getDisplayMatching(bounds).workArea); }
   function moveTo(bounds: Bounds, reduce = false, duration = 320) {
@@ -91,10 +92,9 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     }
     const old = view;
     view = observeFacts(view, facts, panel ? { ...settings, autoApproval: false } : settings);
-    // A fresh approval or question is worth opening the sheet for: the glass is
-    // the answerer, and a request the user never sees is a request that stalls.
-    const newRequest = old.pending.length === 0 && view.pending.length > 0;
-    if (newRequest && !panel && view.mode !== 'approval') { showMode('approval'); return; }
+    // observeFacts owns automatic transitions and respects both user settings
+    // and manual sizing. Notification pinning must also run on return paths.
+    if (settings.pin === 'on-notification' && win.isAlwaysOnTop() !== (facts.pending.length > 0)) win.setAlwaysOnTop(facts.pending.length > 0);
     // Once the request that pulled us into the approval sheet is resolved, go
     // back to the view the user came from instead of parking on an empty sheet.
     if (view.mode === 'approval') {
@@ -106,7 +106,6 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
         return;
       }
     }
-    if (settings.pin === 'on-notification') win.setAlwaysOnTop(facts.pending.length > 0);
     if (view.mode !== old.mode && !panel) moveTo({ ...win.getBounds(), ...viewSize(view.mode, view.pending.length > 0) });
     const attentionChanged = (old.pending.length > 0) !== (view.pending.length > 0);
     if (view.mode === old.mode && view.mode === 'peek' && !view.manual && !panel && attentionChanged) {
@@ -134,7 +133,9 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
       { label: '始终置顶', id: 'pin', type: 'checkbox', checked: win.isAlwaysOnTop(), click: item => setSettings({ pin: item.checked ? 'always' : 'normal' }) },
       { label: '设置', id: 'settings', click: () => showPanel('settings') },
       { label: '查看 DSH 原窗口', id: 'open-dsh', enabled: hooks.canOpenDSH, click: hooks.openDSH },
-      { label: '重新加载 Glass', id: 'reload', click: () => { app.relaunch({ args: process.argv.slice(1) }); app.exit(0); } },
+      // Reload only the UI. Main retains its verified cookie and subscriptions;
+      // relaunching argv would replay the launcher's single-use authentication.
+      { label: '重新加载 Glass', id: 'reload', click: () => win.webContents.reload() },
       { label: '重新连接', id: 'reconnect', click: hooks.reconnect },
       { label: 'Mock 调试', id: 'debug', submenu: [
         { label: '重播演示', id: 'mock-restart', click: () => hooks.mock('restart') },

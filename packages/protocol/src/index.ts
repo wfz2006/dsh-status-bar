@@ -99,6 +99,12 @@ function safeQuestions(questions: Question[], state?: Projection): Question[] {
     state.capabilities.respondQuestion && q.status === 'pending' && q.runtimeId === state.runtimeId && q.sourceEpoch === state.epoch && sessionAcceptsRequests(state, q.sessionId)) }));
 }
 function pending(status: string) { return status === 'pending' || status === 'submitting'; }
+/** Resolved history must never evict an unresolved request from the UI window. */
+export function requestWindow<T extends { status: string }>(values: readonly T[], limit = 100): T[] {
+  const active = values.filter(value => pending(value.status));
+  const count = Math.max(0, limit - active.length);
+  return [...(count ? values.filter(value => !pending(value.status)).slice(-count) : []), ...active.slice(-limit)];
+}
 function canUpdateRequest(previous: { status: string; revision?: number } | undefined, incoming: { status: string; revision?: number }) {
   if (!previous) return true;
   if (!pending(previous.status)) return false;
@@ -143,14 +149,14 @@ export function reduceProjection(state: Projection, event: Frame | LocalEvent): 
     if (a.runtimeId !== state.runtimeId || a.sourceEpoch !== state.epoch || !Object.hasOwn(state.sessions, a.sessionId)) return state;
     if (f.kind === 'approval.resolved' && pending(a.status)) return state;
     if (!canUpdateRequest(state.approvals.find(x => x.sessionId === a.sessionId && x.requestId === a.requestId), a)) return state;
-    return { ...next, approvals: safeApprovals([...state.approvals.filter(x => !(x.sessionId === a.sessionId && x.requestId === a.requestId)), a], next).slice(-100) };
+    return { ...next, approvals: safeApprovals(requestWindow([...state.approvals.filter(x => !(x.sessionId === a.sessionId && x.requestId === a.requestId)), a]), next) };
   }
   if (f.kind === 'question.requested' || f.kind === 'question.resolved') {
     const q = f.payload;
     if (q.runtimeId !== state.runtimeId || q.sourceEpoch !== state.epoch || !Object.hasOwn(state.sessions, q.sessionId)) return state;
     if (f.kind === 'question.resolved' && pending(q.status)) return state;
     if (!canUpdateRequest(state.questions.find(x => x.sessionId === q.sessionId && x.requestId === q.requestId), q)) return state;
-    return { ...next, questions: safeQuestions([...state.questions.filter(x => !(x.sessionId === q.sessionId && x.requestId === q.requestId)), q], next).slice(-100) };
+    return { ...next, questions: safeQuestions(requestWindow([...state.questions.filter(x => !(x.sessionId === q.sessionId && x.requestId === q.requestId)), q]), next) };
   }
   if (f.kind === 'session.upserted') {
     const s = f.payload;

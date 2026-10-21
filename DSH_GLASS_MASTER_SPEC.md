@@ -29,8 +29,8 @@
 9. [docs/07_DECISIONS.md](docs/07_DECISIONS.md)：架构决策记录。
 10. [docs/08_STATE_MODEL.md](docs/08_STATE_MODEL.md)：会话投影、状态机、乱序处理。
 11. [docs/09_SOURCES.md](docs/09_SOURCES.md)：官方源地址、已确认事实与易变点。
-12. [TASKS.md](TASKS.md)：Codex 实施清单。
-13. [PROMPT_FOR_CODEX.md](PROMPT_FOR_CODEX.md)：新 Codex 会话的启动提示词。
+12. TASKS.md：Codex 实施清单。
+13. PROMPT_FOR_CODEX.md：新 Codex 会话的启动提示词。
 
 ## 范围约束
 
@@ -51,7 +51,7 @@
 
 ## 启动方式（给 Codex）
 
-在空项目目录放置全部文件，然后在 Codex 中打开此目录，粘贴 [PROMPT_FOR_CODEX.md](PROMPT_FOR_CODEX.md) 中的首轮指令。**先执行 M0（环境与 DSH 接口核验），不要第一步直接写审批桥。**
+在空项目目录放置全部文件，然后在 Codex 中打开此目录，粘贴 PROMPT_FOR_CODEX.md 中的首轮指令。**先执行 M0（环境与 DSH 接口核验），不要第一步直接写审批桥。**
 
 建议初始技术栈：pnpm workspace、TypeScript strict、Electron、electron-vite、React、Tailwind、Zustand、Zod、Vitest、Playwright（桌面 E2E 实测视环境而定）。具体版本锁定到实际兼容版本后写入锁文件，避免套用未经验证的模板版本。
 

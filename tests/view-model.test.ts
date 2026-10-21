@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { initialProjection, reduceProjection } from '../packages/protocol/src/index';
 import { mockFrames } from '../packages/adapters/mock/src/index';
-import { DEFAULT_SETTINGS, normalizeSettings, deriveTask, initialView, observeFacts, manualView, viewForSize, viewSize, formatTokens, taskMetrics, taskUsage } from '../apps/desktop/src/shared/view-model';
+import { DEFAULT_SETTINGS, normalizeSettings, deriveTask, deriveSessionSummary, initialView, observeFacts, manualView, viewForSize, viewSize, formatTokens, taskMetrics, taskUsage } from '../apps/desktop/src/shared/view-model';
 
 it('defaults to a calm task capsule and validates persisted preferences', () => {
   expect(initialView().mode).toBe('capsule');
@@ -104,5 +104,16 @@ it('includes only current runtime and session questions in the shared attention 
   p = { ...p, questions: [q, { ...q, sessionId: 'demo-other' }, { ...q, sourceEpoch: 'old' }, { ...q, status: 'answered' }] };
   const task = deriveTask(p, 'demo-main');
   expect(task.questions).toHaveLength(1); expect(task.attentionCount).toBe(2);
+  expect(deriveSessionSummary(p, 'demo-main')).toMatchObject({ title: task.title, status: task.status, label: task.label });
   expect(deriveTask({ ...p, approvals: [] }, 'demo-main').status).toBe('waiting_answer');
+});
+it('the lightweight picker summary agrees with task details for terminal and disconnected sessions', () => {
+  let p = initialProjection(); for (const f of mockFrames()) p = reduceProjection(p, f);
+  for (const phase of ['working', 'waiting-approval', 'waiting-question', 'finished', 'limit-reached', 'error', 'cancelled', 'archived', 'unknown'] as const) {
+    for (const stale of [false, true]) {
+      const projection = { ...p, stale, sessions: { ...p.sessions, 'demo-main': { ...p.sessions['demo-main']!, phase } } };
+      const task = deriveTask(projection, 'demo-main');
+      expect(deriveSessionSummary(projection, 'demo-main')).toMatchObject({ title: task.title, status: task.status, label: task.label });
+    }
+  }
 });

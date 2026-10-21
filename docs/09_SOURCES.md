@@ -44,7 +44,7 @@
 
 ## 5. 目标运行环境核验（Codex 本地填写）
 
-2026-10-18 过程延迟专项：只读核对本机 `D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/`，相关包版本均为0.2.1-rc.2。`dsh-api-session-controller/lib/index.js:1546,1573,1604` 证实 `session/follow.request.assistantStream=true` 才返回实时帧与重连基线；1658处为线格式。`dsh-agent-loop/lib/index.js:354,1080,1156` 证实实时start/chunk/end先于/伴随持久消息提交；`dsh-llm/lib/index.js:954,1150` 证实text/reasoning delta、block-end及压缩快照格式。SHA256和本轮验证范围见 `reports/process-latency/README.md`；未读取用户凭据或修改已安装应用/Profile。
+2026-10-18 过程延迟专项：只读核对本机 `D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/`，相关包版本均为0.2.1-rc.2。`dsh-api-session-controller/lib/index.js:1546,1573,1604` 证实 `session/follow.request.assistantStream=true` 才返回实时帧与重连基线；1658处为线格式。`dsh-agent-loop/lib/index.js:354,1080,1156` 证实实时start/chunk/end先于/伴随持久消息提交；`dsh-llm/lib/index.js:954,1150` 证实text/reasoning delta、block-end及压缩快照格式。SHA256和本轮验证范围见 `docs/integration-matrix.md`（该轮验收记录未随仓库保存）；未读取用户凭据或修改已安装应用/Profile。
 
 ```text
 检查日期：2026-10-17

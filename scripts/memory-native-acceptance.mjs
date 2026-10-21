@@ -6,6 +6,7 @@ import { fixture } from './native-fixture.mjs';
 import { memoryBackdrop } from './memory-backdrop.mjs';
 
 const f=await fixture();
+const output=resolve(process.env.GLASS_REPORT_DIR ?? 'reports/memory-upgrade');
 const report={checks:[],changes:[]};
 try {
   const {app,page,mainId,menu}=f;
@@ -88,7 +89,7 @@ try {
   await expect.poll(()=>page.evaluate(()=>window.glass.getOpticsState())).toMatchObject({enabled:false,running:false});
   assert.deepEqual(await page.locator('.desktop-backdrop').evaluate(c=>[c.width,c.height]),[0,0]);
   report.checks.push('hide/show and solid material release/recreate the native and canvas resources');
-  await mkdir(resolve('reports/memory-upgrade'),{recursive:true});
-  await writeFile(resolve('reports/memory-upgrade/native-acceptance.json'),JSON.stringify({result:'PASS',...report},null,2));
+  await mkdir(output,{recursive:true});
+  await writeFile(resolve(output,'native-acceptance.json'),JSON.stringify({result:'PASS',...report},null,2));
   console.log('Memory native acceptance: PASS',JSON.stringify(report));
 }finally{await f.app.close();}

@@ -14,3 +14,4 @@ apps/desktop/native/*.exe
 packages/dsh-status-bar/app/
 packages/dsh-status-bar/electron/
 packages/dsh-status-bar/*.tgz
+reports/

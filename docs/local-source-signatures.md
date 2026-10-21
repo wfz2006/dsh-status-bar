@@ -1,5 +1,7 @@
 # 目标版本接口核验
 
+> 本文为 2026-10-17 的 0.2.0-rc.2 历史探测记录，末尾 BLOCKED 描述不代表当前实现。后续已实现认证 Host Adapter；0.2.1-rc.2 的接入证据与尚未验收的 Desktop 所有权边界见 [接入矩阵](integration-matrix.md) 和 [ADR 004](adr/004-authenticated-host.md)。
+
 日期：2026-10-17。核验了本机 **0.2.0-rc.2 安装包中的 JavaScript 实现**。未修改 ASAR；通过已安装 Electron 的只读 ASAR 文件 API 检查。安装包声明的 `.d.ts` 文件未随包提供，不能声称本地类型编译已通过。
 
 证据文件 `docs/evidence/installed-signatures.json` 保存包名、版本、精确文件路径、SHA-256 和选定代码片段；不会读取用户聊天、模型配置或凭据。复现脚本：`scripts/probe-installed.cjs`，需要以官方 Electron 的 Node 模式运行。

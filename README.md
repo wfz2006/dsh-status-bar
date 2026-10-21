@@ -18,22 +18,22 @@ Windows 11 优先，Electron 实现，单实例常驻，不注册托盘图标、
 
 | | |
 |:--|:--|
-| ![胶囊](reports/intro-shots/capsule.png)<br>**胶囊 · 平时**：小鲸鱼标志 + 一行任务名 + 「3 轮 · 42 步」的小字进度。小到可以贴着屏幕边缘安静待着。 | ![速览](reports/intro-shots/peek.png)<br>**速览 · 瞟一眼**：会话转录（思考 / DSH / 你）、当前步骤，外加吞吐与缓存这些小仪表。 |
-| ![详情](reports/intro-shots/expanded.png)<br>**紧凑详情 · 看全程**：「过程 / 步骤」双标签，思考、工具调用、消息一条条排开，谁已完成谁已发送一目了然。 | ![审批](reports/intro-shots/approval.png)<br>**独立审批 · 拍板时**：「需要你的确认 2 项」，命令先预览再点「拒绝 / 允许一次」，拿不准还能跳回 DSH 原窗口处理。 |
+| ![胶囊](docs/images/capsule.png)<br>**胶囊 · 平时**：小鲸鱼标志 + 一行任务名 + 「3 轮 · 42 步」的小字进度。小到可以贴着屏幕边缘安静待着。 | ![速览](docs/images/peek.png)<br>**速览 · 瞟一眼**：会话转录（思考 / DSH / 你）、当前步骤，外加吞吐与缓存这些小仪表。 |
+| ![详情](docs/images/expanded.png)<br>**紧凑详情 · 看全程**：「过程 / 步骤」双标签，思考、工具调用、消息一条条排开，谁已完成谁已发送一目了然。 | ![审批](docs/images/approval.png)<br>**独立审批 · 拍板时**：「需要你的确认 2 项」，命令先预览再点「拒绝 / 允许一次」，拿不准还能跳回 DSH 原窗口处理。 |
 
-胶囊 288×50 DIP 起，点击长大成速览，再点进入详情；有请求待处理时直接打开审批视图。扩展约 320ms，收起先 80ms 内容退场、再 260ms 原生窗口连续变化。
+胶囊 288×44 DIP 起，点击长大成速览，再点进入详情；有请求待处理时点击可打开审批视图。自动展开由设置控制，默认关闭，手动尺寸不会被新请求覆盖。扩展约 320ms，收起先 80ms 内容退场、再 260ms 原生窗口连续变化。
 
 ## 📖 这块玻璃是「真」玻璃
 
 普通悬浮窗只是把背景涂白假装透明；这块玻璃是真的会「看穿」它背后的东西——只取窗后一小块画面（**不保存、不上传**），再用同一套透镜把它折射出来：窗后内容被压弯约 **13 个物理像素**，边缘还带着一丝丝彩虹（RGB 色散）。
 
-![折射对照](reports/desktop-optics/comparison.png)
+![折射对照](docs/images/comparison.png)
 
 > 对照实验（实测存档）：左「零位移」，右「开启折射与 RGB 色散」。拿真实窗后条纹做的实测，不是效果图。
 
-这项能力默认**关闭**，要在设置里手动打开；关闭、隐藏窗口或程序退出时立刻停用。隐私条款就一句话：只看该看的那块，别的不碰。
+普通启动时，只要原生取样助手可用且材质非实色，这项能力默认**开启**；设置中的“真实折射与色散”可为本次运行关闭它。隐藏窗口时暂停，显示后恢复；关闭取样或退出程序时停止。范围仅限本窗后方与最多 48 个物理像素边距，不保存、不上传。
 
-![设置](reports/intro-shots/settings.png)
+![设置](docs/images/settings.png)
 
 ## 📖 定下的死规矩：按钮永远是你按的
 
@@ -45,7 +45,7 @@ Windows 11 优先，Electron 实现，单实例常驻，不注册托盘图标、
 
 ## 📊 数字小卡片
 
-| 142 | 4 | 13 px | 0 |
+| 171 | 4 | 13 px | 0 |
 |:--:|:--:|:--:|:--:|
 | 单测全绿（另有类型检查、lint、桌面构建） | 副面孔：胶囊 / 速览 / 详情 / 审批 | 真实折射偏折（实测物理像素） | 次自动放行（永远是 0） |
 
@@ -59,7 +59,7 @@ pnpm build
 pnpm start
 ```
 
-也可以直接双击 `启动预览.cmd`。开发热更新用 `pnpm dev`。默认是 **Mock 演示**；连接真实 DSH 见下。
+也可以直接双击 `启动预览.cmd`。开发热更新用 `pnpm dev`。普通启动为 **DSH 数据源、尚未连接**；Mock 仅从调试菜单显式开启，自动化夹具使用 `GLASS_SMOKE=1`。连接真实 DSH 见下。
 
 ### 装成 DSH 插件（推荐）
 
@@ -106,9 +106,7 @@ packages/adapters     dsh（真实 Host）/ mock（演示数据源）
 packages/dsh-status-bar  DSH 插件（bundle：启动桌面端并把认证链接交过去）
 tests                 单元测试
 scripts               构建、验收、截图与联调脚本
-docs                  产品 / 架构 / 协议 / 安全 / 决策文档
-reports               每轮真实验收记录与截图（23 个目录）
-experiments           Tauri 原生材质对照等实验
+docs                  产品 / 架构 / 协议 / 安全 / 决策文档，界面截图在 docs/images
 ```
 
 ## 📚 文档索引
@@ -118,8 +116,8 @@ experiments           Tauri 原生材质对照等实验
 - [总体架构](docs/01_ARCHITECTURE.md) ｜ [自定义本地协议](docs/02_PROTOCOL.md) ｜ [状态模型](docs/08_STATE_MODEL.md)
 - [DSH 集成与已验证接口](docs/04_DSH_INTEGRATION.md) ｜ [安全测试](docs/05_SECURITY_TESTING.md)
 - [决策记录](docs/07_DECISIONS.md) ｜ [执行计划](docs/06_EXECUTION_PLAN.md)
-- [规格原文](docs/README_SPEC.md) ｜ [实现清单](TASKS.md) ｜ [开发规格](DSH_GLASS_MASTER_SPEC.md) ｜ [UI 重设计规范](DSH_Glass_Liquid_UI_Redesign_Spec.md)
-- 真实截图与验收：`reports/`（材质矩阵、四形态、录屏、折射实测、性能、动效等）
+- [开发规格](DSH_GLASS_MASTER_SPEC.md) ｜ [UI 重设计规范](DSH_Glass_Liquid_UI_Redesign_Spec.md) ｜ [变更记录](docs/release-notes-0.2.5.md)
+- 界面截图见 `docs/images/`；验收脚本会把新证据写到本机 `reports/`（不入库）
 
 ## 📌 当前状态
 

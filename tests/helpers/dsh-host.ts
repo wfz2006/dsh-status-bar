@@ -27,6 +27,8 @@ export class FakeHost {
   readonly followRequests = new Map<string, Args>();
   readonly pending = new Map<string, { agentId: string; event: string; request: Args }>();
   authAttempts = 0;
+  autoPong = true;
+  pings = 0;
   origin = '';
   private server?: Server;
   private wss?: WebSocketServer;
@@ -35,7 +37,7 @@ export class FakeHost {
 
   async start() {
     this.server = createServer((request, response) => { this.http(request, response).catch(() => { if (!response.headersSent) response.writeHead(500).end(); else response.destroy(); }); });
-    this.wss = new WebSocketServer({ noServer: true });
+    this.wss = new WebSocketServer({ noServer: true, autoPong: this.autoPong });
     this.wss.on('connection', socket => this.attach(socket));
     this.server.on('upgrade', (request, socket, head) => {
       const url = new URL(request.url ?? '/', 'http://127.0.0.1');
@@ -64,6 +66,10 @@ export class FakeHost {
     socket.send(JSON.stringify({ type: 'item', streamId: stream, value }));
     return true;
   }
+  end(stream: string) {
+    const socket = this.streams.get(stream); if (!socket) return;
+    this.streams.delete(stream); socket.send(JSON.stringify({ type: 'end', streamId: stream }));
+  }
 
   waterfall(event: { eventId: string; agentId: string; event: string; request: Args }) {
     this.pending.set(event.eventId, event);
@@ -80,9 +86,11 @@ export class FakeHost {
   snapshot(sessionId: string, projections: Args) { return this.send(`audit:${sessionId}`, { type: 'snapshot', projections: { values: projections }, records: [] }); }
 
   private attach(socket: WebSocket) {
+    socket.on('ping', () => { this.pings++; });
     socket.on('message', raw => {
       let message: Args;
       try { message = object(JSON.parse(raw.toString())); } catch { return; }
+      if (message.type === 'cancel') { this.streams.delete(String(message.streamId)); return; }
       if (message.type !== 'open') return;
       const stream = String(message.streamId ?? '');
       if (!stream) return;
@@ -133,7 +141,7 @@ export class FakeHost {
     this.requests.push({ method, args });
     let result: Args = { ok: true, value: method === '$events/result' ? undefined : true };
     if (method === '$events/result' && this.rejectResults) result = { ok: false };
-    else if (this.rpc) result = { ok: true, value: this.rpc(method, args) };
+    else if (this.rpc) result = { ok: true, value: await this.rpc(method, args) };
     else if (method === 'session/list') result = { ok: true, value: { items: this.sessions.map(seed => ({ sessionId: seed.sessionId, cwd: seed.cwd ?? 'C:\\ws', running: seed.running ?? false, agentAvailable: seed.agentAvailable ?? seed.running ?? false, projections: { values: { title: seed.title ?? seed.sessionId, ...(seed.stats ?? {}) } } })) } };
     if (method === '$events/result' && result.ok === true && result.value === undefined && !this.suppressDecision) {
       const id = String(args.eventId); const delivery = this.pending.get(id);

@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { Approval, Frame, Question, Session, SessionNote } from '@glass/protocol';
+import { requestWindow } from '@glass/protocol';
 import { HostTransport, bounded, record, type RecordValue } from './transport';
 import { AssistantPreview } from './assistant-preview';
+import { isDeepStrictEqual } from 'node:util';
+import { SessionCache } from './retention';
+import { redactCredentials, toolPreview } from './tool-preview';
 
 export const dshIntegration = Object.freeze({ status: 'AVAILABLE', mode: 'authenticated-host', respondApproval: true, respondQuestion: true,
   reason: '通过用户提供的本机 Host 认证链接连接；具体答复能力仅由本次连接的有效请求授予。' });
@@ -46,11 +50,12 @@ export function createDshAdapter(options: Options) {
   const sessions = new Map<string, Session>(); const approvals = new Map<string, Approval>(); const questions = new Map<string, Question>();
   /** Projections arrive one key at a time; keep the merged view so stats never flicker back to partial zeros. */
   const projectionValues = new Map<string, RecordValue>();
-  const projectionClocks = new Map<string, number>();
-  const revisions = new Map<string, number>(); const deliveries = new Map<string, Delivery>(); const followed = new Set<string>();
+  const projectionClocks = new SessionCache<number>();
+  let sourceRevision = 0;
+  const deliveries = new Map<string, Delivery>(); const followed = new Set<string>();
   const terminal = new Map<string, Session['phase']>(); const archived = new Set<string>(); const live = new Set<string>();
-  const toolArguments = new Map<string, { name: string; preview: string; complete: boolean }>();
-  const auditApprovals = new Map<string, string>(); const continuedQuestions = new Map<string, string>();
+  const toolArguments = new SessionCache<{ name: string; preview: string; complete: boolean }>();
+  const auditApprovals = new SessionCache<string>(); const continuedQuestions = new Map<string, string>();
   const decisions = new Map<string, (status: string) => void>();
   const coldRead = new Set<string>();
   const previews = new Map<string, AssistantPreview>();
@@ -70,28 +75,62 @@ export function createDshAdapter(options: Options) {
   }
   let readyResolve: (() => void) | undefined; let readyReject: ((error: Error) => void) | undefined;
   let baseline = false; let gatewayReady = false;
-  const revision = (id: string) => { const next = (revisions.get(id) ?? 0) + 1; revisions.set(id, next); return next; };
+  // A connection-wide monotonic counter needs no dead-session tombstones and
+  // remains greater than the removal revision when the same ID is re-added.
+  const revision = (id: string) => { void id; return ++sourceRevision; };
   // Last emitted shape per session, used to keep idle polls from republishing.
-  const emittedSessions = new Map<string, string>();
+  const emittedSessions = new Map<string, Session>();
+  let replayFrames: Map<string, Frame> | undefined;
+  function publish(value: Frame) {
+    if (!replayFrames) { options.publish(value); return; }
+    if (value.kind === 'approval.requested' || value.kind === 'approval.resolved' || value.kind === 'question.requested' || value.kind === 'question.resolved') {
+      const request = value.payload;
+      replayFrames.set(`${value.kind.split('.')[0]}:${request.sessionId}:${request.requestId}`, structuredClone(value));
+    }
+  }
   function frame(kind: Frame['kind'], payload: unknown): Frame { return { protocolVersion: 1, messageId: randomUUID(), sentAt: new Date().toISOString(), runtimeId, epoch, kind, payload } as Frame; }
   function welcome(): Frame { return frame('glass.welcome', { source: 'dsh', capabilities: { observeSessions: connected, observeTodos: connected, observeTools: connected,
     // Connection-level support only: each concrete decision still requires a matching live delivery (see deliveryFor).
     respondApproval: connected, respondQuestion: connected } }); }
-  function snapshot(): Frame { return frame('glass.snapshot', { sessions: [...sessions.values()].slice(-100).map(displaySession), approvals: [...approvals.values()].slice(-100), questions: [...questions.values()].slice(-100) }); }
+  function snapshot(): Frame { return frame('glass.snapshot', { sessions: [...sessions.values()].slice(-100).map(displaySession), approvals: requestWindow([...approvals.values()]), questions: requestWindow([...questions.values()]) }); }
+  function pruneHistory() {
+    for (const requests of [approvals, questions]) {
+      let resolved = [...requests.values()].filter(request => !isPending(request.status)).length;
+      for (const [key, request] of requests) if (!isPending(request.status) && resolved > 100) { requests.delete(key); resolved--; }
+    }
+  }
+  function clearPending(id: string, protectedRequests: ReadonlySet<string> = new Set()) {
+    for (const d of [...deliveries.values()]) if (d.identity.sessionId === id && !protectedRequests.has(`${id}:${d.identity.requestId}`)) finalizeDelivery(d, 'unavailable');
+    for (const [kind, requests] of [['approval', approvals], ['question', questions]] as const) {
+      for (const [key, request] of requests) if (request.sessionId === id && isPending(request.status) && !protectedRequests.has(key)) {
+        request.status = 'unavailable'; request.actionable = false; request.revision = revision(id);
+        continuedQuestions.delete(key); decisions.get(key)?.('unavailable');
+        if (connected) publish(frame(kind === 'approval' ? 'approval.resolved' : 'question.resolved', structuredClone(request)));
+      }
+    }
+    auditApprovals.deleteWhere(id, requestId => !protectedRequests.has(`${id}:${requestId}`));
+    if (!protectedRequests.size) toolArguments.deleteSession(id);
+    pruneHistory();
+  }
   function emitSession(id: string) {
     const session = sessions.get(id); if (!session) return;
     const waitingApproval = [...approvals.values()].some(a => a.sessionId === id && isPending(a.status));
     const waitingQuestion = [...questions.values()].some(q => q.sessionId === id && isPending(q.status));
     session.phase = archived.has(id) ? 'archived' : terminal.get(id) ?? (waitingApproval ? 'waiting-approval' : waitingQuestion ? 'waiting-question' : session.agentStatus === 'idle' || session.agentStatus === 'unknown' ? 'unknown' : 'working');
+    // Historical boundaries are intermediate states, not new live transitions.
+    // Publishing them would permanently revoke an otherwise current request.
+    if (replayFrames) return;
     // The 10s session list poll re-projects every known session. Skip publishes
     // that would not change the projection, so an idle dashboard stops paying
     // for 80+ identical renders every tick.
     const displayed = displaySession(session);
-    const fingerprint = JSON.stringify(displayed, (key, value) => key === 'lastSourceSeq' ? undefined : value);
-    if (emittedSessions.get(id) === fingerprint) return;
+    // Share immutable arrays/strings with the live view instead of retaining a
+    // second, potentially 120 KiB JSON string for every session. Equality is exact.
+    const fingerprint = { ...displayed, lastSourceSeq: 0 };
+    if (isDeepStrictEqual(emittedSessions.get(id), fingerprint)) return;
     emittedSessions.set(id, fingerprint);
     session.lastSourceSeq = revision(id);
-    if (connected) options.publish(frame('session.upserted', structuredClone({ ...displayed, lastSourceSeq: session.lastSourceSeq })));
+    if (connected) publish(frame('session.upserted', structuredClone({ ...displayed, lastSourceSeq: session.lastSourceSeq })));
   }
   function ensureSession(id: string, row: RecordValue = {}): Session | undefined {
     if (!id || id.length > 200) return;
@@ -117,9 +156,10 @@ export function createDshAdapter(options: Options) {
     const session = ensureSession(id); if (!session) return;
     const previous = projectionValues.get(id) ?? {};
     const incoming = Object.fromEntries(Object.entries(record(values)).filter(([key]) => {
-      const clockKey = `${id}:${key}`; const previousClock = projectionClocks.get(clockKey);
+      if (!['title', 'todos', 'userQuestions', 'sessionStats', 'tokenUsage', 'contextPressure', 'turnBoundary'].includes(key)) return false;
+      const previousClock = projectionClocks.get(id, key);
       if (cached && key in previous || sourceClock !== undefined && previousClock !== undefined && sourceClock < previousClock) return false;
-      if (sourceClock !== undefined) projectionClocks.set(clockKey, sourceClock);
+      if (sourceClock !== undefined) projectionClocks.set(id, key, sourceClock);
       return true;
     }));
     const merged = { ...previous, ...incoming };
@@ -159,30 +199,32 @@ export function createDshAdapter(options: Options) {
         }
         q.status = settled.has(q.requestId.slice(9)) ? 'answered' : 'cancelled'; q.actionable = false; q.revision = revision(id); questions.set(key, q); continuedQuestions.delete(key); decisions.get(key)?.(q.status);
         for (const d of [...deliveries.values()]) if (d.identity.sessionId === id && d.identity.requestId === q.requestId) deliveries.delete(d.eventId);
-        if (connected) options.publish(frame('question.resolved', q));
+        if (connected) publish(frame('question.resolved', q));
       }
-      if (connected) for (const q of questions.values()) if (q.sessionId === id && activeIds.has(q.requestId)) options.publish(frame('question.requested', q));
+      if (connected) for (const q of questions.values()) if (q.sessionId === id && activeIds.has(q.requestId)) publish(frame('question.requested', q));
     }
-    emitSession(id);
+    pruneHistory(); emitSession(id);
   }
   function follow(id: string) {
     if (followed.has(id) || !live.has(id)) return;
     followed.add(id); transport?.subscribe(`audit:${id}`, 'session/follow', { request: { address: { kind: 'session', sessionId: id }, maxMessages: 80, assistantStream: true } });
   }
-  function event(id: string, value: unknown) {
-    const session = ensureSession(id); if (!session) return;
+  function event(id: string, value: unknown, protectedRequests?: ReadonlySet<string>) {
+    const session = sessions.get(id); if (!session) return;
     const e = record(value); const data = record(e.data); const type = bounded(e.type);
     const settledNotes = previews.get(id)?.settle(e);
     if (type === 'turn/start' || type === 'turn/end') previews.get(id)?.clear();
     const eventSeq = typeof e.seq === 'number' && Number.isInteger(e.seq) && e.seq >= 0 ? e.seq : revision(id);
     if (type === 'turn/start') {
+      clearPending(id, protectedRequests);
       terminal.delete(id); session.agentStatus = 'running';
-      if (typeof e.seq !== 'number' || e.seq >= (projectionClocks.get(`${id}:todos`) ?? -1)) {
+      if (typeof e.seq !== 'number' || e.seq >= (projectionClocks.get(id, 'todos') ?? -1)) {
         session.todos = []; const p = projectionValues.get(id); if (p) p.todos = [];
-        if (typeof e.seq === 'number') projectionClocks.set(`${id}:todos`, e.seq);
+        if (typeof e.seq === 'number') projectionClocks.set(id, 'todos', e.seq);
       }
     }
     if (type === 'turn/end') {
+      clearPending(id, protectedRequests);
       session.agentStatus = 'idle'; const reason = bounded(record(data.reason).kind);
       terminal.set(id, reason === 'aborted' ? 'cancelled' : reason === 'error' || reason === 'blocked' ? 'error' : reason === 'max-tokens' ? 'limit-reached' : reason === 'completed' ? 'finished' : 'unknown');
       if (reason === 'aborted' || reason === 'error') session.activities = session.activities.map(a => a.status === 'running' || a.status === 'pending' ? { ...a, status: reason === 'aborted' ? 'cancelled' : 'error' } : a);
@@ -212,14 +254,14 @@ export function createDshAdapter(options: Options) {
     if (type === 'tool/call') {
       const callId = bounded(data.callId, '', 200); const name = bounded(data.name, 'tool', 200);
       if (callId) {
-        let parsed: unknown; try { parsed = JSON.parse(bounded(data.arguments)); } catch { parsed = undefined; }
-        const containsSensitive = (v: unknown): boolean => Array.isArray(v) ? v.some(containsSensitive) : Object.entries(record(v)).some(([key, nested]) => /(?:secret|password|token|authorization|api.?key|^env$)/i.test(key) || containsSensitive(nested));
-        const args = record(parsed); const encoded = JSON.stringify(args); const complete = parsed !== undefined && Object.keys(args).length > 0 && !containsSensitive(parsed) && encoded.length <= 4096;
-        toolArguments.set(`${id}:${callId}`, { name, preview: complete ? bounded(args.command, encoded) : '参数包含敏感字段、过长或格式不可验证，请在 DSH 中确认。', complete });
-        session.activities = [{ callId, toolName: name, summary: complete ? bounded(args.command ?? encoded, name, 400) : name, sourceSeq: eventSeq, status: 'running' as const }, ...session.activities.filter(a => a.callId !== callId)].slice(0, 100);
+        const tool = { name, ...toolPreview(data.arguments) };
+        toolArguments.set(id, callId, tool);
+        const protectedCalls = new Set([...approvals.values()].filter(a => a.sessionId === id && isPending(a.status) && a.callId).map(a => a.callId!));
+        toolArguments.trim(id, 256, protectedCalls);
+        session.activities = [{ callId, toolName: name, summary: tool.complete ? bounded(tool.preview, name, 400) : name, sourceSeq: eventSeq, status: 'running' as const }, ...session.activities.filter(a => a.callId !== callId)].slice(0, 100);
         for (const a of approvals.values()) if (a.sessionId === id && a.callId === callId && a.toolName === name && isPending(a.status)) {
-          const tool = toolArguments.get(`${id}:${callId}`)!; a.commandPreview = tool.preview; a.displayDetails = tool.complete ? 'complete' : 'partial'; a.actionable = tool.complete && [...deliveries.values()].some(d => d.identity.requestId === a.requestId); a.revision = revision(id);
-          if (connected) options.publish(frame('approval.requested', structuredClone(a)));
+          a.commandPreview = tool.preview; a.displayDetails = tool.complete ? 'complete' : 'partial'; a.actionable = tool.complete && [...deliveries.values()].some(d => d.identity.sessionId === id && d.identity.requestId === a.requestId); a.revision = revision(id);
+          if (connected) publish(frame('approval.requested', structuredClone(a)));
         }
       }
     }
@@ -228,35 +270,39 @@ export function createDshAdapter(options: Options) {
       const failed = message.isError === true || !!data.error;
       const known = session.activities.some(a => a.callId === callId);
       if (callId && !known) {
-        session.activities = [{ callId, toolName: toolArguments.get(`${id}:${callId}`)?.name ?? 'tool', summary: failed ? '工具执行失败' : '工具执行完成', sourceSeq: eventSeq, status: failed ? 'error' as const : 'success' as const, resultSummary: failed ? '工具执行失败' : '工具执行完成' }, ...session.activities].slice(0, 100);
+        session.activities = [{ callId, toolName: toolArguments.get(id, callId)?.name ?? 'tool', summary: failed ? '工具执行失败' : '工具执行完成', sourceSeq: eventSeq, status: failed ? 'error' as const : 'success' as const, resultSummary: failed ? '工具执行失败' : '工具执行完成' }, ...session.activities].slice(0, 100);
       }
       session.activities = session.activities.map(a => a.callId === callId ? { ...a, status: failed ? 'error' : 'success', resultSummary: failed ? '工具执行失败' : '工具执行完成' } : a);
     }
     if (type === 'approval/asked') {
       const auditId = bounded(data.id, '', 200); const callId = bounded(data.callId, '', 200);
       const matching = [...approvals.values()].find(a => a.sessionId === id && !!callId && a.callId === callId && a.toolName === data.toolName && isPending(a.status));
-      if (auditId && matching) auditApprovals.set(`${id}:${auditId}`, matching.requestId);
+      if (auditId && matching) auditApprovals.set(id, auditId, matching.requestId);
       else if (auditId) {
-        const requestId = `audit:${auditId}`; auditApprovals.set(`${id}:${auditId}`, requestId);
-        approvals.set(`${id}:${requestId}`, { requestId, runtimeId, sourceEpoch: epoch, sessionId: id, toolName: bounded(data.toolName, 'tool', 200), ...(callId ? { callId } : {}), reason: bounded(data.reason, 'DSH 审批记录'), createdAt: new Date().toISOString(), status: 'pending', actionable: false, displayDetails: 'partial', revision: revision(id) });
+        const requestId = `audit:${auditId}`; auditApprovals.set(id, auditId, requestId);
+        approvals.set(`${id}:${requestId}`, { requestId, runtimeId, sourceEpoch: epoch, sessionId: id, toolName: bounded(data.toolName, 'tool', 200), ...(callId ? { callId } : {}), reason: redactCredentials(bounded(data.reason, 'DSH 审批记录')), createdAt: new Date().toISOString(), status: 'pending', actionable: false, displayDetails: 'partial', revision: revision(id) });
       }
     }
     if (type === 'approval/decided') {
-      const requestId = auditApprovals.get(`${id}:${bounded(data.id, '', 200)}`); const a = requestId ? approvals.get(`${id}:${requestId}`) : undefined;
+      const requestId = auditApprovals.get(id, bounded(data.id, '', 200)); const a = requestId ? approvals.get(`${id}:${requestId}`) : undefined;
       if (a && ['allowed-once', 'rejected', 'cancelled', 'unavailable'].includes(String(data.outcome))) {
         a.status = data.outcome as Approval['status']; a.actionable = false; a.revision = revision(id);
         decisions.get(`${id}:${a.requestId}`)?.(a.status);
         for (const d of [...deliveries.values()]) if (d.identity.sessionId === id && d.identity.requestId === requestId) deliveries.delete(d.eventId);
-        if (connected) options.publish(frame('approval.resolved', structuredClone(a)));
+        if (connected) publish(frame('approval.resolved', structuredClone(a)));
+        auditApprovals.deleteWhere(id, value => value === requestId);
       }
     }
-    emitSession(id);
+    pruneHistory(); emitSession(id);
   }
   function finalizeDelivery(delivery: Delivery, status: Approval['status'] | Question['status']) {
     deliveries.delete(delivery.eventId); const key = `${delivery.identity.sessionId}:${delivery.identity.requestId}`;
     decisions.get(key)?.(status);
-    if (delivery.kind === 'approval') { const a = approvals.get(key); if (a) { a.status = status as Approval['status']; a.actionable = false; a.revision = revision(a.sessionId); if (connected) options.publish(frame('approval.resolved', structuredClone(a))); } }
-    else { const q = questions.get(key); if (q) { q.status = status as Question['status']; q.actionable = false; q.revision = revision(q.sessionId); if (connected) options.publish(frame('question.resolved', structuredClone(q))); } }
+    if (delivery.kind === 'approval') { const a = approvals.get(key); if (a) { a.status = status as Approval['status']; a.actionable = false; a.revision = revision(a.sessionId); if (connected) publish(frame('approval.resolved', structuredClone(a))); } }
+    else { const q = questions.get(key); if (q) { q.status = status as Question['status']; q.actionable = false; q.revision = revision(q.sessionId); if (connected) publish(frame('question.resolved', structuredClone(q))); } }
+    continuedQuestions.delete(key);
+    auditApprovals.deleteWhere(delivery.identity.sessionId, value => value === delivery.identity.requestId);
+    pruneHistory();
     emitSession(delivery.identity.sessionId);
   }
   function gateway(value: unknown) {
@@ -269,8 +315,11 @@ export function createDshAdapter(options: Options) {
         else if (d.kind === 'question' && d.durableCallId) {
           // Timed waits continue as durable questions; a lost delivery is not an expiry.
           deliveries.delete(d.eventId); const q = questions.get(`${d.identity.sessionId}:${d.identity.requestId}`);
-          if (q) { q.actionable = false; q.revision = revision(q.sessionId); if (connected) options.publish(frame('question.requested', structuredClone(q))); }
-          void transport?.request('session/projections', { request: { sessionId: d.identity.sessionId } }).then(p => applyProjections(d.identity.sessionId, record(p).values)).catch(() => {});
+          if (q) { q.actionable = false; q.revision = revision(q.sessionId); if (connected) publish(frame('question.requested', structuredClone(q))); }
+          const current = transport; const session = sessions.get(d.identity.sessionId);
+          void current?.request('session/projections', { request: { sessionId: d.identity.sessionId } }).then(p => {
+            if (current === transport && sessions.get(d.identity.sessionId) === session) applyProjections(d.identity.sessionId, record(p).values);
+          }).catch(() => {});
         } else finalizeDelivery(d, 'cancelled');
       }
       return;
@@ -283,23 +332,25 @@ export function createDshAdapter(options: Options) {
         for (const [key, a] of approvals) if (a.sessionId === id) approvals.delete(key);
         for (const [key, q] of questions) if (q.sessionId === id) { questions.delete(key); continuedQuestions.delete(key); }
         const sourceSeq = revision(id); sessions.delete(id); projectionValues.delete(id); terminal.delete(id); live.delete(id); emittedSessions.delete(id); previews.delete(id);
-        if (connected) options.publish(frame('session.removed', { sessionId: id, sourceSeq }));
+        followed.delete(id); coldRead.delete(id); archived.delete(id); projectionClocks.deleteSession(id); toolArguments.deleteSession(id); auditApprovals.deleteSession(id);
+        transport?.unsubscribe(`audit:${id}`);
+        if (connected) publish(frame('session.removed', { sessionId: id, sourceSeq }));
       }
-      if (g.event === 'api-session/status' && ensureSession(id)) { sessions.get(id)!.agentStatus = args[1] === true ? 'running' : 'idle'; if (args[1] === true) { terminal.delete(id); follow(id); } emitSession(id); }
+      if (g.event === 'api-session/status' && sessions.has(id)) { sessions.get(id)!.agentStatus = args[1] === true ? 'running' : 'idle'; if (args[1] === true) { terminal.delete(id); follow(id); } emitSession(id); }
       if (g.event === 'api-session/error' && sessions.has(id)) { terminal.set(id, 'error'); sessions.get(id)!.agentStatus = 'idle'; emitSession(id); }
       return;
     }
     const eventId = bounded(g.eventId, '', 200); const sessionId = bounded(g.agentId, '', 200); const request = record(g.request);
-    if (g.type !== 'waterfall' || !clientId || !eventId || !sessionId || !ensureSession(sessionId) || deliveries.has(eventId)) return;
+    if (g.type !== 'waterfall' || !clientId || !eventId || !sessionId || !sessions.has(sessionId) || deliveries.has(eventId)) return;
     const createdAt = new Date().toISOString();
     if (g.event === 'approval/request') {
       const toolName = bounded(request.toolName, '', 200); if (!toolName) return;
-      const callId = bounded(request.callId, '', 200); const tool = toolArguments.get(`${sessionId}:${callId}`); const complete = !!tool?.complete && tool.name === toolName;
+      const callId = bounded(request.callId, '', 200); const tool = toolArguments.get(sessionId, callId); const complete = !!tool?.complete && tool.name === toolName;
       const existing = callId ? [...approvals.values()].find(a => a.sessionId === sessionId && a.callId === callId && a.toolName === toolName && isPending(a.status)) : undefined;
       const requestId = existing?.requestId ?? `approval:${randomUUID()}`; const identity = { runtimeId, sourceEpoch: epoch, sessionId, requestId }; terminal.delete(sessionId);
-      const a: Approval = { ...identity, toolName, ...(callId ? { callId } : {}), reason: bounded(request.displayReason, bounded(request.reason, '需要确认此操作')), ...(tool ? { commandPreview: tool.preview } : {}), displayDetails: complete ? 'complete' : 'partial', status: 'pending', actionable: complete, createdAt, revision: revision(sessionId) };
+      const a: Approval = { ...identity, toolName, ...(callId ? { callId } : {}), reason: redactCredentials(bounded(request.displayReason, bounded(request.reason, '需要确认此操作'))), ...(tool ? { commandPreview: tool.preview } : {}), displayDetails: complete ? 'complete' : 'partial', status: 'pending', actionable: complete, createdAt, revision: revision(sessionId) };
       approvals.set(`${sessionId}:${requestId}`, a); deliveries.set(eventId, { eventId, clientId, identity, kind: 'approval', submitting: false });
-      if (connected) options.publish(frame('approval.requested', structuredClone(a))); emitSession(sessionId);
+      if (connected) publish(frame('approval.requested', structuredClone(a))); emitSession(sessionId);
     }
     if (g.event === 'user-questions/request') {
       const items = questionItems(request.questions); if (!items.length) return;
@@ -307,11 +358,9 @@ export function createDshAdapter(options: Options) {
       terminal.delete(sessionId); continuedQuestions.delete(`${sessionId}:${requestId}`);
       const identity = { runtimeId, sourceEpoch: epoch, sessionId, requestId };
       // Legacy ask() has no durable call identity or authoritative answer receipt: observe only.
-      // The waterfall delivery itself is the answer channel ($events/result), so a
-      // delivered question is answerable even when the host omits wait.callId.
-      const q: Question = { ...identity, createdAt, revision: revision(sessionId), status: 'pending', actionable: true, questions: items };
+      const q: Question = { ...identity, createdAt, revision: revision(sessionId), status: 'pending', actionable: !!callId, questions: items };
       questions.set(`${sessionId}:${requestId}`, q); deliveries.set(eventId, { eventId, clientId, identity, kind: 'question', submitting: false, ...(callId ? { durableCallId: callId } : {}) });
-      if (connected) options.publish(frame('question.requested', structuredClone(q))); emitSession(sessionId);
+      if (connected) publish(frame('question.requested', structuredClone(q))); emitSession(sessionId);
     }
   }
   function checkReady() { if (baseline && gatewayReady) readyResolve?.(); }
@@ -330,12 +379,26 @@ export function createDshAdapter(options: Options) {
     }
     if (stream.startsWith('audit:')) {
       const id = stream.slice(6);
+      if (!sessions.has(id)) return;
+      if (v.type === 'stream-closed') {
+        clearPending(id); followed.delete(id); live.delete(id); previews.delete(id);
+        sessions.get(id)!.agentStatus = 'unknown'; terminal.delete(id); emitSession(id);
+        return;
+      }
       if (v.type === 'snapshot') {
-        if ('assistantStream' in v) preview(id).restore(v.assistantStream);
-        if (Array.isArray(v.records)) for (const entry of v.records) { const row = record(entry); if (row.type === 'event') event(id, row.event); }
-        const projection = record(v.projections); applyProjections(id, projection.values, typeof projection.asOfSeq === 'number' ? projection.asOfSeq : undefined);
-        const boundary = record(record(projection.values).turnBoundary);
-        if (typeof boundary.openTurnStartSeq === 'number') { terminal.delete(id); const session = sessions.get(id); if (session) session.agentStatus = 'running'; emitSession(id); }
+        // Replayed historical boundaries may settle requests created by that
+        // replay, but must never cancel a live delivery received before it.
+        const protectedRequests = new Set([...approvals.keys(), ...questions.keys()]);
+        const pendingFrames = new Map<string, Frame>(); replayFrames = pendingFrames;
+        try {
+          if (Array.isArray(v.records)) for (const entry of v.records) { const row = record(entry); if (row.type === 'event') event(id, row.event, protectedRequests); }
+          if ('assistantStream' in v) preview(id).restore(v.assistantStream);
+          const projection = record(v.projections); applyProjections(id, projection.values, typeof projection.asOfSeq === 'number' ? projection.asOfSeq : undefined);
+          const boundary = record(record(projection.values).turnBoundary);
+          if (typeof boundary.openTurnStartSeq === 'number') { terminal.delete(id); const session = sessions.get(id); if (session) session.agentStatus = 'running'; }
+        } finally { replayFrames = undefined; }
+        emitSession(id);
+        for (const pending of pendingFrames.values()) publish(pending);
       }
       if (v.type === 'event') event(id, v.event);
       if (v.type === 'assistant-stream' && sessions.has(id)) { preview(id).accept(v.frame); emitSession(id); }
@@ -349,15 +412,18 @@ export function createDshAdapter(options: Options) {
     for (const q of questions.values()) q.actionable = false; continuedQuestions.clear();
     for (const resolve of decisions.values()) resolve('unavailable');
     emittedSessions.clear(); previews.clear();
+    toolArguments.clear(); auditApprovals.clear(); projectionClocks.clear(); projectionValues.clear(); followed.clear(); coldRead.clear();
     readyReject?.(new Error('DSH 实时连接已断开。')); options.onConnection('disconnected');
   }
   async function refreshList() {
     const current = transport; if (!current) return;
+    const knownAtStart = new Map(sessions);
     const result = record(await current.request('session/list', { _request: {} }));
     if (current !== transport) return;
     if (!Array.isArray(result.items)) throw new Error('DSH 会话列表格式不兼容。');
     for (const value of result.items.slice(0, 100)) {
       const row = record(value); const id = bounded(row.sessionId, '', 200);
+      if (knownAtStart.has(id) && knownAtStart.get(id) !== sessions.get(id)) continue;
       if (ensureSession(id, row)) {
         const projection = record(row.projections); applyProjections(id, projection.values, projection.kind === 'sequenced' && typeof projection.asOfSeq === 'number' ? projection.asOfSeq : undefined, projection.kind !== 'sequenced'); follow(id);
         if (!live.has(id) && !coldRead.has(id) && typeof projection.asOfSeq === 'number' && Number.isSafeInteger(projection.asOfSeq) && projection.asOfSeq >= 0) {
@@ -365,6 +431,7 @@ export function createDshAdapter(options: Options) {
           // page observes existing storage; unlike follow it does not promote a cold session into an Agent.
           try {
             const page = record(await current.request('session/page', { request: { address: { kind: 'session', sessionId: id }, throughSeq: projection.asOfSeq, maxMessages: 1 } }));
+            if (current !== transport || !sessions.has(id)) continue;
             const records = Array.isArray(page.records) ? page.records.map(record).filter(r => r.type === 'event').map(r => record(r.event)) : [];
             const lastBoundary = [...records].reverse().find(e => e.type === 'turn/start' || e.type === 'turn/end');
             if (lastBoundary?.type === 'turn/end') {
@@ -380,7 +447,7 @@ export function createDshAdapter(options: Options) {
   }
   async function connect(link: string): Promise<void> {
     disconnect(); const attempt = ++generation; runtimeId = randomUUID(); epoch = randomUUID(); baseline = false; gatewayReady = false;
-    sessions.clear(); approvals.clear(); questions.clear(); revisions.clear(); deliveries.clear(); followed.clear(); terminal.clear(); archived.clear(); live.clear(); toolArguments.clear(); auditApprovals.clear(); continuedQuestions.clear(); projectionValues.clear(); projectionClocks.clear(); coldRead.clear(); options.onConnection('connecting');
+    sessions.clear(); approvals.clear(); questions.clear(); sourceRevision = 0; deliveries.clear(); followed.clear(); terminal.clear(); archived.clear(); live.clear(); toolArguments.clear(); auditApprovals.clear(); continuedQuestions.clear(); projectionValues.clear(); projectionClocks.clear(); coldRead.clear(); options.onConnection('connecting');
     const current = new HostTransport(item, disconnected); transport = current;
     try {
       await current.authenticate(link); await refreshList(); await current.open();
@@ -390,8 +457,18 @@ export function createDshAdapter(options: Options) {
       const timeout = setTimeout(() => readyReject?.(new Error('DSH 实时通道没有返回完整基线。')), 10000);
       try { await ready; } finally { clearTimeout(timeout); readyResolve = undefined; readyReject = undefined; }
       if (attempt !== generation || current !== transport) throw new Error('DSH 连接已取消。');
-      connected = true; options.publish(welcome()); options.publish(snapshot()); options.onConnection('connected');
-      poll = setInterval(() => { void refreshList().catch(() => disconnected()); }, 10000); poll.unref();
+      connected = true; publish(welcome()); publish(snapshot()); options.onConnection('connected');
+      let polling = false; let failures = 0; let retryAt = 0;
+      poll = setInterval(() => {
+        if (polling || Date.now() < retryAt || current !== transport) return;
+        polling = true;
+        void refreshList().then(() => { failures = 0; retryAt = 0; }).catch(error => {
+          // A transient inventory failure does not invalidate a healthy event
+          // stream. Authentication failures still fail closed immediately.
+          if (error instanceof Error && error.name === 'HostAuthenticationError') disconnected();
+          else { failures++; retryAt = Date.now() + Math.min(60000, 10000 * 2 ** Math.min(failures - 1, 3)); }
+        }).finally(() => { polling = false; });
+      }, 10000); poll.unref();
     } catch { if (attempt === generation) disconnected(); throw new Error('连接 DSH 失败，请检查本机 Host 是否开启以及认证链接是否有效。'); }
   }
   function disconnect() { generation++; disconnected(); }
@@ -405,18 +482,19 @@ export function createDshAdapter(options: Options) {
     const d = deliveryFor(identity, 'approval'); d.submitting = true;
     const approval = approvals.get(`${identity.sessionId}:${identity.requestId}`);
     if (!approval?.actionable || approval.displayDetails !== 'complete') { d.submitting = false; throw new Error('操作参数尚未完整验证，请在 DSH 中确认。'); }
-    approval.status = 'submitting'; approval.actionable = false; approval.revision = revision(identity.sessionId); options.publish(frame('approval.requested', structuredClone(approval)));
+    approval.status = 'submitting'; approval.actionable = false; approval.revision = revision(identity.sessionId); publish(frame('approval.requested', structuredClone(approval)));
     const decision = watchDecision(`${identity.sessionId}:${identity.requestId}`);
     try { const accepted = await transport!.request('$events/result', { clientId: d.clientId, eventId: d.eventId, outcome: { kind: 'result', value: outcome } });
       if (accepted !== undefined || await decision.promise !== outcome) throw new Error('没有收到匹配的 DSH 决议。');
     }
-    catch { if (deliveries.has(d.eventId)) finalizeDelivery(d, 'unavailable'); throw new Error('审批提交失败，请回到 DSH 确认状态。'); }
+    catch { if (deliveries.get(d.eventId) === d) finalizeDelivery(d, 'unavailable'); throw new Error('审批提交失败，请回到 DSH 确认状态。'); }
     finally { decision.stop(); }
   }
   async function respondQuestion(identity: RequestIdentity, answers: QuestionAnswer[]) {
     const key = `${identity.sessionId}:${identity.requestId}`; const q = questions.get(key);
     if (!q || !q.actionable || q.runtimeId !== identity.runtimeId || q.sourceEpoch !== identity.sourceEpoch || !connected || !isPending(q.status)) throw new Error('问题已失效。');
     const continued = continuedQuestions.get(key); const d = continued ? undefined : deliveryFor(identity, 'question');
+    const responseTransport = transport; const responseGeneration = generation;
     if (!Array.isArray(answers) || answers.length !== q.questions.length || new Set(answers.map(a => a.questionId)).size !== answers.length) throw new Error('请完整填写每个问题。');
     const mapped = q.questions.map(question => {
       const answer = answers.find(a => a.questionId === question.id);
@@ -425,23 +503,24 @@ export function createDshAdapter(options: Options) {
       return { id: question.id, selected, ...(custom ? { custom } : {}) };
     });
     if (d) d.submitting = true;
-    q.status = 'submitting'; q.actionable = false; q.revision = revision(identity.sessionId); options.publish(frame('question.requested', structuredClone(q)));
+    q.status = 'submitting'; q.actionable = false; q.revision = revision(identity.sessionId); publish(frame('question.requested', structuredClone(q)));
     const decision = watchDecision(key);
     try {
       if (continued) {
         const accepted = await transport!.request('userQuestions/answer', { agentId: identity.sessionId, callId: continued, answer: { answers: mapped } });
+        if (responseGeneration !== generation || responseTransport !== transport || questions.get(key) !== q || q.status !== 'submitting') throw new Error('问题已失效。');
         if (accepted !== true) throw new Error('DSH 未接收此答案。');
-        continuedQuestions.delete(key); q.status = 'answered'; q.actionable = false; q.revision = revision(identity.sessionId); options.publish(frame('question.resolved', structuredClone(q))); emitSession(identity.sessionId);
+        continuedQuestions.delete(key); q.status = 'answered'; q.actionable = false; q.revision = revision(identity.sessionId); publish(frame('question.resolved', structuredClone(q))); pruneHistory(); emitSession(identity.sessionId);
       } else if (d) {
         const accepted = await transport!.request('$events/result', { clientId: d.clientId, eventId: d.eventId, outcome: { kind: 'result', value: { answers: mapped } } });
         if (accepted !== undefined) throw new Error('没有收到匹配的 DSH 答案确认。');
-        if (!d.durableCallId) {
-          q.status = 'answered'; q.actionable = false; q.revision = revision(identity.sessionId);
-          options.publish(frame('question.resolved', structuredClone(q))); emitSession(identity.sessionId);
-        } else if (await decision.promise !== 'answered') throw new Error('没有收到匹配的 DSH 答案确认。');
+        if (!d.durableCallId || await decision.promise !== 'answered') throw new Error('没有收到匹配的 DSH 答案确认。');
       }
-    } catch { if (d && deliveries.has(d.eventId)) finalizeDelivery(d, 'unavailable'); else { q.status = 'unavailable'; q.actionable = false; q.revision = revision(identity.sessionId); options.publish(frame('question.resolved', structuredClone(q))); emitSession(identity.sessionId); } throw new Error('答案提交失败，请回到 DSH 确认状态。'); }
+    } catch { if (d && deliveries.get(d.eventId) === d) finalizeDelivery(d, 'unavailable'); else if (responseGeneration === generation && responseTransport === transport && questions.get(key) === q && isPending(q.status)) { q.status = 'unavailable'; q.actionable = false; q.revision = revision(identity.sessionId); publish(frame('question.resolved', structuredClone(q))); pruneHistory(); emitSession(identity.sessionId); } throw new Error('答案提交失败，请回到 DSH 确认状态。'); }
     finally { decision.stop(); }
   }
-  return { connect, disconnect, welcome, snapshot, respondApproval, respondQuestion, stop: disconnect };
+  function retained() { return { sessions: sessions.size, approvals: approvals.size, questions: questions.size,
+    toolArguments: toolArguments.size, auditApprovals: auditApprovals.size, projectionClocks: projectionClocks.size,
+    followed: followed.size, coldRead: coldRead.size, emittedSessions: emittedSessions.size, deliveries: deliveries.size, decisions: decisions.size }; }
+  return { connect, disconnect, welcome, snapshot, respondApproval, respondQuestion, retained, stop: disconnect };
 }

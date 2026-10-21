@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 import { fixture } from './native-fixture.mjs';
 
-const f=await fixture(),output=resolve('reports/performance-upgrade');
+const f=await fixture(),output=resolve(process.env.GLASS_REPORT_DIR ?? 'reports/performance-upgrade');
 const checks=[];
 try {
   const {page,app,mainId,menu}=f;

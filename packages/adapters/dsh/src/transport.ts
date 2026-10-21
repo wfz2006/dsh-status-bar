@@ -4,6 +4,7 @@ import WebSocket from 'ws';
 export type RecordValue = Record<string, unknown>;
 export function record(value: unknown): RecordValue { return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {}; }
 export function bounded(value: unknown, fallback = '', max = 4096): string { return typeof value === 'string' ? value.slice(0, max) : fallback; }
+export class HostAuthenticationError extends Error { constructor() { super('DSH 认证已失效。'); this.name = 'HostAuthenticationError'; } }
 
 /** Deliberately accepts an explicitly supplied Host link, never a Profile or discovery file. */
 export function parseHostLink(link: string): URL {
@@ -23,6 +24,7 @@ export class HostTransport {
   private controller = new AbortController();
   private streams = new Set<string>();
   private openingReject?: (error: Error) => void;
+  private heartbeat?: ReturnType<typeof setInterval>;
   constructor(private readonly onItem: (stream: string, value: unknown) => void, private readonly onClose: () => void) {}
 
   async authenticate(link: string): Promise<void> {
@@ -47,6 +49,7 @@ export class HostTransport {
       headers: { Cookie: this.cookie, Origin: this.origin, 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'client-request', rpcId, method, payload: { args } }),
     });
+    if (response.status === 401 || response.status === 403) throw new HostAuthenticationError();
     if (!response.ok) throw new Error('DSH Host 请求失败。');
     const body = record(await response.json()); const result = record(body.result);
     if (body.type !== 'server-response' || body.rpcId !== rpcId || result.ok !== true) throw new Error('DSH Host 拒绝了请求。');
@@ -58,19 +61,33 @@ export class HostTransport {
     const url = new URL('/api/remote.mux', this.origin); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     const socket = new WebSocket(url, { headers: { Cookie: this.cookie, Origin: this.origin }, maxPayload: 4 * 1024 * 1024, handshakeTimeout: 10000 });
     this.socket = socket;
+    let alive = true;
+    socket.on('ping', () => { alive = true; });
+    socket.on('pong', () => { alive = true; });
     socket.on('message', data => {
+      alive = true;
       let message: RecordValue;
       try { message = record(JSON.parse(data.toString())); } catch { socket.close(1002); return; }
       const stream = bounded(message.streamId);
       if (!this.streams.has(stream)) return;
       if (message.type === 'item') this.onItem(stream, message.value);
-      if (message.type === 'error' || message.type === 'end') { this.streams.delete(stream); socket.close(1000); }
+      if (message.type === 'error' || message.type === 'end') {
+        this.streams.delete(stream);
+        if (['control', 'gateway', 'workspace'].includes(stream)) socket.close(1000);
+        else this.onItem(stream, { type: 'stream-closed' });
+      }
     });
-    socket.on('close', () => this.onClose());
+    socket.on('close', () => { clearInterval(this.heartbeat); this.heartbeat = undefined; this.onClose(); });
     try { await new Promise<void>((resolve, reject) => { this.openingReject = reject; socket.once('open', resolve); socket.once('error', () => reject(new Error('无法连接 DSH 实时通道。'))); }); }
     finally { this.openingReject = undefined; }
     // Keep an error listener after the handshake; no raw errors containing credentials are logged.
     socket.on('error', () => socket.close());
+    this.heartbeat = setInterval(() => {
+      if (!alive) { socket.terminate(); return; }
+      alive = false;
+      if (socket.readyState === WebSocket.OPEN) socket.ping();
+    }, 15000);
+    this.heartbeat.unref();
   }
 
   subscribe(stream: string, endpoint: string, args: RecordValue = {}): void {
@@ -78,7 +95,14 @@ export class HostTransport {
     this.socket?.send(JSON.stringify({ type: 'open', streamId: stream, endpoint, payload: { args } }));
   }
 
+  unsubscribe(stream: string): void {
+    if (this.streams.delete(stream) && this.socket?.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({ type: 'cancel', streamId: stream }));
+    }
+  }
+
   close(): void {
+    clearInterval(this.heartbeat); this.heartbeat = undefined;
     this.openingReject?.(new Error('DSH 连接已取消。'));
     this.controller.abort(); this.cookie = ''; this.origin = ''; this.streams.clear();
     this.socket?.removeAllListeners(); this.socket?.on('error', () => {}); this.socket?.terminate(); this.socket = undefined;
