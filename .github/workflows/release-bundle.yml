@@ -37,8 +37,13 @@ jobs:
       - name: Fetch the Electron runtime
         shell: pwsh
         run: |
-          pnpm rebuild electron
-          node -e "const {createRequire}=require('node:module');const r=createRequire(require('node:path').resolve('apps/desktop/package.json'));const d=require('node:path').join(require('node:path').dirname(r.resolve('electron/package.json')),'dist');if(!require('node:fs').existsSync(require('node:path').join(d,'electron.exe'))){console.error('electron dist missing at '+d);process.exit(1)};console.log('electron runtime at '+d)"
+          $pkgDir = (node -e "const {createRequire}=require('node:module');const p=require('node:path');console.log(p.dirname(createRequire(p.resolve('apps/desktop/package.json')).resolve('electron/package.json')))").Trim()
+          if (-not (Test-Path (Join-Path $pkgDir 'dist/electron.exe'))) {
+            Write-Host "electron dist missing in $pkgDir, running its installer"
+            node (Join-Path $pkgDir 'install.js')
+          }
+          if (-not (Test-Path (Join-Path $pkgDir 'dist/electron.exe'))) { throw "electron dist still missing at $pkgDir" }
+          Write-Host "electron runtime at $pkgDir/dist"
 
       - name: Build the native region helper
         shell: pwsh
