@@ -34,6 +34,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Fetch the Electron runtime
+        shell: pwsh
+        run: |
+          pnpm rebuild electron
+          node -e "const {createRequire}=require('node:module');const r=createRequire(require('node:path').resolve('apps/desktop/package.json'));const d=require('node:path').join(require('node:path').dirname(r.resolve('electron/package.json')),'dist');if(!require('node:fs').existsSync(require('node:path').join(d,'electron.exe'))){console.error('electron dist missing at '+d);process.exit(1)};console.log('electron runtime at '+d)"
+
       - name: Build the native region helper
         shell: pwsh
         run: ./scripts/build-region-capture.ps1
