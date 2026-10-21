@@ -264,6 +264,8 @@ importers:
         specifier: 8.18.3
         version: 8.18.3
 
+  packages/dsh-status-bar: {}
+
   packages/protocol:
     dependencies:
       zod:
