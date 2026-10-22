@@ -1,5 +1,7 @@
 # DSH Status Bar
 
+![DSH Status Bar 发布卡](docs/images/release-card.png)
+
 > **把 DSH（DeepSeek Harness）的任务进度，装进一块会折射的桌面玻璃里。**
 
 像手机上的「灵动岛」：平时是个安静的小胶囊，有事时自己长大，没事时乖乖待着。你可以随手把它拖到屏幕任何角落、拉成顺手的大小。它只是看板 + 传话筒，不抢戏、不越权。
@@ -29,7 +31,7 @@ Windows 11 优先，Electron 实现，单实例常驻，不注册托盘图标、
 
 ![折射对照](docs/images/comparison.png)
 
-> 对照实验（实测存档）：左「零位移」，右「开启折射与 RGB 色散」。拿真实窗后条纹做的实测，不是效果图。
+> 对照实验（本次实测）：左「零位移」，右「开启折射与 RGB 色散」。拿真实窗后条纹做的实测，不是效果图。
 
 普通启动时，只要原生取样助手可用且材质非实色，这项能力默认**开启**；设置中的“真实折射与色散”可为本次运行关闭它。隐藏窗口时暂停，显示后恢复；关闭取样或退出程序时停止。范围仅限本窗后方与最多 48 个物理像素边距，不保存、不上传。
 
@@ -45,7 +47,7 @@ Windows 11 优先，Electron 实现，单实例常驻，不注册托盘图标、
 
 ## 📊 数字小卡片
 
-| 171 | 4 | 13 px | 0 |
+| 189 | 4 | 13 px | 0 |
 |:--:|:--:|:--:|:--:|
 | 单测全绿（另有类型检查、lint、桌面构建） | 副面孔：胶囊 / 速览 / 详情 / 审批 | 真实折射偏折（实测物理像素） | 次自动放行（永远是 0） |
 
@@ -74,6 +76,8 @@ dsh plugin --profile web add https://github.com/wfz2006/dsh-status-bar/releases/
 ```
 
 装好后重启 DSH，玻璃会跟着启动；不想要它自动开，就在 profile 补丁里写 `- id: dsh-status-bar-plugin` + `config: { autoLaunch: false }`。细节见 [packages/dsh-status-bar/README.md](packages/dsh-status-bar/README.md)。
+
+隐藏窗口后按 `Ctrl+Shift+G` 恢复；退出悬浮窗后，在 DSH 任意会话输入 `/status-bar` 即可重新打开。这个命令不保存或重放认证 token，只会在需要时向当前 DSH 取一条新链接。
 
 ### 连接真实 DSH（实验）
 

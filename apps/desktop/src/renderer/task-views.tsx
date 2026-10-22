@@ -1,4 +1,4 @@
-import { memo, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { Projection } from '@glass/protocol';
 import { formatTokens, taskUsage, deriveTask, deriveSessionSummary } from '../shared/view-model';
 import { Icon, type IconName } from './icon';
@@ -70,21 +70,72 @@ function SessionPicker({ projection, selected, select }: { projection: Projectio
     </ul>
   </div>;
 }
+const TITLE_MARQUEE_GAP = 36;
+function CapsuleTitle({ title, working }: { title: string; working: boolean }) {
+  const container = useRef<HTMLSpanElement>(null);
+  const first = useRef<HTMLSpanElement>(null);
+  const restartTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [overflow, setOverflow] = useState(false);
+  const [distance, setDistance] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const content = () => working
+    ? <>{Array.from(title).slice(0, 32).map((char, index) => char === ' '
+      ? <span className="wave-char wave-space" key={index} />
+      : <span className="wave-char" key={index} style={{ animationDelay: (index % 24) * 0.045 + 's' }}>{char}</span>)}{Array.from(title).length > 32 && Array.from(title).slice(32).join('')}</>
+    : <>{title}</>;
+  // A long title becomes a banner only after the real content width exceeds the
+  // capsule. The duplicate copy makes the leftward loop seamless.
+  useLayoutEffect(() => {
+    const host = container.current, copy = first.current;
+    if (!host || !copy) return;
+    let cancelled = false;
+    const measure = () => {
+      if (cancelled) return;
+      const width = copy.scrollWidth;
+      const next = width > host.clientWidth + 1;
+      setOverflow(next); setDistance(next ? width + TITLE_MARQUEE_GAP : 0);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(host); observer.observe(copy);
+    void document.fonts.ready.then(measure, () => {});
+    return () => { cancelled = true; observer.disconnect(); };
+  }, [title, working]);
+  useEffect(() => {
+    if (!overflow) {
+      setPlaying(false);
+      if (restartTimer.current !== undefined) clearTimeout(restartTimer.current);
+      return;
+    }
+    const timer = setTimeout(() => setPlaying(true), 1400);
+    return () => clearTimeout(timer);
+  }, [overflow]);
+  useEffect(() => () => { if (restartTimer.current !== undefined) clearTimeout(restartTimer.current); }, []);
+  function handleEnd() {
+    if (!overflow) return;
+    setPlaying(false);
+    if (restartTimer.current !== undefined) clearTimeout(restartTimer.current);
+    restartTimer.current = setTimeout(() => setPlaying(true), 2500);
+  }
+  const style = overflow ? ({
+    '--capsule-marquee-distance': `${distance}px`,
+    '--capsule-marquee-duration': `${Math.max(8, Math.min(45, distance / 38)).toFixed(1)}s`,
+  } as CSSProperties) : undefined;
+  return <span ref={container} className="capsule-title" data-overflow={overflow ? 'true' : undefined} data-playing={playing ? 'true' : undefined} style={style}>
+    <span className="capsule-title-track" data-playing={playing ? 'true' : undefined}
+      onAnimationEnd={event => { if (event.target === event.currentTarget) handleEnd(); }}>
+      <span ref={first} className="capsule-title-copy">{content()}</span>
+      {overflow && <span className="capsule-title-copy" aria-hidden="true">{content()}</span>}
+    </span>
+  </span>;
+}
 export function TaskCapsule({ task, activate }: { task: Task; activate: () => void }) {
   const title = task.status === 'disconnected' ? task.label + ' · ' + task.title : task.title;
   const metrics = taskUsage(task);
   const metricsTitle = metrics ? (metrics.stale ? '离线快照 · ' : '') + metrics.turns + ' 轮 · ' + metrics.steps + ' 次执行' + (metrics.speedText ? ' · ' + metrics.speedText : '') : '';
   const working = task.status === 'running' || task.status === 'starting';
-  // Only the leading characters can be visible in a 288px capsule; animating
-  // the clipped tail of a long session title wastes style and paint work.
-  const titleChars = working ? Array.from(title) : [];
-  const titleNode = working
-    ? <span className="capsule-title" aria-hidden="true">{titleChars.slice(0, 32).map((char, index) => char === ' '
-      ? <span className="wave-char wave-space" key={index} />
-      : <span className="wave-char" key={index} style={{ animationDelay: (index % 24) * 0.045 + 's' }}>{char}</span>)}{titleChars.length > 32 && titleChars.slice(32).join('')}</span>
-    : <span className="capsule-title">{title}</span>;
   return <button className="task-capsule" aria-label={task.attentionCount ? '展开待处理请求' : '展开速览'} aria-description="可拖动；右键打开菜单。数据来源与调试状态见设置。" title={title + ' · ' + task.label + (metricsTitle ? ' · ' + metricsTitle : '') + (task.attentionCount ? ' · ' + task.attentionCount + ' 项待处理' : '')} onClick={activate}>
-    <WhaleCompanion state={task.status}><StatusOrb task={task} /></WhaleCompanion>{titleNode}
+    <WhaleCompanion state={task.status}><StatusOrb task={task} /></WhaleCompanion><CapsuleTitle title={title} working={working} />
     {task.attentionCount > 0 && <span className="pending-count" aria-label={task.attentionCount + ' 项待处理请求'}>{task.attentionCount} 待处理</span>}
     {metrics && <span className="capsule-metrics" title={metricsTitle} aria-label={metrics.turns + ' 轮，Agent 执行 ' + metrics.steps + ' 步'}><b>{metrics.turns}</b>轮 · <b>{metrics.steps}</b>步</span>}
     {task.total > 0 && <span className="step-count" aria-label={task.completed + '/' + task.total + ' Todo 步骤完成'}><span className="progress-caption">任务 </span>{task.completed}/{task.total}</span>}

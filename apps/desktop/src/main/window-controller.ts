@@ -147,8 +147,8 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
         { label: '长命令只读预览', id: 'mock-long-approval', click: () => hooks.mock('long-approval') },
       ] },
       { type: 'separator' },
-      { label: '显示窗口', id: 'show', click: () => win.show() },
-      { label: '隐藏窗口', id: 'hide', click: () => win.hide() },
+      { label: '显示窗口（Ctrl+Shift+G）', id: 'show', click: () => win.show() },
+      { label: '隐藏窗口（Ctrl+Shift+G）', id: 'hide', click: () => win.hide() },
       { label: '退出', id: 'quit', click: hooks.quit },
     ];
     return Menu.buildFromTemplate(items);

@@ -23,6 +23,16 @@ process it belongs to disappears; disposing the plugin kills the spawned tree.
 If the companion is already running, the second launch hits its single-instance
 lock: the existing window is focused and re-connected with the new link.
 
+## Reopening a hidden or closed companion
+
+Hiding the window keeps the process alive; `Ctrl+Shift+G` toggles it back. After
+the user quits the companion, the plugin registers the DSH slash command
+`/status-bar`. Invoking it in any session asks DSH for a fresh authenticated link
+and either shows the existing instance through the single-instance hand-off or
+starts a new one. The command is registered even when `autoLaunch: false`, so a
+manually disabled companion can still be opened without restarting DSH. It never
+stores or replays an old token.
+
 ## Install
 
 From npm, from the plugin market (once listed), or straight from the release
@@ -39,11 +49,32 @@ dsh plugin --profile web add https://github.com/wfz2006/dsh-status-bar/releases/
 Both end up as the same companion: the built desktop app plus an Electron
 runtime. The tarball carries them; the npm package reads the download URL from its
 own manifest (`dsh.statusBar.runtime`), fetches that tarball the first time DSH
-starts it — progress goes to the host log, roughly
-`[dsh-status-bar] downloading the Glass runtime: 40% of 155 MB` — and unpacks it
-into a per-version cache: `%LOCALAPPDATA%\dsh-status-bar\runtime-<version>` on
+starts it, and unpacks it into a per-version cache:
+`%LOCALAPPDATA%\dsh-status-bar\runtime-<version>` on
 Windows, `~/.cache/dsh-status-bar/runtime-<version>` elsewhere. Later launches
 reuse that cache, so the download happens once per version.
+
+On Windows, a small native preparation window shows download progress before
+Electron is available. A failed download shows **Retry** and **Try later**;
+retry continues without restarting DSH. Cancel stops the preparation and keeps
+the verifiable partial for the next launch. A valid cache opens the companion
+directly, without flashing the preparation window.
+
+The downloader prefers system `curl` (and falls back to Node if unavailable),
+checks stalled connections, and makes up to three attempts. Partial files live
+beside the cache as `runtime-<version>.tgz.part`; Range resume requires an ETag or
+Last-Modified validator. If the server ignores Range or no validator exists,
+the file is downloaded afresh rather than concatenated incorrectly. Corrupt
+archives are discarded; extracted content must match the plugin version before
+it replaces a cache. A per-version lock prevents concurrent hosts from writing
+the same partial/cache. Plugin disposal aborts preparation and prevents late launch.
+
+The default GitHub URL is pinned to `releases/download/v<plugin-version>/...`,
+even for older manifests advertising `latest`. An explicit download URL override
+is respected; its archive must still match the installed plugin version. No
+authenticated DSH link is requested until the runtime is ready, and progress
+files contain no Host token or Cookie. Non-Windows environments retain log output;
+the native progress UI is Windows-only.
 
 > Renamed in 0.2.3. The old package id was `dsh-glass-plugin`; it still resolves
 > to the same app, but new installs should use `dsh-status-bar-plugin`.
@@ -65,7 +96,8 @@ symlink at `node_modules/dsh-status-bar-plugin` if pnpm did not run, then restar
 ## Configuration
 
 The bundle patch sets `autoLaunch: true`. To keep the plugin installed but stop it
-from launching the companion, override the row config in the profile patch:
+from launching the companion at boot, override the row config in the profile
+patch; `/status-bar` remains available for manual launches:
 
 ```yaml
 - id: dsh-status-bar-plugin
@@ -82,6 +114,7 @@ Other overrides, all optional:
 | `runtimeDir` | where the downloaded runtime is cached |
 | `downloadUrl` | override the runtime tarball URL |
 | `autoReload` | relaunch the companion when the desktop bundle changes (default `true`) |
+| `showStartupUI` | show native Windows preparation/error feedback (default `true`); disable only for intentionally headless use |
 
 The same settings are available through the environment:
 `DSH_STATUS_BAR_APP`, `DSH_STATUS_BAR_ELECTRON`, `DSH_STATUS_BAR_RUNTIME`,
@@ -98,3 +131,11 @@ fallbacks.
 
 MIT. The bundled Electron runtime keeps its own license files
 (`electron/dist/LICENSE`, `LICENSES.chromium.html`).
+
+## Development verification
+
+From the repository root, run `pnpm test` and `pnpm test:plugin-startup` after
+`pnpm build`. The latter uses a temporary thin-plugin install, local HTTP/Host,
+native WPF feedback and the actual workspace Electron through the documented
+`electronBinary` override. It does not reinstall or enable the production plugin.
+See [first-run recovery](../../docs/first-run-recovery.md) for evidence and limits.

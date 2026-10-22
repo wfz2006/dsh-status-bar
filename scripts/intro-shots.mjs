@@ -1,8 +1,10 @@
 import { fixture } from './native-fixture.mjs';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, copyFile } from 'node:fs/promises';
 
 const out = process.env.GLASS_UI_REPORT ?? 'reports/intro-shots';
+const published = 'docs/images';
 await mkdir(out, { recursive: true });
+await mkdir(published, { recursive: true });
 const f = await fixture();
 try {
   await f.page.evaluate(() => window.glass.setSettings({ animation: 'off', theme: 'auto', pin: 'always' }));
@@ -27,8 +29,18 @@ try {
   await f.page.screenshot({ path: out + '/approval.png' });
   await f.menu('settings');
   await f.page.screenshot({ path: out + '/settings.png' });
+  await f.page.evaluate(() => {
+    const toggle = document.querySelector('input[aria-label="真实折射与色散"]');
+    toggle?.scrollIntoView({ block: 'center' });
+  });
+  await f.page.waitForTimeout(400);
+  await f.page.screenshot({ path: out + '/settings-optics.png' });
 
-  console.log('intro shots written to', out);
+  for (const name of ['capsule', 'peek', 'expanded', 'approval', 'settings', 'settings-optics']) {
+    await copyFile(out + '/' + name + '.png', published + '/' + name + '.png');
+  }
+
+  console.log('intro shots written to', out, 'and published to', published);
 } finally {
   await f.app.close();
 }

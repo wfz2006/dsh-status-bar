@@ -98,21 +98,22 @@
 
     <div class="section"><h2>🫧 四副面孔：从小胶囊到审批台</h2><div class="readme">
       <div class="gallery">
-        <figure class="shot"><img src="reports/intro-shots/capsule.png" alt="胶囊形态" /><figcaption><b>胶囊 · 平时</b>：小鲸鱼标志 + 一行任务名 + 「3 轮 · 42 步」的小字进度。小到可以贴着屏幕边缘安静待着。</figcaption></figure>
-        <figure class="shot"><img src="reports/intro-shots/peek.png" alt="速览形态" /><figcaption><b>速览 · 瞟一眼</b>：会话转录（思考 / DSH / 你）、当前步骤「搭建本地通信桥」，还有吞吐与缓存这些小仪表。</figcaption></figure>
-        <figure class="shot"><img src="reports/intro-shots/expanded.png" alt="紧凑详情形态" /><figcaption><b>紧凑详情 · 看全程</b>：「过程 / 步骤」双标签，思考、工具调用、消息一条条排开，谁已完成谁已发送一目了然。</figcaption></figure>
-        <figure class="shot"><img src="reports/intro-shots/approval.png" alt="独立审批形态" /><figcaption><b>独立审批 · 拍板时</b>：「需要你的确认 2 项」，命令先预览再点「拒绝 / 允许一次」，拿不准还能跳回 DSH 原窗口处理。</figcaption></figure>
+        <figure class="shot"><img src="docs/images/capsule.png" alt="胶囊形态" /><figcaption><b>胶囊 · 平时</b>：小鲸鱼标志 + 一行任务名（太长就自己省略）+「3 轮 · 42 步 · 1/3」的小字进度。小到可以贴着屏幕边缘安静待着。</figcaption></figure>
+        <figure class="shot"><img src="docs/images/peek.png" alt="速览形态" /><figcaption><b>速览 · 瞟一眼</b>：会话转录（思考 / DSH / 你）、当前步骤「搭建本地通信桥」，底下还有 218 tok/s、缓存 96.4%、上下文 7.2% 这些小仪表。</figcaption></figure>
+        <figure class="shot"><img src="docs/images/expanded.png" alt="紧凑详情形态" /><figcaption><b>紧凑详情 · 看全程</b>：「过程 / 步骤」双标签，思考、工具调用、消息一条条排开，谁已完成谁已发送一目了然，右上角还有「任务 1/3」可以直接跳。</figcaption></figure>
+        <figure class="shot"><img src="docs/images/approval.png" alt="独立审批形态" /><figcaption><b>独立审批 · 拍板时</b>：「需要你的确认 2 项」，命令先预览再点「拒绝 / 允许一次」；参数不完整就只读展示，让你回 DSH 原窗口处理。</figcaption></figure>
       </div>
     </div></div>
 
     <div class="section"><h2>📖 这块玻璃是「真」玻璃</h2><div class="readme">
-      <p class="lede">普通悬浮窗只是把背景涂白假装透明；这块玻璃是真的会「看穿」它背后的东西——只取窗后一小块画面（不保存、不上传），再用同一套透镜把它折射出来：窗后的内容会被压弯约 <strong>13 个物理像素</strong>，边缘还带着一丝丝彩虹（RGB 色散）。下图左边是不开特效的样子，右边是玻璃折射后——竖条纹真的弯了。</p>
+      <p class="lede">普通悬浮窗只是把背景涂白假装透明；这块玻璃是真的会「看穿」它背后的东西——只取窗后一小块画面（不保存、不上传），再用同一套透镜把它折射出来：窗后的内容会被压弯约 <strong>13 个物理像素</strong>，边缘还带着一丝丝彩虹（RGB 色散）。下图左右是同一扇窗、同一组真实窗后条纹：左边零位移，右边被真实透镜压弯。</p>
       <div class="gallery">
-        <figure class="shot"><img src="reports/desktop-optics/comparison.png" alt="折射对照" /><figcaption><b>对照实验（实测存档）</b>：左「零位移」，右「开启折射与 RGB 色散」。拿真实窗后条纹做的实测，不是效果图。</figcaption></figure>
+        <figure class="shot"><img src="docs/images/comparison.png" alt="折射对照" /><figcaption><b>对照实验（本次实测）</b>：左「零位移」，右「开启折射与 RGB 色散」。用的是真窗后条纹真渲染，不是效果图。</figcaption></figure>
       </div>
-      <p>这项能力默认<strong>关闭</strong>，要在设置里手动打开；关闭、隐藏窗口或程序退出时立刻停用。隐私条款就一句话：只看该看的那块，别的不碰。</p>
+      <p class="lede">这项能力<strong>默认开启</strong>（原生取样助手可用、材质不是实色时）；不想看折射，在设置里关掉即可。隐藏窗口、关掉取样或退出程序时立刻停用。隐私条款就一句话：只看该看的那块，别的不碰。</p>
       <div class="gallery">
-        <figure class="shot"><img src="reports/intro-shots/settings.png" alt="设置界面" /><figcaption><b>设置</b>：连接 DSH 用官方本地认证地址（用完即清、不保存），外观与行为选项也都在这里。</figcaption></figure>
+        <figure class="shot"><img src="docs/images/settings-optics.png" alt="设置里的真实折射开关" /><figcaption><b>设置里的「真实折射与色散」</b>：一行说明写得很直白——「仅取样本框后方及少量边距，不保存、不上传。关闭或隐藏即停；启动默认开启。」</figcaption></figure>
+        <figure class="shot"><img src="docs/images/settings.png" alt="设置界面" /><figcaption><b>设置全景</b>：连接 DSH 用官方本地认证地址（用完即清、不保存），外观（主题 / 强度 / 底色 / 亮度）与行为选项也都在这里。</figcaption></figure>
       </div>
     </div></div>
 
@@ -127,10 +128,10 @@
 
     <div class="section"><h2>📊 数字小卡片</h2>
       <div class="fun-cards">
-        <div class="fun-card"><div class="num">120</div><div class="lbl">项单测全绿（另有类型检查、lint、桌面构建）</div></div>
+        <div class="fun-card"><div class="num">189</div><div class="lbl">项单测全绿（另有类型检查、lint、桌面构建）</div></div>
         <div class="fun-card"><div class="num">4</div><div class="lbl">副面孔：胶囊 / 速览 / 详情 / 审批</div></div>
         <div class="fun-card"><div class="num">13 px</div><div class="lbl">真实折射偏折（实测物理像素）</div></div>
-        <div class="fun-card"><div class="num">1200</div><div class="lbl">个项目文件的工程现场</div></div>
+        <div class="fun-card"><div class="num">190</div><div class="lbl">个入库文件（不含依赖与构建产物）</div></div>
         <div class="fun-card"><div class="num">150%</div><div class="lbl">DPI 下拖动「自己长大」的 bug 已摁死</div></div>
         <div class="fun-card"><div class="num">0</div><div class="lbl">次自动放行（永远是 0）</div></div>
       </div>
@@ -142,15 +143,16 @@
         <li>磨砂白膜质感 → 验收没过，换成薄透；</li>
         <li>字体描边加阴影 → 删；</li>
         <li>拖动窗口时它会自己越长越大 → 已修复，现在拖动只挪位置；</li>
+        <li>真实折射本来是默认关闭的 → 复核后改成默认开启：卖点既然是「真」，就别让它一上来就假装普通；</li>
         <li>顺手做了 Tauri 原生材质对照实验，最终主入口仍是 Electron。</li>
       </ul>
     </div></div>
 
     <div class="section"><h2>📊 项目概览</h2>
       <div class="grid">
-        <div class="card"><h3>文件数</h3><p class="muted">1200</p></div>
-        <div class="card"><h3>主要语言</h3><span class="tag subtle">JSON · 193</span><span class="tag subtle">JavaScript · 41</span><span class="tag subtle">Markdown · 36</span><span class="tag subtle">TypeScript · 20</span><span class="tag subtle">Python · 5</span><span class="tag subtle">PowerShell · 5</span><span class="tag subtle">YAML · 4</span><span class="tag subtle">Rust · 1</span><span class="tag subtle">HTML · 1</span><span class="tag subtle">CSS · 1</span></div>
-        <div class="card"><h3>目录</h3><span class="tech-tag">experiments (181)</span><span class="tech-tag">reports (31)</span><span class="tech-tag">packages (13)</span><span class="tech-tag">.local-dsh-probe (1)</span><span class="tech-tag">.tools (1)</span><span class="tech-tag">apps (1)</span><span class="tech-tag">docs (1)</span><span class="tech-tag">examples (1)</span></div>
+        <div class="card"><h3>入库文件数</h3><p class="muted">190</p></div>
+        <div class="card"><h3>主要语言</h3><span class="tag subtle">TypeScript · 63</span><span class="tag subtle">JavaScript · 51</span><span class="tag subtle">Markdown · 22</span><span class="tag subtle">JSON · 10</span><span class="tag subtle">CSS · 8</span><span class="tag subtle">Python · 5</span><span class="tag subtle">PowerShell · 5</span><span class="tag subtle">YAML · 5</span><span class="tag subtle">HTML · 2</span></div>
+        <div class="card"><h3>目录</h3><span class="tech-tag">scripts (58)</span><span class="tech-tag">apps (46)</span><span class="tech-tag">packages (25)</span><span class="tech-tag">docs (23)</span><span class="tech-tag">tests (21)</span><span class="tech-tag">experiments (7)</span></div>
       </div>
     </div>
 
@@ -160,7 +162,7 @@
         <div class="dep-card"><div class="dep-line"><span>React 19 + Zustand</span></div><div class="dep-note">界面与状态管理</div></div>
         <div class="dep-card"><div class="dep-line"><span>TypeScript（strict）</span></div><div class="dep-note">全套类型约束</div></div>
         <div class="dep-card"><div class="dep-line"><span>自研工作包</span></div><div class="dep-note">protocol / bridge / adapters / dsh-plugin</div></div>
-        <div class="dep-card"><div class="dep-line"><span>Vitest + Playwright</span></div><div class="dep-note">120 项单测 + 桌面实测脚本</div></div>
+        <div class="dep-card"><div class="dep-line"><span>Vitest + Playwright</span></div><div class="dep-note">189 项单测 + 桌面实测脚本</div></div>
         <div class="dep-card"><div class="dep-line"><span>ws</span></div><div class="dep-note">本地 WebSocket 通信</div></div>
       </div>
       <p class="muted" style="margin-top:12px;">想深挖：跑起来看 docs/RUNNING.md；产品边界与协议看 docs/ 00-09 系列；每轮真实截图与验收记录都在 reports/ 目录。</p>
@@ -170,7 +172,7 @@
   </div>
 
   <div class="footer">
-    <div>生成时间：2026/10/18 14:22:36</div>
+    <div>图片与文案更新于：2026/10/22 23:35（截图均为真机重拍，折射对照为本次实测）</div>
   </div>
 
   <script>

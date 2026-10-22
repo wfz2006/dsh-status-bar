@@ -67,3 +67,7 @@ Structured question ownership：BLOCKED / 未注册回答者
 ```
 
 请按可复现证据填写，不可从网页最近版本号推定用户当前的安装版本。
+
+### 2026-10-22 首次启动修复复测
+
+Node 24.15.0、工作区 Electron 44.8.0；本机系统 curl、tar、Windows PowerShell/WPF 实际参与隔离首次启动复测。受控下载中断/503、Range 续传、失败重试、真实 Electron 启动和销毁通过；21 文件187测试、lint/typecheck/build 通过。只读取安装版插件公开源码与缓存 manifest/version，没有修改用户 DSH Profile，也没有重新验收真实 Desktop 模型任务或审批所有权。完整方法和边界见 [首次启动恢复](first-run-recovery.md)。

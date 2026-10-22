@@ -17,8 +17,10 @@
     "test:memory": "node scripts/memory-acceptance.mjs after && node scripts/memory-native-acceptance.mjs",
     "audit:memory": "node scripts/memory-audit.mjs",
     "test:process-latency": "node scripts/process-latency-acceptance.mjs",
+    "test:plugin-startup": "powershell.exe -NoLogo -NoProfile -STA -ExecutionPolicy Bypass -File scripts/plugin-startup-ui-acceptance.ps1 && node scripts/plugin-startup-acceptance.mjs",
     "test:native-redesign": "node scripts/native-redesign.mjs",
     "test:liquid": "node scripts/liquid-acceptance.mjs",
+    "card:release": "node scripts/release-card.mjs",
     "test:live": "node scripts/live-dsh-integration.mjs"
   },
   "devDependencies": {

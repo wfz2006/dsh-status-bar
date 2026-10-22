@@ -56,7 +56,7 @@ export function createMockAdapter(publish: (f: Frame) => void, disconnect: () =>
       frames.splice(3);
       frames.push({ ...base, messageId: 'finished-6', kind: 'session.updated', payload: { sessionId: 'demo-main', sourceSeq: 6, fields: { agentStatus: 'idle', phase: 'finished' } } });
     }
-    if (scenario === 'edge-cases' && snapshot.kind === 'glass.snapshot') snapshot = { ...snapshot, payload: { ...snapshot.payload, sessions: snapshot.payload.sessions.map(s => ({ ...s, title: '长中文任务：验证不同显示缩放、窄窗口、没有 Todo 以及复杂背景下的可读性。'.repeat(5), todos: [] })) } };
+    if (scenario === 'edge-cases' && snapshot.kind === 'glass.snapshot') snapshot = { ...snapshot, payload: { ...snapshot.payload, sessions: snapshot.payload.sessions.map(s => ({ ...s, title: '长中文任务：验证不同显示缩放、窄窗口、没有 Todo 以及复杂背景下的可读性。', todos: [] })) } };
     if (scenario === 'approval-queue') {
       const approval = frames.find(f => f.kind === 'approval.requested');
       if (approval?.kind === 'approval.requested') frames.push({ ...approval, messageId: 'approval-6', payload: { ...approval.payload, requestId: 'mock-approval-2', callId: 'mock-call-3', commandPreview: 'echo "Second independent Mock request"' } });

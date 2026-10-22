@@ -32,6 +32,7 @@ export function GlassSettingsPanel({ value, update, projection, mock, back }: { 
       <label>完成后自动收起<input aria-label="完成后自动收起" type="checkbox" checked={value.autoCollapse} onChange={e => update({ autoCollapse: e.target.checked })} /></label>
       <label>动画<select aria-label="动画" value={value.animation} onChange={e => update({ animation: e.target.value as GlassSettings['animation'] })}><option value="full">完整</option><option value="reduced">减少</option><option value="off">关闭</option></select></label>
       <label>置顶行为<select aria-label="置顶行为" value={value.pin} onChange={e => update({ pin: e.target.value as GlassSettings['pin'] })}><option value="normal">普通</option><option value="always">始终置顶</option><option value="on-notification">有待处理请求时</option></select></label>
+      <p className="muted settings-shortcut-note">隐藏后按 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> 恢复。<br/>退出后在 DSH 输入 <code>/status-bar</code> 重新打开。</p>
       </fieldset>
       <details className="debug-settings"><summary><span>材质降级与调试</span><Icon name="chevron"/></summary>
         <p className="muted">旧 Acrylic 对照会露出方形底角，已停用；旧选择自动回到薄透。磨砂玻璃在真实折射开启时模糊取样画面，关闭时退回半透明白雾。</p>
