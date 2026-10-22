@@ -20,7 +20,9 @@ const outIndex = args.indexOf('--out');
 const outDir = resolve(outIndex >= 0 && args[outIndex + 1] ? args[outIndex + 1] : join(repoRoot, 'dist', 'npm'));
 const runPack = !args.includes('--no-pack');
 
-const RUNTIME_URL = 'https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-status-bar.tgz';
+// The runtime lives on the npm registry because it is the one host that serves
+// 155 MB at registry speed; the release asset stays as the plugin's fallback.
+const RUNTIME_URL = `https://registry.npmjs.org/dsh-status-bar-runtime/-/dsh-status-bar-runtime-${JSON.parse(readFileSync(join(pluginRoot, 'package.json'), 'utf8')).version}.tgz`;
 const COPIED = ['lib', 'cordis.patch.yml', 'README.md', 'LICENSE', 'assets', 'screenshots.json'];
 
 const manifest = JSON.parse(readFileSync(join(pluginRoot, 'package.json'), 'utf8'));

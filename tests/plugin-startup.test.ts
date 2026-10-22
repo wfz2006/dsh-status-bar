@@ -162,6 +162,16 @@ it('pins the default/latest manifest URL to this plugin version and preserves ex
   expect(runtime.runtimeUrl({}, f.plugin)).toContain('/download/v0.2.5/');
   expect(runtime.runtimeUrl({ downloadUrl: f.url }, f.plugin)).toBe(f.url);
 });
+it('prefers the npm-hosted runtime and keeps the release asset as its fallback', async () => {
+  const f = await fixture();
+  type RuntimeWithFallback = { runtimeUrls(config: object, root: string): string[] };
+  const runtime = await f.runtime() as unknown as RuntimeWithFallback;
+  expect(runtime.runtimeUrls({}, f.plugin)).toEqual(['https://github.com/wfz2006/dsh-status-bar/releases/download/v0.2.5/dsh-status-bar.tgz']);
+  const npmRuntime = 'https://registry.npmjs.org/dsh-status-bar-runtime/-/dsh-status-bar-runtime-0.2.5.tgz';
+  writeFileSync(join(f.plugin, 'package.json'), JSON.stringify({ version: '0.2.5', dsh: { statusBar: { runtime: npmRuntime } } }));
+  expect(runtime.runtimeUrls({}, f.plugin)).toEqual([npmRuntime, 'https://github.com/wfz2006/dsh-status-bar/releases/download/v0.2.5/dsh-status-bar.tgz']);
+  expect(runtime.runtimeUrls({ downloadUrl: f.url }, f.plugin)).toEqual([f.url]);
+});
 it('does not publish a cache for an archive from the wrong release', async () => {
   const f = await fixture({ version: '9.9.9', respond: (_req, res, bytes) => res.writeHead(200, { ETag: '"wrong"', 'Content-Length': bytes.length }).end(bytes) });
   const runtime = await f.runtime();

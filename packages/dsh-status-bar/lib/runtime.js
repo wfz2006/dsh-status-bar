@@ -25,6 +25,15 @@ export function runtimeUrl(config, root) {
   const url = explicit ?? advertised ?? DEFAULT_RUNTIME_URL;
   return !explicit && url === DEFAULT_RUNTIME_URL ? `https://github.com/wfz2006/dsh-status-bar/releases/download/v${packageVersion(root)}/dsh-status-bar.tgz` : url;
 }
+/** The npm-hosted runtime is the primary source; the release asset stays as a
+ * fallback for networks where one of the two is unreachable. An explicitly
+ * configured address is used alone, so operators keep full control. */
+export function runtimeUrls(config, root) {
+  const primary = runtimeUrl(config, root);
+  if (config.downloadUrl ?? process.env.DSH_STATUS_BAR_RUNTIME_URL ?? process.env.DSH_GLASS_RUNTIME_URL) return [primary];
+  const fallback = `https://github.com/wfz2006/dsh-status-bar/releases/download/v${packageVersion(root)}/dsh-status-bar.tgz`;
+  return primary === fallback ? [primary] : [primary, fallback];
+}
 function binary(dist) {
   const name = process.platform === 'win32' ? 'electron.exe' : process.platform === 'darwin' ? join('Electron.app', 'Contents', 'MacOS', 'Electron') : 'electron';
   return firstFile([join(dist, name)]);
@@ -90,6 +99,22 @@ function removeOwned(path, root) {
   if (dirname(path) !== dirname(root) || !basename(path).startsWith(`${basename(root)}.`)) throw new Error('缓存临时路径无效。');
   rmSync(path, { recursive: true, force: true });
 }
+async function downloadWithFallback(config, pluginRoot, part, { signal, onProgress }) {
+  const urls = runtimeUrls(config, pluginRoot);
+  let lastError;
+  for (const url of urls) {
+    try {
+      await downloadArchive(url, part, { signal, onProgress });
+      return;
+    } catch (error) {
+      if (error?.name === 'AbortError') throw error;
+      checkAbort(signal);
+      lastError = error;
+      if (url !== urls.at(-1)) onProgress({ phase: 'downloading', message: '这个下载源不可用，正在改用备用源。' });
+    }
+  }
+  throw lastError ?? new Error('运行时下载失败。');
+}
 export async function ensureRuntime(config, pluginRoot, { signal, onProgress = () => {} } = {}) {
   const version = packageVersion(pluginRoot); const base = cacheBase(config); const root = join(base, `runtime-${version}`);
   const cached = cachedRuntime(root, version); if (cached) return cached;
@@ -101,7 +126,7 @@ export async function ensureRuntime(config, pluginRoot, { signal, onProgress = (
     // The exclusive lock proves that no other preparer owns these generated
     // staging folders. An abrupt Host exit must not leave one unpack per retry.
     for (const name of readdirSync(base)) if (name.startsWith(`${basename(root)}.staging-`) && /^[0-9a-f-]{36}$/.test(name.slice(`${basename(root)}.staging-`.length))) removeOwned(join(base, name), root);
-    await downloadArchive(runtimeUrl(config, pluginRoot), part, { signal, onProgress }); checkAbort(signal);
+    await downloadWithFallback(config, pluginRoot, part, { signal, onProgress }); checkAbort(signal);
     onProgress({ phase: 'unpacking', message: '下载完成，正在校验并解压运行时。' });
     let entries;
     try { entries = await run('tar', ['-tvzf', part], signal, true); }
