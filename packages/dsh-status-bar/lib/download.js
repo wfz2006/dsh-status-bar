@@ -19,6 +19,11 @@ export function delay(ms, signal) {
 const size = path => { try { return statSync(path).size; } catch { return 0; } };
 const json = path => { try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return {}; } };
 function reset(part) { for (const path of [part, `${part}.json`]) rmSync(path, { force: true }); }
+const TLS_CODES = new Set([35, 51, 60]);
+function tlsHint(code) {
+  if (!TLS_CODES.has(code)) return undefined;
+  return `与下载服务器建立安全连接失败（curl ${code}），通常是系统时间、代理或证书设置导致。`;
+}
 function validator(headers) {
   const tag = headers.etag;
   return typeof tag === 'string' && !tag.startsWith('W/') ? tag : headers['last-modified'];
@@ -35,17 +40,29 @@ function metadata(headers, source) {
   const range = String(headers['content-range'] ?? '').match(/^bytes \d+-\d+\/(\d+)$/);
   return { source, validator: validator(headers), total: range ? Number(range[1]) : Number(headers['content-length']) || 0 };
 }
+/** Schannel refuses the handshake when it cannot reach a revocation endpoint
+ * (`CRYPT_E_NO_REVOCATION_CHECK`, curl 35), which is the norm on locked-down
+ * networks. Best-effort keeps the check when it works and tolerates the failure.
+ * Curl older than 7.70 does not know the flag and exits 2; retry without it. */
+export function curlArgs(url, part, headersFile, previous, options, quirks = {}) {
+  const schannel = quirks.schannel ?? process.platform === 'win32';
+  const args = ['--silent', '--show-error', '--location', '--fail', '--connect-timeout', '15', '--max-time', String(options.timeoutMs / 1000),
+    '--speed-limit', '1', '--speed-time', String(Math.max(1, Math.ceil(options.idleMs / 1000))), '--proto-redir', '=https,http',
+    '--dump-header', headersFile, '--output', part];
+  if (schannel && quirks.revoke !== false) args.push('--ssl-revoke-best-effort');
+  if (new URL(url).protocol === 'https:') args.push('--proto', '=https', '--proto-redir', '=https');
+  if (previous.validator) args.push('--header', `If-Range: ${previous.validator}`);
+  const offset = size(part);
+  if (offset) args.push('--continue-at', String(offset));
+  args.push('--url', url);
+  return args;
+}
 function curlAttempt(url, part, previous, options) {
   const headersFile = `${part}.headers`;
   rmSync(headersFile, { force: true });
   const offset = size(part);
   const program = process.platform === 'win32' ? join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'curl.exe') : 'curl';
-  const args = ['--silent', '--show-error', '--location', '--fail', '--connect-timeout', '15', '--max-time', String(options.timeoutMs / 1000),
-    '--speed-limit', '1', '--speed-time', String(Math.max(1, Math.ceil(options.idleMs / 1000))), '--proto-redir', '=https,http',
-    '--dump-header', headersFile, '--output', part];
-  if (new URL(url).protocol === 'https:') args.push('--proto', '=https', '--proto-redir', '=https');
-  if (offset) args.push('--continue-at', String(offset), '--header', `If-Range: ${previous.validator}`);
-  args.push('--url', url);
+  const args = curlArgs(url, part, headersFile, previous, options, { revoke: options.revoke });
   return new Promise((resolve, reject) => {
     let child;
     const progress = () => {
@@ -73,7 +90,9 @@ function curlAttempt(url, part, previous, options) {
         const completed = response.status === 416 && String(response.headers?.['content-range']).match(/^bytes \*\/(\d+)$/);
         if (completed && Number(completed[1]) === offset && previous.total === offset) { resolve(); return; }
         if (code === 33 || response.status === 416) reset(part);
-        reject(new Error(response.status >= 400 ? `下载服务返回 HTTP ${response.status}。` : `下载连接中断或超时（curl ${code ?? 'stopped'}）。`));
+        const failure = new Error(response.status >= 400 ? `下载服务返回 HTTP ${response.status}。` : tlsHint(code) ?? `下载连接中断或超时（curl ${code ?? 'stopped'}）。`);
+        if (typeof code === 'number') failure.curlCode = code;
+        reject(failure);
       } catch (error) { reject(error); }
       finally { rmSync(headersFile, { force: true }); }
     });
@@ -123,7 +142,7 @@ export async function downloadArchive(url, part, { signal, onProgress = () => {}
   const parsed = new URL(url);
   if (parsed.username || parsed.password || !['https:', 'http:'].includes(parsed.protocol) || parsed.protocol === 'http:' && !['127.0.0.1', 'localhost', '[::1]'].includes(parsed.hostname)) throw new Error('运行时地址必须使用 HTTPS。');
   const source = createHash('sha256').update(url).digest('hex');
-  let useNode = backend === 'node'; let lastError;
+  let useNode = backend === 'node'; let revoke = true; let lastError;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     checkAbort(signal);
     const previous = json(`${part}.json`);
@@ -131,7 +150,7 @@ export async function downloadArchive(url, part, { signal, onProgress = () => {}
     if (existsSync(part) && previous.source === source && previous.total > 0 && size(part) === previous.total) return;
     onProgress({ phase: 'downloading', received: size(part), total: previous.total || 0, attempt, message: '正在下载桌面运行时，完成后自动打开悬浮窗。' });
     let reported = 0;
-    const options = { source, signal, idleMs, timeoutMs, onProgress: progress => {
+    const options = { source, signal, idleMs, timeoutMs, revoke, onProgress: progress => {
       const now = Date.now(); if (now - reported < 250 && progress.received !== progress.total) return;
       reported = now; onProgress({ phase: 'downloading', attempt, ...progress });
     } };
@@ -143,6 +162,12 @@ export async function downloadArchive(url, part, { signal, onProgress = () => {}
       checkAbort(signal); return;
     } catch (error) {
       checkAbort(signal); lastError = error;
+      // An old curl without --ssl-revoke-best-effort exits 2; retry the same
+      // attempt without the flag instead of failing the whole download.
+      if (!useNode && revoke && error.curlCode === 2) { revoke = false; attempt--; continue; }
+      // A TLS failure that survives the flag is worth one Node attempt, since
+      // Node validates against its own trust store instead of Schannel's.
+      if (!useNode && TLS_CODES.has(error.curlCode)) { useNode = true; attempt--; continue; }
       if (attempt < attempts) {
         onProgress({ phase: 'retrying', message: `下载中断，${attempt} 秒后重试；可验证的已下载部分会保留。`, attempt });
         await delay(attempt * 1000, signal);

@@ -238,3 +238,18 @@ it('handles a truncated error response in the Node fallback without an unhandled
   await expect(downloadArchive(f.url, join(f.runtimeDir, 'bad.part'), { backend: 'node', attempts: 1 })).rejects.toThrow('503');
   await new Promise(resolve => setTimeout(resolve, 50));
 });
+it('asks Schannel for best-effort revocation checking and still resumes by validator', async () => {
+  type Curl = { curlArgs(url: string, part: string, headers: string, previous: { validator?: string; total?: number }, options: { timeoutMs: number; idleMs: number }, quirks?: { schannel?: boolean; revoke?: boolean }): string[] };
+  const f = await fixture();
+  const { curlArgs } = await f.downloader() as unknown as Curl;
+  const directory = mkdtempSync(join(tmpdir(), 'glass-curl-')); cleanup.push(() => rmSync(directory, { recursive: true, force: true }));
+  const part = join(directory, 'runtime.tgz.part'); const headers = join(directory, 'headers'); const options = { timeoutMs: 300000, idleMs: 30000 };
+  const url = 'https://example.invalid/dsh-status-bar.tgz';
+  expect(curlArgs(url, part, headers, {}, options, { schannel: true })).toContain('--ssl-revoke-best-effort');
+  expect(curlArgs(url, part, headers, {}, options, { schannel: true, revoke: false })).not.toContain('--ssl-revoke-best-effort');
+  expect(curlArgs(url, part, headers, {}, options, { schannel: false })).not.toContain('--ssl-revoke-best-effort');
+  writeFileSync(part, 'x'.repeat(64));
+  const resumed = curlArgs(url, part, headers, { validator: '"abc"', total: 1024 }, options, { schannel: true });
+  expect(resumed).toEqual(expect.arrayContaining(['--continue-at', '64', '--header', 'If-Range: "abc"']));
+  expect(resumed.at(-2)).toBe('--url'); expect(resumed.at(-1)).toBe(url);
+});

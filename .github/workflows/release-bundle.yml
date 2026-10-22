@@ -9,7 +9,7 @@ on:
       tag:
         description: 'Release tag to attach the bundle to'
         required: true
-        default: 'v0.2.6'
+        default: 'v0.2.7'
 
 permissions:
   contents: write
