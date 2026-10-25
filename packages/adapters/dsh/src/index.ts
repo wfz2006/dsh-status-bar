@@ -336,7 +336,19 @@ export function createDshAdapter(options: Options) {
         transport?.unsubscribe(`audit:${id}`);
         if (connected) publish(frame('session.removed', { sessionId: id, sourceSeq }));
       }
-      if (g.event === 'api-session/status' && sessions.has(id)) { sessions.get(id)!.agentStatus = args[1] === true ? 'running' : 'idle'; if (args[1] === true) { terminal.delete(id); follow(id); } emitSession(id); }
+      if (g.event === 'api-session/status' && sessions.has(id)) {
+        // Also record repeated native statuses: a later inventory response may
+        // have been captured before this event even if the label is unchanged.
+        sessions.get(id)!.lastSourceSeq = revision(id);
+        sessions.get(id)!.agentStatus = args[1] === true ? 'running' : 'idle';
+        if (args[1] === true) {
+          // The installed Host emits this from agent/status with a real Agent.
+          // A cold inventory row may predate its creation; subscribe now rather
+          // than waiting up to 10s for session/list to mark it available.
+          live.add(id); coldRead.delete(id); terminal.delete(id); follow(id);
+        }
+        emitSession(id);
+      }
       if (g.event === 'api-session/error' && sessions.has(id)) { terminal.set(id, 'error'); sessions.get(id)!.agentStatus = 'idle'; emitSession(id); }
       return;
     }
@@ -417,21 +429,26 @@ export function createDshAdapter(options: Options) {
   }
   async function refreshList() {
     const current = transport; if (!current) return;
-    const knownAtStart = new Map(sessions);
+    // Session objects are updated in place. Keeping only object references
+    // cannot detect live updates while the asynchronous list RPC is in flight.
+    const knownAtStart = new Map([...sessions].map(([id, session]) => [id, { session, revision: session.lastSourceSeq }]));
     const result = record(await current.request('session/list', { _request: {} }));
     if (current !== transport) return;
     if (!Array.isArray(result.items)) throw new Error('DSH 会话列表格式不兼容。');
     for (const value of result.items.slice(0, 100)) {
       const row = record(value); const id = bounded(row.sessionId, '', 200);
-      if (knownAtStart.has(id) && knownAtStart.get(id) !== sessions.get(id)) continue;
-      if (ensureSession(id, row)) {
+      const before = knownAtStart.get(id);
+      if (before && (before.session !== sessions.get(id) || before.revision !== sessions.get(id)?.lastSourceSeq)) continue;
+      const listed = ensureSession(id, row);
+      if (listed) {
         const projection = record(row.projections); applyProjections(id, projection.values, projection.kind === 'sequenced' && typeof projection.asOfSeq === 'number' ? projection.asOfSeq : undefined, projection.kind !== 'sequenced'); follow(id);
         if (!live.has(id) && !coldRead.has(id) && typeof projection.asOfSeq === 'number' && Number.isSafeInteger(projection.asOfSeq) && projection.asOfSeq >= 0) {
           coldRead.add(id);
+          const pageRevision = listed.lastSourceSeq;
           // page observes existing storage; unlike follow it does not promote a cold session into an Agent.
           try {
             const page = record(await current.request('session/page', { request: { address: { kind: 'session', sessionId: id }, throughSeq: projection.asOfSeq, maxMessages: 1 } }));
-            if (current !== transport || !sessions.has(id)) continue;
+            if (current !== transport || sessions.get(id) !== listed || listed.lastSourceSeq !== pageRevision || live.has(id)) continue;
             const records = Array.isArray(page.records) ? page.records.map(record).filter(r => r.type === 'event').map(r => record(r.event)) : [];
             const lastBoundary = [...records].reverse().find(e => e.type === 'turn/start' || e.type === 'turn/end');
             if (lastBoundary?.type === 'turn/end') {

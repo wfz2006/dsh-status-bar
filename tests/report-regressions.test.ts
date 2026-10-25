@@ -66,6 +66,40 @@ it('tolerates one failed list poll and recovers inventory while retaining the he
   await expect.poll(() => h.state().sessions['after-retry']?.phase).toBe('working');
   expect(h.state().connection).toBe('connected');
 });
+it.each([false, true])('does not overwrite newer native activity with an older in-flight inventory row (tool event: %s)', async withTool => {
+  const h = await setup();
+  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+  await h.adapter.connect(h.host.link());
+  let finish: (value: unknown) => void = () => {};
+  h.host.rpc = method => method === 'session/list' ? new Promise(resolve => { finish = resolve; }) : true;
+  vi.advanceTimersByTime(10000);
+  await expect.poll(() => h.host.requests.filter(r => r.method === 'session/list').length).toBe(3);
+  h.host.gateway({ type: 'emit', event: 'api-session/status', args: ['s1', true] });
+  if (withTool) {
+    h.host.audit('s1', { type: 'tool/call', seq: 2, data: { callId: 'fresh', name: 'read', arguments: '{}' } });
+    await expect.poll(() => h.state().sessions.s1?.activities[0]?.callId).toBe('fresh');
+  } else await new Promise(resolve => setTimeout(resolve, 20));
+  finish({ items: [{ sessionId: 's1', running: false, agentAvailable: false, projections: { values: { title: 'stale poll' } } }] });
+  // Let the queued HTTP response pass through the real transport, not a fake timer.
+  await new Promise(resolve => setTimeout(resolve, 50));
+  expect(h.state().sessions.s1?.agentStatus).toBe('running');
+  expect(h.state().sessions.s1?.phase).toBe('working');
+});
+it('ignores a late cold-history completion after the session has resumed live tools', async () => {
+  const h = await setup(); vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+  await h.adapter.connect(h.host.link());
+  let finish: (value: unknown) => void = () => {};
+  h.host.rpc = method => method === 'session/list' ? { items: [{ sessionId: 's1', running: false, agentAvailable: false, projections: { asOfSeq: 10, values: {} } }] }
+    : method === 'session/page' ? new Promise(resolve => { finish = resolve; }) : true;
+  vi.advanceTimersByTime(10000);
+  await expect.poll(() => h.host.requests.some(r => r.method === 'session/page')).toBe(true);
+  h.host.gateway({ type: 'emit', event: 'api-session/status', args: ['s1', true] });
+  h.host.audit('s1', { type: 'tool/call', seq: 20, data: { callId: 'resumed', name: 'read', arguments: '{}' } });
+  await expect.poll(() => h.state().sessions.s1?.activities[0]?.callId).toBe('resumed');
+  finish({ records: [{ type: 'event', event: { type: 'turn/end', seq: 10, data: { reason: { kind: 'completed' } } } }] });
+  await new Promise(resolve => setTimeout(resolve, 50));
+  expect(h.state().sessions.s1?.phase).toBe('working');
+});
 it('ignores late events after session removal and releases every session-scoped cache', async () => {
   const h = await setup();
   h.host.audit('s1', { type: 'tool/call', data: { callId: 'c1', name: 'bash', arguments: '{"command":"echo safe"}' } });

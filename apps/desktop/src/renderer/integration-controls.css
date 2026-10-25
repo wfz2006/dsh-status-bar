@@ -26,6 +26,11 @@
 .question-option small { display:block; color:var(--muted); margin-top:3px; line-height:1.45; }
 .question-custom { display:flex; flex-direction:column; gap:5px; margin-top:8px; color:var(--muted); }
 .question-custom textarea { width:100%; min-height:56px; box-sizing:border-box; resize:vertical; border:1px solid var(--surface-edge); border-radius:8px; padding:7px 9px; color:var(--fg); background:var(--neutral-fill); font:inherit; line-height:1.5; }
+.glass[data-theme] .question-custom textarea:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+.glass[data-theme] .question-option:has(input:focus-visible) { outline:2px solid var(--accent); outline-offset:-2px; }
+.glass[data-theme] :is(.process-list,.todo-list):focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+.glass[data-theme] .request-heading button[data-copy-state=copied] { color:var(--success); }
+.glass[data-theme] .request-heading button[data-copy-state=error] { color:var(--danger); }
 .question-field:disabled .question-option { cursor:not-allowed; }
 .question-submit { width:100%; min-height:38px; color:var(--accent); }
 .question-submit:disabled { opacity:.5; cursor:not-allowed; }

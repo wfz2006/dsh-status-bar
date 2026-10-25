@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export { initialProjection } from './initial-projection';
 
 const id = z.string().min(1).max(200);
 const text = z.string().max(4096);
@@ -82,11 +83,6 @@ export type Projection = {
   removedSessions?: Record<string, number>;
 };
 export type LocalEvent = { kind: 'transport.closed' | 'transport.connecting' | 'transport.incompatible' };
-export function initialProjection(): Projection {
-  return { connection: 'connecting', stale: true, source: null, runtimeId: null, epoch: null,
-    capabilities: { observeSessions: false, observeTodos: false, observeTools: false, respondApproval: false, respondQuestion: false },
-    sessions: {}, approvals: [], questions: [], seen: [], removedSessions: {} };
-}
 function sessionAcceptsRequests(state: Projection, sessionId: string) {
   return Object.hasOwn(state.sessions, sessionId) && !['finished', 'limit-reached', 'error', 'cancelled', 'archived'].includes(state.sessions[sessionId]!.phase);
 }

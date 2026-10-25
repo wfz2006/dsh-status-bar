@@ -19,11 +19,11 @@ import './integration-controls.css';
 import './motion.css';
 import './whale.css';
 import './experience.css';
+import './drag-motion.css';
 
 declare global { interface Window { glass: GlassAPI } }
 const initialWindow: WindowState = { pinned: false, material: 'acrylic', morphing: null, viewMode: 'capsule', manualSize: false, panel: null, settings: { ...DEFAULT_SETTINGS }, completionFeedback: false };
 function App() {
-  const drag=useWindowDrag();
   const { projection, selected, replace, select } = useGlass();
   const root = useRef<HTMLElement>(null);
   const settledMode = useRef<GlassViewMode>('capsule');
@@ -57,6 +57,7 @@ function App() {
     if (kind) playChime(kind);
   }, [selected, task.status, task.attentionCount, windowState.settings.sound]);
   const mode = windowState.morphing === 'collapsing' && windowState.viewMode === 'capsule' ? settledMode.current : windowState.morphing || windowState.panel ? windowState.viewMode : layoutMode === 'expanded' && windowState.viewMode === 'approval' ? 'approval' : layoutMode;
+  const drag = useWindowDrag(root, `${mode}:${windowState.panel}:${windowState.morphing}`, windowState.settings.animation);
   if (!windowState.morphing) settledMode.current = mode;
   const invoke = (value: WindowAction) => () => void action(value);
   return <main ref={root} {...drag} className="glass" data-mode={mode} data-panel={windowState.panel ?? 'none'}

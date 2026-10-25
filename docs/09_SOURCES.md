@@ -71,3 +71,15 @@ Structured question ownership：BLOCKED / 未注册回答者
 ### 2026-10-22 首次启动修复复测
 
 Node 24.15.0、工作区 Electron 44.8.0；本机系统 curl、tar、Windows PowerShell/WPF 实际参与隔离首次启动复测。受控下载中断/503、Range 续传、失败重试、真实 Electron 启动和销毁通过；21 文件187测试、lint/typecheck/build 通过。只读取安装版插件公开源码与缓存 manifest/version，没有修改用户 DSH Profile，也没有重新验收真实 Desktop 模型任务或审批所有权。完整方法和边界见 [首次启动恢复](first-run-recovery.md)。
+
+### 2026-10-23 性能与轻量化复测
+
+Windows x64，终端 Node 24.15.0 / pnpm 12.4.1；真实 Electron 44.8.0 进程返回 Node 24.22.0、主显示器 scaleFactor 1.5。桌面生产构建、类型/lint、22 文件206测试，光学/流式与隐藏生命周期验收，以及两轮 OS 私有工作集对照见 [性能与轻量化实测](performance-optimization.md)。部分 GPU/整树内存场景更高，旧 desktop-smoke 在原构建与新构建同一 Todo 断言失败；不声称全部桌面验收或整体内存优化通过。未改 DSH 安装或 Profile，DSH CLI 不在当前 PATH，未重验真实 Desktop 任务与审批所有权。
+
+### 2026-10-23 工具过程延迟复测
+
+只读提取本机安装版 `dsh-api-session-controller`、`dsh-api-remotes`、`dsh-agent-loop` 等公开代码，package 版本 0.2.1-rc.2；`api-session/status` 的 Agent 来源、`session/follow` 实时投递及模型顺序工具提交已从该安装包核对。源文件 SHA-256 保存在本机 `reports/process-sync/installed/sources.json`。22 文件210测试、lint/typecheck/build、工具/文本流式/隐藏生命周期验收通过；受控 Host 下订阅等待从 8,730ms 降到 19ms，工具行完整显示中位数 245ms 降到 26ms。不是用户真实 Desktop 任务对照；未改安装版或 Profile，见 [过程同步报告](process-sync-latency.md)。
+
+### 2026-10-25 代码与交互审查
+
+23 文件214测试、lint/typecheck/build 通过。真实 Electron 的请求草稿、特殊 ID、键盘标签、复制反馈、原生隐藏和 360 DIP 明暗布局已复测；既有 experience/motion/performance/tool-latency 与原生拖动验收通过，旧 desktop-smoke 迁移后整套通过。发现生产 CSS 压缩将独立 scale 改写到 transform，关闭 CSS 压缩后原缩放阈值验收恢复通过，JS 压缩保留。原生内存验收隐藏查询一次超时，独立复跑通过；没有据此声称整体内存改善。未重验安装版 DSH 任务或修改用户 Profile，详见 [审查报告](review-ui-2026-10-25.md)。

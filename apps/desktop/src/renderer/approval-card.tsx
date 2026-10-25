@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Task } from './task-views';
 import { Icon } from './icon';
 import { requestIdentity, requestKey } from './request-model';
@@ -12,6 +12,11 @@ function DecisionPreview({label,tone,explain}:{label:string;tone:'allow'|'reject
 export function ApprovalCard({ task, openDSH }: { task: Task; openDSH: () => void }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [copyResult, setCopyResult] = useState({ identity: '', text: '' });
+  useEffect(()=>{
+    if(!copyResult.text)return;
+    const timer=setTimeout(()=>setCopyResult({identity:'',text:''}),1800);
+    return ()=>clearTimeout(timer);
+  },[copyResult]);
   const [blocked,setBlocked]=useState({identity:'',text:''});
   const [submissions,setSubmissions]=useState<Record<string,{stage:string;text:string}>>({});
   const inFlight=useRef(new Set<string>());
@@ -29,13 +34,13 @@ export function ApprovalCard({ task, openDSH }: { task: Task; openDSH: () => voi
   }
   async function copy(sessionId: string, requestId: string) {
     try { await window.glass.copyApproval({ sessionId, requestId }); setCopyResult({ identity: key, text: '已复制预览' }); }
-    catch { setCopyResult({ identity: key, text: '预览不可用' }); }
+    catch { setCopyResult({ identity: key, text: '复制失败' }); }
   }
   return <>
     {task.pending.length > 1 && <nav className="request-selector" aria-label="待处理请求队列">{task.pending.map((a, index) => <button key={requestKey(a)} data-request-id={a.requestId} className="quiet-button" aria-label={'查看请求 ' + (index + 1)} aria-current={a === request ? 'true' : undefined} onClick={() => setSelected(requestKey(a))}><span className="control-label">{index + 1}</span></button>)}</nav>}
     {request && <>
       <div className="approval-body"><article className="approval-card" key={key}>
-        <div className="request-heading"><strong>{request.toolName === 'bash' ? '终端命令' : request.toolName}</strong><button className="text-button" onClick={() => void copy(request.sessionId, request.requestId)} disabled={!request.commandPreview}><span className="control-label">复制预览</span></button><button className="request-external" aria-label="打开 DSH" title="打开 DSH" onClick={openDSH}><Icon name="external"/></button></div>
+        <div className="request-heading"><strong>{request.toolName === 'bash' ? '终端命令' : request.toolName}</strong><button className="text-button" data-copy-state={copyResult.identity===key?(copyResult.text==='已复制预览'?'copied':copyResult.text?'error':'idle'):'idle'} onClick={() => void copy(request.sessionId, request.requestId)} disabled={!request.commandPreview}><span className="control-label">{copyResult.identity===key&&copyResult.text?(copyResult.text==='已复制预览'?'已复制':copyResult.text):'复制预览'}</span></button><button className="request-external" aria-label="打开 DSH" title="打开 DSH" onClick={openDSH}><Icon name="external"/></button></div>
         <p className="approval-reason" aria-label="审批标题">{request.reason || '此操作需要你的确认'}</p>
         <details className="request-details"><summary><Icon name="code"/><span>查看完整命令与请求</span><Icon name="chevron"/></summary><pre className="command-full">{request.commandPreview ?? '参数暂不可用'}</pre><p>{request.reason}</p><dl><dt>Session</dt><dd>{request.sessionId}</dd><dt>Request</dt><dd>{request.requestId}</dd><dt>Call</dt><dd>{request.callId ?? '未提供'}</dd></dl></details>
       </article></div>

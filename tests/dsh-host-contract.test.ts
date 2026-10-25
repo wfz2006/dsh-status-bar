@@ -132,6 +132,23 @@ describe('dsh host contract', () => {
     await expect.poll(() => h.host.followRequests.get('s1')?.assistantStream, { timeout: 500, interval: 5 }).toBe(true);
     expect(h.host.requests.filter(r => r.method === 'session/list')).toHaveLength(1);
   });
+  it('follows an existing cold session as soon as its native running event arrives', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', agentAvailable: false }] });
+    await h.adapter.connect(h.host.link());
+    expect(h.host.openStreams).not.toContain('audit:s1');
+    h.host.gateway({ type: 'emit', event: 'api-session/status', args: ['s1', false] });
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(h.host.openStreams).not.toContain('audit:s1');
+    expect(h.state().sessions.s1?.phase).toBe('unknown');
+    h.host.gateway({ type: 'emit', event: 'api-session/status', args: ['s1', true] });
+    await expect.poll(() => h.host.followRequests.get('s1')?.assistantStream, { timeout: 500, interval: 5 }).toBe(true);
+    h.host.audit('s1', { type: 'tool/call', seq: 1, data: { callId: 'fast', name: 'read', arguments: '{}' } });
+    h.host.audit('s1', { type: 'tool/result', seq: 2, data: { message: { toolCallId: 'fast', isError: false } } });
+    h.host.audit('s1', { type: 'turn/end', seq: 3, data: { reason: { kind: 'completed' } } });
+    await expect.poll(() => h.state().sessions.s1?.phase, { timeout: 500, interval: 5 }).toBe('finished');
+    expect(h.state().sessions.s1?.activities[0]?.status).toBe('success');
+    expect(h.host.requests.filter(r => r.method === 'session/list')).toHaveLength(1);
+  });
 
   it('continues streaming across turn boundaries in the same Agent lifecycle', async () => {
     const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });

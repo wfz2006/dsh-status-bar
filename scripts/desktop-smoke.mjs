@@ -11,7 +11,7 @@ export async function runAcceptance({ native = false } = {}) {
   const profile = await mkdtemp(join(tmpdir(), 'dsh-glass-redesign-'));
   const env = { ...process.env, GLASS_SMOKE: '1', GLASS_USER_DATA_DIR: profile }; delete env.ELECTRON_RUN_AS_NODE;
   const app = await electron.launch({ executablePath, args: [resolve('apps/desktop')], env });
-  const output = resolve('docs/evidence/redesign'); await mkdir(output, { recursive: true });
+  const output = resolve(process.env.GLASS_REPORT_DIR ?? 'reports/desktop-smoke'); await mkdir(output, { recursive: true });
   const report = { results: [], motion: [], nativeCaptures: [], errors: [] };
   try {
     const page = await app.firstWindow();
@@ -26,6 +26,11 @@ export async function runAcceptance({ native = false } = {}) {
       await expect.poll(async () => (await ui()).morphing).toBe(null);
     }
     async function screenshot(name) { await page.screenshot({ path: output + '/' + name + '.png' }); }
+    async function steps() { await page.getByRole('tab', { name: /^步骤/ }).click(); }
+    async function chooseSession(title) {
+      await page.getByRole('button', { name: /选择会话/ }).click();
+      await page.getByRole('option', { name: new RegExp(title) }).click();
+    }
     async function assertNoOverflow() {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       assert.equal(await page.locator('.glass').evaluate(e => e.scrollWidth > e.clientWidth), false);
@@ -56,6 +61,7 @@ export async function runAcceptance({ native = false } = {}) {
     await screenshot('phase2-peek');
     await page.getByRole('button', { name: '展开任务详情', exact: true }).click();
     await page.locator('[data-mode=expanded][data-morph=idle]').waitFor();
+    await steps();
     await expect.poll(async () => page.locator('.todo').count()).toBe(2);
     await screenshot('phase2-expanded');
     // Wait for the initial read-only Mock request, then verify explicit attention view.
@@ -72,7 +78,7 @@ export async function runAcceptance({ native = false } = {}) {
     report.menuItems = menuItems;
     for (const id of ['view-capsule','view-peek','view-expanded','view-approval','pin','settings','open-dsh','reconnect','hide','show','quit','debug']) assert.ok(menuItems.some(i => i.id === id));
     await menu('settings');
-    await expect(page.getByText('Mock 演示', { exact: true })).toBeVisible();
+    await expect(page.locator('.source-notice')).toContainText('Mock 演示');
     await page.getByLabel('显示主题').selectOption('light');
     await page.getByLabel('玻璃强度').selectOption('readable');
     await page.getByLabel('默认形态').selectOption('peek');
@@ -87,9 +93,9 @@ export async function runAcceptance({ native = false } = {}) {
     await page.getByRole('button', { name: '返回', exact: true }).click();
     await expect.poll(async () => (await ui()).panel).toBe(null);
     await menu('view-expanded');
-    await page.getByLabel('选择会话').selectOption('demo-other');
+    await chooseSession('视觉探索'); await steps();
     assert.equal(await page.locator('.todo').count(), 1);
-    await page.getByLabel('选择会话').selectOption('demo-main');
+    await chooseSession('构建 DSH Glass');
     await menu('mock-disconnect');
     await expect(page.getByRole('button', { name: '检查连接并重试', exact: true })).toBeVisible();
     await page.evaluate(() => window.glass.setSettings({ pin: 'on-notification' }));
@@ -139,11 +145,14 @@ export async function runAcceptance({ native = false } = {}) {
     assert.equal((await ui()).morphing, null);
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await menu('mock-edge-cases'); await menu('view-expanded');
+    await steps();
     await expect.poll(async () => page.getByRole('progressbar').count()).toBe(0);
     await expect(page.getByText('此会话尚无 Todo，不显示百分比。')).toBeVisible();
     await assertNoOverflow(); await screenshot('long-title-empty-todo');
     await menu('view-capsule'); await assertNoOverflow();
-    assert.ok((await page.locator('.task-capsule').getAttribute('title')).length > 150, 'Truncated title remains available in tooltip');
+    await expect(page.locator('.capsule-title')).toHaveAttribute('data-overflow', 'true');
+    const longTitle = await page.evaluate(async () => Object.values((await window.glass.getState()).sessions)[0].title);
+    assert.ok((await page.locator('.task-capsule').getAttribute('title')).includes(longTitle), 'Tooltip preserves the complete actual session title');
     report.results.push('Reduced motion, long Chinese title and empty Todo layout: PASS');
     await menu('view-expanded');
     const resize = await page.locator('.resize-se').boundingBox();

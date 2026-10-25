@@ -253,16 +253,17 @@ function ProcessList({ task }: { task: Task }) {
   ].sort((a, b) => b.sourceSeq - a.sourceSeq), [notes, activities]);
   useEffect(() => { syncFade(); }, [rows]);
   if (!rows.length) return <WhaleEmpty>此会话尚无过程；开始工作后，这里会按时间出现思考与工具调用。</WhaleEmpty>;
-  return <div ref={listRef} onScroll={syncFade} data-fade-top={fade.top ? 'true' : undefined} data-fade-bottom={fade.bottom ? 'true' : undefined} className="activity-list process-list" role="tabpanel" aria-label="AI 工作过程">
+  return <div ref={listRef} tabIndex={0} onScroll={syncFade} data-fade-top={fade.top ? 'true' : undefined} data-fade-bottom={fade.bottom ? 'true' : undefined} className="activity-list process-list" aria-label="AI 工作过程">
     {rows.map((row, index) => <ProcessRow row={row} index={index} key={row.key} />)}
   </div>;
 }
 const TodoList = memo(function TodoList({ todos }: { todos: Task['todos'] }) {
   if (!todos.length) return <WhaleEmpty>此会话尚无 Todo，不显示百分比。</WhaleEmpty>;
-  return <ol className="todo-list" aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span className="todo-text">{todo.content}</span>{todo.status === 'completed' && <span className="todo-note">已完成</span>}</li>)}</ol>;
+  return <ol className="todo-list" tabIndex={0} aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span className="todo-text">{todo.content}</span>{todo.status === 'completed' && <span className="todo-note">已完成</span>}</li>)}</ol>;
 });
 export function TaskExpanded({ task, projection, selected, select, approval, reconnect }: { task: Task; projection: Projection; selected: string; select: (id: string) => void; approval: () => void; reconnect: () => void }) {
   const [tab, setTab] = useState<'process' | 'steps'>('process');
+  const tabsId = useId(), panelId = tabsId + '-panel';
   const metrics = taskUsage(task);
   const todos = task.todos;
   return <section className="task-expanded">
@@ -281,11 +282,17 @@ export function TaskExpanded({ task, projection, selected, select, approval, rec
       </div>
     </div>}
     <Progress task={task} />
-    <div className="task-tabs" role="tablist" aria-label="任务详情视图" data-active={tab}>
-      <button className="task-tab" role="tab" aria-selected={tab === 'process'} onClick={() => setTab('process')}>过程</button>
-      <button className="task-tab" role="tab" aria-selected={tab === 'steps'} onClick={() => setTab('steps')}>步骤{task.total > 0 ? ' ' + task.completed + '/' + task.total : ''}</button>
+    <div className="task-tabs" role="tablist" aria-label="任务详情视图" data-active={tab} onKeyDown={event => {
+      if (event.altKey || event.ctrlKey || event.metaKey || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault(); event.stopPropagation();
+      const next = event.key === 'Home' ? 'process' : event.key === 'End' ? 'steps' : tab === 'process' ? 'steps' : 'process';
+      setTab(next);
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role=tab]')[next === 'process' ? 0 : 1]?.focus();
+    }}>
+      <button className="task-tab" role="tab" id={tabsId + '-process'} aria-controls={panelId} tabIndex={tab === 'process' ? 0 : -1} aria-selected={tab === 'process'} onClick={() => setTab('process')}>过程</button>
+      <button className="task-tab" role="tab" id={tabsId + '-steps'} aria-controls={panelId} tabIndex={tab === 'steps' ? 0 : -1} aria-selected={tab === 'steps'} onClick={() => setTab('steps')}>步骤{task.total > 0 ? ' ' + task.completed + '/' + task.total : ''}</button>
     </div>
-    <div className="task-panel" key={tab}>
+    <div className="task-panel" key={tab} id={panelId} role="tabpanel" aria-labelledby={tabsId + '-' + tab}>
       {tab === 'process' ? <ProcessList task={task} /> : <TodoList todos={todos} />}
     </div>
     {task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}

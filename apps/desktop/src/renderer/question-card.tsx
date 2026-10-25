@@ -1,14 +1,14 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Question } from '@glass/protocol';
 import type { Task } from './task-views';
-import { questionAnswers, requestIdentity, requestKey } from './request-model';
+import { draftValue, EMPTY_QUESTION_DRAFT, questionAnswers, requestIdentity, requestKey, type QuestionDraft } from './request-model';
 import { ApprovalCard } from './approval-card';
 import { Icon } from './icon';
 
-function QuestionForm({ request, disconnected }: { request: Question; disconnected: boolean }) {
-  const [values,setValues]=useState<Record<string,string[]>>({});
-  const [custom,setCustom]=useState<Record<string,string>>({});
-  const [stage,setStage]=useState<'idle'|'busy'|'sent'|'error'>('idle');
+type UpdateDraft = (update: (draft: QuestionDraft) => QuestionDraft) => void;
+function QuestionForm({ request, disconnected, draft, update }: { request: Question; disconnected: boolean; draft: QuestionDraft; update: UpdateDraft }) {
+  const { values, custom, stage } = draft;
+  const setStage = (stage: QuestionDraft['stage']) => update(current => ({ ...current, stage }));
   const submitting=useRef(false);
   const busy=request.status==='submitting' || stage==='busy' || stage==='sent';
   const enabled=request.actionable && !disconnected && !busy;
@@ -25,16 +25,16 @@ function QuestionForm({ request, disconnected }: { request: Question; disconnect
     <div className="approval-body question-body">{request.questions.map((q,index)=><fieldset className="question-field" key={q.id} disabled={!enabled}>
       <legend>{request.questions.length>1 && <span className="question-number">{index+1}. </span>}{q.question}</legend>
       {q.type!=='freeText' && <div className="question-options">{q.options?.map((option,optionIndex)=><label className="question-option" key={optionIndex}>
-        <input type={q.type==='multiple'?'checkbox':'radio'} name={q.id} checked={(values[q.id]??[]).includes(option.label)} onChange={event=>{
+        <input type={q.type==='multiple'?'checkbox':'radio'} name={q.id} checked={draftValue(values,q.id,[]).includes(option.label)} onChange={event=>{
           const checked=event.target.checked;
-          setValues(current=>({...current,[q.id]:q.type==='single'?[option.label]:checked?[...(current[q.id]??[]),option.label]:(current[q.id]??[]).filter(value=>value!==option.label)}));
-          if(q.type==='single')setCustom(current=>({...current,[q.id]:''}));
+          update(current=>({...current,values:{...current.values,[q.id]:q.type==='single'?[option.label]:checked?[...draftValue(current.values,q.id,[]),option.label]:draftValue(current.values,q.id,[]).filter(value=>value!==option.label)},
+            custom:q.type==='single'?{...current.custom,[q.id]:''}:current.custom}));
         }}/><span><strong>{option.label}</strong>{option.description && <small>{option.description}</small>}</span>
       </label>)}</div>}
       {(q.type==='freeText' || q.allowCustom) && <label className="question-custom"><span>{q.type==='freeText'?'你的回答':'其他回答'}</span>
-        <textarea rows={2} maxLength={4096} value={custom[q.id]??''} onChange={event=>{
-          setCustom(current=>({...current,[q.id]:event.target.value}));
-          if(q.type==='single')setValues(current=>({...current,[q.id]:[]}));
+        <textarea rows={2} maxLength={4096} value={draftValue(custom,q.id,'')} onChange={event=>{
+          const text=event.target.value;
+          update(current=>({...current,custom:{...current.custom,[q.id]:text},values:q.type==='single'?{...current.values,[q.id]:[]}:current.values}));
         }} placeholder={q.type==='freeText'?'输入回答…':'也可以输入自己的答案…'}/></label>}
     </fieldset>)}</div>
     <footer className="approval-footer" data-request-id={request.requestId} data-session-id={request.sessionId} data-stage={busy ? 'waiting' : stage}>
@@ -45,10 +45,25 @@ function QuestionForm({ request, disconnected }: { request: Question; disconnect
 }
 function QuestionCard({task}:{task:Task}) {
   const [selected,setSelected]=useState<string|null>(null);
+  const [drafts,setDrafts]=useState<Record<string,QuestionDraft>>({});
+  const active=useRef(new Set<string>());
+  active.current=new Set(task.questions.map(requestKey));
+  useEffect(()=>{
+    setDrafts(current=>{
+      const entries=Object.entries(current).filter(([key])=>active.current.has(key));
+      return entries.length===Object.keys(current).length?current:Object.fromEntries(entries);
+    });
+  },[task.questions]);
   const request=task.questions.find(q=>requestKey(q)===selected)??task.questions[0];
+  const key=request?requestKey(request):'';
+  function updateDraft(update:(draft:QuestionDraft)=>QuestionDraft) {
+    // Ignore a late async response after its request has ended. Keep draft
+    // data only, rather than mounting every hidden form in a large queue.
+    setDrafts(current=>active.current.has(key)?{...current,[key]:update(current[key]??EMPTY_QUESTION_DRAFT)}:current);
+  }
   return <>
     {task.questions.length>1 && <nav className="request-selector" aria-label="问题请求队列">{task.questions.map((q,index)=><button className="quiet-button" key={requestKey(q)} onClick={()=>setSelected(requestKey(q))} aria-current={q===request?'true':undefined}><span className="control-label">问题 {index+1}</span></button>)}</nav>}
-    {request && <QuestionForm key={requestKey(request)} request={request} disconnected={task.status==='disconnected'}/>}
+    {request && <QuestionForm key={key} request={request} disconnected={task.status==='disconnected'} draft={drafts[key]??EMPTY_QUESTION_DRAFT} update={updateDraft}/>}
   </>;
 }
 export function RequestPanel({task,openDSH}:{task:Task;openDSH:()=>void}) {

@@ -204,6 +204,14 @@ Main给助手固定本窗HWND/本进程PID；助手校验owner、可见性与WDA
 
 preload 在结构化克隆后复用字段完全相同的 Todo、活动与摘要对象，以减少 React 无效工作；不以对象身份判断审批授权。renderer 无额外 Node/文件/网络权限。
 
+2026-10-23：增量帧新增可选 `sessionChanges`。新会话仍放在 `sessions`，已有会话只传变化的 `fields` 和需要删除的 `deleted` 字段；`activities` / `notes` 以 `{length,items:[[index,row],...]}` 传变化行。按位置而非 ID 应用，因此重复 ID、重新排序、缩短列表、显式 `undefined` 和可选字段删除均保留原语义。Todo 仅在内容改变时整表替换。基线、revision、每 300 次完整刷新及缺帧后的保守恢复不变；缺少会话基线的局部更新请求重新同步。
+
+上述对象共享只在 preload 内成立，`contextBridge` 传给页面的完整投影仍会再复制；本轮测量的增量收益范围是 Main → preload，不把它当作整条 UI 链路的复制量或帧率改善。
+
+本地 `WindowState` 新增可选 `visible`，由 Main 的 `isVisible() && !isMinimized()` 得到，在 show/hide/minimize/restore 时发布；旧夹具缺少该字段时按可见处理。透明窗口的 `document.hidden` 在本机隐藏实测中不可靠，renderer 据此原生字段清理隐藏期间的 SVG 滤镜、贴图缓存和尺寸观察器，显示后重建相同光学参数。不增加原生窗口控制权限。
+
 Adapter 每种请求保留最多 100 条已结束历史，未结束请求不因历史增长被裁掉；投影的 100 项请求窗口优先保留未结束项。工具参数摘要按会话最多 256 项，当前待审批调用另行保护；会话删除、断线会清理相关缓存。真实 turn 边界让遗留请求 unavailable；历史 follow 快照原子回放，只发布最终状态，不能因中间历史终态撤销当前 delivery，也不能恢复已结束请求的操作权。
 
 Host 实时物理通道以 15 秒 Ping/下一周期存活检查检测半开连接；正常流量也可证明连接仍活着。单会话 audit 子流结束会撤销其请求并在会话列表确认仍可用后重新订阅，不关闭其他子流。列表暂时失败以 10–60 秒退避重试；认证失败或关键子流结束仍断线，禁止自动重放一次性 token。
+
+2026-10-23 过程同步修复：对列表中已有的会话，目标版本确认的 `api-session/status(id,true)` 也作为真实 Agent 可用的证明，立即订阅 `session/follow`，无需等下一次列表轮询；false 不代表完成，也不启用冷历史。异步列表行和冷历史页面在返回时额外核对会话身份及本地 revision，避免覆盖更晚的实时事件或把新一轮误标完成。原生协议、审批资格与正式终态依据不变，实测见 [过程同步报告](process-sync-latency.md)。

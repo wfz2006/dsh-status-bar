@@ -1,4 +1,4 @@
-import { memo, useLayoutEffect, useRef } from 'react';
+import { memo, useLayoutEffect, useRef, useState } from 'react';
 import type { GlassSettings } from '../shared/view-model';
 import './vendor/edge-liquid-glass.js';
 import './glass-material.css';
@@ -18,9 +18,16 @@ declare global {
 type MaterialProps = { strength: GlassSettings['strength']; moving: boolean; solid: boolean; frosted: boolean; autoTheme:boolean;appearance:GlassAppearance };
 export const GlassMaterial = memo(function GlassMaterial({ strength, moving, solid, frosted, autoTheme, appearance }: MaterialProps) {
   const surface = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(true);
+  useLayoutEffect(() => {
+    let current = true, updated = false;
+    const off = window.glass.subscribeWindow(state => { updated = true; setVisible(state.visible !== false); });
+    void window.glass.getWindowState().then(state => { if (current && !updated) setVisible(state.visible !== false); }).catch(() => {});
+    return () => { current = false; off(); };
+  }, []);
   useLayoutEffect(() => { document.documentElement.dataset.glassProfile = strength; }, [strength]);
   useLayoutEffect(() => {
-    if (solid) return;
+    if (solid || !visible) return;
     window.LiquidGlass.init();
     // Follow the actual local rectangle while morphing. Keep all three RGB
     // passes; coalesce native resize bursts instead of restoring glass later.
@@ -33,11 +40,11 @@ export const GlassMaterial = memo(function GlassMaterial({ strength, moving, sol
     });
     if(surface.current)observer.observe(surface.current);
     return () => {observer.disconnect();clearTimeout(timer);cancelAnimationFrame(frame);window.LiquidGlass.dispose();};
-  }, [solid]);
+  }, [solid, visible]);
   useLayoutEffect(() => {
-    if (!surface.current || solid) return;
+    if (!surface.current || solid || !visible) return;
     window.LiquidGlass.refresh([surface.current]);
-  }, [strength, moving, solid]);
+  }, [strength, moving, solid, visible]);
   return <div className="glass-material" aria-hidden="true" data-source="edge-liquid-glass-newtab" data-optics={solid ? 'solid' : 'lens'}>
     <svg id="glass-defs" width="0" height="0" focusable="false" />
     <div className="glass-body" style={{filter:solid || appearance.brightness===100?'none':`brightness(${appearance.brightness / 100})`}}>

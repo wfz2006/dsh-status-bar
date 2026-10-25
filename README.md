@@ -47,7 +47,7 @@ Windows 11 优先，Electron 实现，单实例常驻，不注册托盘图标、
 
 ## 📊 数字小卡片
 
-| 189 | 4 | 13 px | 0 |
+| 214 | 4 | 13 px | 0 |
 |:--:|:--:|:--:|:--:|
 | 单测全绿（另有类型检查、lint、桌面构建） | 副面孔：胶囊 / 速览 / 详情 / 审批 | 真实折射偏折（实测物理像素） | 次自动放行（永远是 0） |
 
@@ -116,6 +116,9 @@ docs                  产品 / 架构 / 协议 / 安全 / 决策文档，界面�
 ## 📚 文档索引
 
 - [运行与验收](docs/RUNNING.md)：怎么跑、怎么验、当前材质与偏好
+- [性能与轻量化实测](docs/performance-optimization.md)：代码体积、流式传输、两轮内存对照及未解决的 GPU 开销
+- [工具过程同步延迟修复](docs/process-sync-latency.md)：消除冷会话轮询等待、旧响应覆盖及工具行淡入延迟
+- [代码审查与交互细节修复](docs/review-ui-2026-10-25.md)：请求草稿、特殊 ID、键盘导航、复制反馈与生产动效
 - [产品边界与验收条件](docs/00_PRODUCT_PRD.md)
 - [总体架构](docs/01_ARCHITECTURE.md) ｜ [自定义本地协议](docs/02_PROTOCOL.md) ｜ [状态模型](docs/08_STATE_MODEL.md)
 - [DSH 集成与已验证接口](docs/04_DSH_INTEGRATION.md) ｜ [安全测试](docs/05_SECURITY_TESTING.md)

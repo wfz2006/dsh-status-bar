@@ -36,7 +36,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   let persistenceTimer: ReturnType<typeof setTimeout> | undefined;
   const presentation = createPresentation(win, publish);
   function state(): WindowState {
-    return { ...(presentation?.state() ?? { material: 'acrylic', morphing: null }), pinned: !win.isDestroyed() && win.isAlwaysOnTop(), viewMode: view.mode, manualSize: view.manual, panel, settings: { ...settings }, completionFeedback };
+    return { ...(presentation?.state() ?? { material: 'acrylic', morphing: null }), visible: !win.isDestroyed() && win.isVisible() && !win.isMinimized(), pinned: !win.isDestroyed() && win.isAlwaysOnTop(), viewMode: view.mode, manualSize: view.manual, panel, settings: { ...settings }, completionFeedback };
   }
   function persist() {
     if (smoke || win.isDestroyed() || panel || presentation?.state().morphing) return;
@@ -178,6 +178,8 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   win.setMenuBarVisibility(false);
   win.webContents.on('context-menu', () => menu().popup({ window: win }));
   win.on('always-on-top-changed', publish);
+  win.on('show', publish); win.on('hide', publish);
+  win.on('minimize', publish); win.on('restore', publish);
   win.on('move', saveSoon); win.on('resize', saveSoon);
   win.on('closed', () => { clearTimeout(completionTimer); clearTimeout(persistenceTimer); });
   return { state, request, setSettings, observe, menu, publish,

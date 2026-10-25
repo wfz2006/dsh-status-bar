@@ -28,6 +28,7 @@ afterEach(() => {
 function setup() {
   let bounds = { x: 100, y: 100, width: 288, height: 44 }; let pinned = false;
   const win = {
+    isVisible: vi.fn(() => true), isMinimized: vi.fn(() => false),
     isDestroyed: () => false, getBounds: () => ({ ...bounds }), setBounds: vi.fn((b: typeof bounds) => { bounds = b; }),
     isAlwaysOnTop: () => pinned, setAlwaysOnTop: vi.fn((value: boolean) => { pinned = value; }),
     setMenuBarVisibility: vi.fn(), on: vi.fn(), show: vi.fn(), hide: vi.fn(),
@@ -39,6 +40,17 @@ function setup() {
   controllers.push(ui); return { ui, win };
 }
 describe('window controller request policy', () => {
+  it('publishes native visibility on hide/show and minimize/restore', () => {
+    const { ui, win } = setup();
+    for (const [event, visible, minimized] of [['hide', false, false], ['show', true, false], ['minimize', true, true], ['restore', true, false]] as const) {
+      win.isVisible.mockReturnValue(visible); win.isMinimized.mockReturnValue(minimized);
+      const listener = win.on.mock.calls.find(call => call[0] === event)?.[1];
+      expect(listener).toBeTypeOf('function');
+      (listener as () => void)();
+      expect(ui.state().visible).toBe(visible && !minimized);
+      expect(win.webContents.send).toHaveBeenLastCalledWith('glass:window-update', expect.objectContaining({ visible: visible && !minimized }));
+    }
+  });
   it('honours disabled auto expansion and still pins a notification', () => {
     const { ui, win } = setup(); ui.setSettings({ autoApproval: false, pin: 'on-notification' });
     ui.observe({ pending: ['approval:a'], completed: null }, true);
