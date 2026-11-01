@@ -12,10 +12,10 @@ const electron = vi.hoisted(() => ({
   shell: { openPath: vi.fn(async () => '') },
 }));
 vi.mock('electron', () => electron);
-vi.mock('../apps/desktop/src/main/presentation', () => ({ createPresentation: (win: { setBounds: (b: unknown) => void }) => ({
-  state: () => ({ material: 'clear', morphing: null }), setMaterial: vi.fn(), applyShape: vi.fn(), stop: vi.fn(),
+vi.mock('../apps/desktop/src/main/presentation', () => ({ createPresentation: (win: { setBounds: (b: unknown) => void }) => {let material='clear';return ({
+  state: () => ({ material, morphing: null }), setMaterial: vi.fn((value:string)=>{material=value;}), applyShape: vi.fn(), stop: vi.fn(),
   morphTo: (bounds: unknown) => win.setBounds(bounds),
-}) }));
+});} }));
 import { createWindowController } from '../apps/desktop/src/main/window-controller';
 import { createDshLauncher, dshExecutableCandidates } from '../apps/desktop/src/main/dsh-launcher';
 
@@ -40,6 +40,29 @@ function setup() {
   controllers.push(ui); return { ui, win };
 }
 describe('window controller request policy', () => {
+  it('keeps the original menu forms independent of the whale pool choice', () => {
+    const {ui,win}=setup();ui.setSettings({appearance:'whale-pool'});
+    const classic=ui.menu().items.find(item=>item.id==='view-capsule');
+    classic?.click?.(classic,win as never,{} as never);
+    expect(ui.state()).toMatchObject({viewMode:'capsule',settings:{appearance:'classic'}});
+    const pool=ui.menu().items.find(item=>item.id==='view-whale-pool');expect(pool).toBeDefined();
+    pool?.click?.(pool,win as never,{} as never);
+    expect(ui.state()).toMatchObject({viewMode:'capsule',settings:{appearance:'whale-pool'}});
+  });
+  it('restores the configured material during automatic approval and preserves pool resize modes', () => {
+    const {ui,win}=setup();ui.setSettings({appearance:'whale-pool',material:'solid',autoApproval:true});
+    expect(ui.state().material).toBe('clear');
+    ui.observe({pending:['approval:a'],completed:null},true);
+    expect(ui.state()).toMatchObject({viewMode:'approval',material:'solid'});
+    ui.observe({pending:[],completed:null},true);
+    expect(ui.state()).toMatchObject({viewMode:'capsule',material:'clear'});
+    ui.resize({...win.getBounds(),width:221});expect(ui.state().viewMode).toBe('capsule');
+    ui.request('expand',true);ui.resize({...win.getBounds(),width:441});
+    expect(ui.state()).toMatchObject({viewMode:'peek',material:'clear'});
+    ui.resize({...win.getBounds(),width:500,height:440});expect(ui.state()).toMatchObject({viewMode:'expanded',material:'solid'});
+    ui.resize({...win.getBounds(),width:180,height:44});
+    expect(win.getBounds().height).toBeGreaterThanOrEqual(140);
+  });
   it('publishes native visibility on hide/show and minimize/restore', () => {
     const { ui, win } = setup();
     for (const [event, visible, minimized] of [['hide', false, false], ['show', true, false], ['minimize', true, true], ['restore', true, false]] as const) {

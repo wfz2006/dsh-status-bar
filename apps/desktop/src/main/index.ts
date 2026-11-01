@@ -241,8 +241,10 @@ else {
       mock: action => { if (source.mode === 'mock') mockAction(action); else void useMock().then(() => mockAction(action)); }, quit: () => app.quit(),
       canOpenDSH: true, openDSH: createDshLauncher(win, app.getPath('userData')),
       menuChanged: () => {},
+      appearanceChanged:pool=>optics?.setSuspended(pool),
     });
     optics=createDesktopOptics(win,join(here,'../../native/RegionCapture.exe'));
+    optics.setSuspended(ui.state().settings.appearance==='whale-pool'&&ui.state().panel===null&&(ui.state().viewMode==='capsule'||ui.state().viewMode==='peek'));
     win.webContents.on('did-finish-load',()=>optics?.refresh());
     win.on('show', () => {
       clearTimeout(stateTimer); stateTimer = undefined; pendingState = undefined;

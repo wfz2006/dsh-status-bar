@@ -13,6 +13,7 @@ export function createDesktopOptics(win:BrowserWindow, helper:string) {
   let busy=false;
   let forceFrame=true;
   let nextFrame=0;
+  let suspended=false;
   const state=()=>({...current});
   function currentBounds() {const b=screen.dipToScreenRect(win,win.getBounds());return {windowLeft:b.x,windowTop:b.y,windowWidth:b.width,windowHeight:b.height};}
   function publishPosition() {if(current.enabled && !win.isDestroyed())win.webContents.send('glass:optics-position',currentBounds());}
@@ -25,7 +26,7 @@ export function createDesktopOptics(win:BrowserWindow, helper:string) {
   }
   function fail() {stopProcess();current={enabled:false,running:false,error:'屏幕取样不可用，已停止'};if(!win.isDestroyed())win.setContentProtection(false);publish();}
   function start() {
-    if(child || !current.enabled || !win.isVisible() || win.isMinimized())return;
+    if(suspended || child || !current.enabled || !win.isVisible() || win.isMinimized())return;
     // Windows 10 2004+: exclude our own HWND from capture to prevent feedback.
     win.setContentProtection(true);
     const hwnd=win.getNativeWindowHandle().readBigUInt64LE().toString();
@@ -97,5 +98,5 @@ export function createDesktopOptics(win:BrowserWindow, helper:string) {
   win.on('show',start);win.on('restore',start);
   win.on('move',publishPosition);win.on('resize',publishPosition);
   win.on('closed',()=>{stopProcess();current.enabled=false;});
-  return {state,enable,refresh:()=>{forceFrame=true;},stop:()=>{stopProcess();current.enabled=false;}};
+  return {state,enable,refresh:()=>{forceFrame=true;},setSuspended:(value:boolean)=>{if(suspended===value)return;suspended=value;if(value)stopProcess();else start();publish();},stop:()=>{stopProcess();current.enabled=false;}};
 }

@@ -3,17 +3,20 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createPresentation } from './presentation';
 import { clampBounds, type Bounds } from '../shared/window';
-import { DEFAULT_SETTINGS, initialView, manualView, normalizeSettings, observeFacts, viewForSize, viewSize, type GlassViewMode, type AttentionFacts } from '../shared/view-model';
+import { DEFAULT_SETTINGS, initialView, manualView, normalizeSettings, observeFacts, viewForAppearanceSize, appearanceViewSize, type GlassViewMode, type AttentionFacts } from '../shared/view-model';
+import { WHALE_POOL_FEATURE, normalizeAnnouncements, acknowledgeFeature, shouldIntroduceWhalePool } from '../shared/feature-announcements';
 import type { WindowAction, WindowState, MockAction } from '../shared/api';
 
-type Hooks = { sourceName?: () => string; position:(x:number,y:number)=>Promise<void>; reconnect: () => void; mock: (action: MockAction) => void; openDSH: () => void; canOpenDSH: boolean; quit: () => void; menuChanged: (menu: Menu) => void };
+type Hooks = { sourceName?: () => string; appearanceChanged?:(pool:boolean)=>void; position:(x:number,y:number)=>Promise<void>; reconnect: () => void; mock: (action: MockAction) => void; openDSH: () => void; canOpenDSH: boolean; quit: () => void; menuChanged: (menu: Menu) => void };
 export function createWindowController(win: BrowserWindow, directory: string, smoke: boolean, hooks: Hooks) {
   const preferencePath = join(directory, 'glass-ui.json');
   let settings = { ...DEFAULT_SETTINGS };
+  let announcements: string[]=[];
   let remembered: { mode: GlassViewMode; bounds: Bounds; manual: boolean } | undefined;
   let savedVersion: number | undefined;
   if (!smoke) try {
     const saved: unknown = JSON.parse(readFileSync(preferencePath, 'utf8'));
+    if(saved && typeof saved==='object' && 'announcements' in saved)announcements=normalizeAnnouncements(saved.announcements);
     if (saved && typeof saved === 'object' && 'version' in saved && typeof saved.version === 'number') savedVersion = saved.version;
     if (saved && typeof saved === 'object' && 'settings' in saved) settings = normalizeSettings(saved.settings);
     if (saved && typeof saved === 'object' && 'mode' in saved && 'bounds' in saved && ['capsule', 'peek', 'expanded', 'approval'].includes(String(saved.mode))) {
@@ -35,16 +38,24 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   let approvalSawRequest = false;
   let persistenceTimer: ReturnType<typeof setTimeout> | undefined;
   const presentation = createPresentation(win, publish);
+  const sizeFor=(mode:GlassViewMode,attention=false)=>appearanceViewSize(mode,attention,settings.appearance);
+  function writePreferences(){
+    if(smoke||win.isDestroyed())return;
+    try{writeFileSync(preferencePath,JSON.stringify({version:2,settings,announcements,mode:panelReturn?.mode??view.mode,manual:panelReturn?.manual??view.manual,bounds:panelReturn?.bounds??win.getBounds()}));}catch{/* Preference failures must not block tasks. */}
+  }
+  function acknowledgeWhalePool(){announcements=acknowledgeFeature(announcements,WHALE_POOL_FEATURE);writePreferences();}
+  function applyMaterial(){presentation?.setMaterial(settings.appearance==='whale-pool'&&!panel&&(view.mode==='capsule'||view.mode==='peek')?'clear':settings.material==='solid'?'solid':settings.material==='acrylic'?'acrylic':settings.material==='frosted'?'frosted':'clear');}
   function state(): WindowState {
     return { ...(presentation?.state() ?? { material: 'acrylic', morphing: null }), visible: !win.isDestroyed() && win.isVisible() && !win.isMinimized(), pinned: !win.isDestroyed() && win.isAlwaysOnTop(), viewMode: view.mode, manualSize: view.manual, panel, settings: { ...settings }, completionFeedback };
   }
   function persist() {
     if (smoke || win.isDestroyed() || panel || presentation?.state().morphing) return;
-    try { writeFileSync(preferencePath, JSON.stringify({ version: 2, settings, mode: view.mode, manual: view.manual, bounds: win.getBounds() })); } catch { /* User preference failures do not affect observations. */ }
+    writePreferences();
   }
   function saveSoon() { clearTimeout(persistenceTimer); persistenceTimer = setTimeout(persist, 180); }
   function publish() {
     if (win.isDestroyed()) return;
+    hooks.appearanceChanged?.(settings.appearance==='whale-pool'&&!panel&&(view.mode==='capsule'||view.mode==='peek'));
     win.webContents.send('glass:window-update', state());
     const applicationMenu = menu();
     Menu.setApplicationMenu(applicationMenu);
@@ -56,31 +67,38 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     saveSoon();
   }
   function showMode(mode: GlassViewMode, reduce = false) {
+    if(panel==='whale-pool-intro')acknowledgeWhalePool();
     if (mode === 'approval' && view.mode !== 'approval') { approvalReturn = view.mode; approvalSawRequest = false; }
     else if (mode !== 'approval') { approvalReturn = undefined; approvalSawRequest = false; }
     panel = null; panelReturn = null;
     view = { ...view, mode, manual: false, returnMode: null };
-    moveTo({ ...win.getBounds(), ...viewSize(mode, view.pending.length > 0) }, reduce, mode === 'capsule' ? 260 : 320); publish();
+    applyMaterial();moveTo({ ...win.getBounds(), ...sizeFor(mode, view.pending.length > 0) }, reduce, mode === 'capsule' ? 260 : 320); publish();
   }
-  function showPanel(value: 'settings' | 'activity') {
+  function showPanel(value: Exclude<WindowState['panel'],null>) {
     if (!panel) panelReturn = { bounds: win.getBounds(), manual: view.manual, mode: view.mode };
-    panel = value; moveTo({ ...win.getBounds(), width: 390, height: value === 'settings' ? 510 : 360 }); publish();
+    panel = value;applyMaterial();moveTo({ ...win.getBounds(), width: 390, height: value === 'settings' ? 510 : 360 }); publish();
   }
   function back() {
+    if(panel==='whale-pool-intro')acknowledgeWhalePool();
     if (panel && panelReturn) {
       const previous = panelReturn; panel = null; panelReturn = null;
       view = { ...view, mode: previous.mode, manual: previous.manual };
-      moveTo(previous.bounds); publish();
+      applyMaterial();moveTo(previous.bounds); publish();
     } else showMode('capsule');
   }
   function setSettings(patch: unknown) {
     if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('Invalid settings');
+    const previousAppearance=settings.appearance;
     settings = normalizeSettings({ ...settings, ...patch });
+    if(previousAppearance!==settings.appearance){
+      if(panelReturn)panelReturn={...panelReturn,manual:false,bounds:{...panelReturn.bounds,...sizeFor(panelReturn.mode,view.pending.length>0)}};
+      else{view={...view,manual:false};moveTo({...win.getBounds(),...sizeFor(view.mode,view.pending.length>0)});}
+    }
     nativeTheme.themeSource = settings.theme === 'auto' ? 'system' : settings.theme;
-    presentation?.setMaterial(settings.material === 'solid' ? 'solid' : settings.material === 'acrylic' ? 'acrylic' : settings.material === 'frosted' ? 'frosted' : 'clear');
+    applyMaterial();
     win.setAlwaysOnTop(settings.pin === 'always' || settings.pin === 'on-notification' && sourceConnected && view.pending.length > 0);
     // Settings changes must be saved even while the settings panel is open.
-    if (!smoke) try { writeFileSync(preferencePath, JSON.stringify({ version: 2, settings, mode: panelReturn?.mode ?? view.mode, manual: panelReturn?.manual ?? view.manual, bounds: panelReturn?.bounds ?? win.getBounds() })); } catch { /* Optional persistence. */ }
+    writePreferences();
     publish(); return state();
   }
   function observe(facts: AttentionFacts, connected: boolean) {
@@ -106,10 +124,10 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
         return;
       }
     }
-    if (view.mode !== old.mode && !panel) moveTo({ ...win.getBounds(), ...viewSize(view.mode, view.pending.length > 0) });
+    if (view.mode !== old.mode && !panel) {applyMaterial();moveTo({ ...win.getBounds(), ...sizeFor(view.mode, view.pending.length > 0) });}
     const attentionChanged = (old.pending.length > 0) !== (view.pending.length > 0);
     if (view.mode === old.mode && view.mode === 'peek' && !view.manual && !panel && attentionChanged) {
-      moveTo({ ...win.getBounds(), ...viewSize('peek', view.pending.length > 0) });
+      moveTo({ ...win.getBounds(), ...sizeFor('peek', view.pending.length > 0) });
     }
     if (facts.completed && facts.completed !== old.completed) {
       completionFeedback = true; clearTimeout(completionTimer); publish();
@@ -122,13 +140,15 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     if (view.mode !== old.mode) publish();
   }
   function menu() {
+    const classicMode=(mode:GlassViewMode)=>{if(settings.appearance!=='classic')setSettings({appearance:'classic'});showMode(mode);};
     const items: MenuItemConstructorOptions[] = [
       { label: hooks.sourceName?.() ?? '数据源：Mock 演示 · 真实 DSH 未接入', enabled: false, id: 'source-label' },
       { type: 'separator' },
-      { label: '胶囊', id: 'view-capsule', click: () => showMode('capsule') },
-      { label: '速览', id: 'view-peek', click: () => showMode('peek') },
-      { label: '任务详情', id: 'view-expanded', click: () => showMode('expanded') },
-      { label: '待处理请求', id: 'view-approval', click: () => showMode('approval') },
+      { label: '胶囊', id: 'view-capsule', click: () => classicMode('capsule') },
+      { label: '速览', id: 'view-peek', click: () => classicMode('peek') },
+      { label: '任务详情', id: 'view-expanded', click: () => classicMode('expanded') },
+      { label: '待处理请求', id: 'view-approval', click: () => classicMode('approval') },
+      {label:'鲸鱼水池',id:'view-whale-pool',type:'checkbox',checked:settings.appearance==='whale-pool',click:()=>{acknowledgeWhalePool();setSettings({appearance:'whale-pool'});showMode('capsule');}},
       { label: '最近活动', id: 'activity', click: () => showPanel('activity') },
       { label: '始终置顶', id: 'pin', type: 'checkbox', checked: win.isAlwaysOnTop(), click: item => setSettings({ pin: item.checked ? 'always' : 'normal' }) },
       { label: '设置', id: 'settings', click: () => showPanel('settings') },
@@ -167,14 +187,18 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
       case 'quit': hooks.quit(); break;
       case 'open-dsh': if (hooks.canOpenDSH) hooks.openDSH(); break;
       case 'reconnect': hooks.reconnect(); break;
+      case 'introduce-whale-pool': showPanel('whale-pool-intro'); break;
+      case 'try-whale-pool': acknowledgeWhalePool();setSettings({appearance:'whale-pool'});showMode('capsule',reduce);break;
+      case 'dismiss-whale-pool': acknowledgeWhalePool();back();break;
       default: throw new Error('Unsupported window action');
     }
     return state();
   }
   nativeTheme.themeSource = settings.theme === 'auto' ? 'system' : settings.theme;
-  const initial = settings.defaultView === 'remember-last' && remembered ? remembered.bounds : { ...win.getBounds(), ...viewSize(view.mode, view.pending.length > 0) };
+  const initial = settings.defaultView === 'remember-last' && remembered ? remembered.bounds : { ...win.getBounds(), ...sizeFor(view.mode, view.pending.length > 0) };
   win.setBounds(safeBounds(initial)); presentation.applyShape();
   setSettings(settings);
+  if(shouldIntroduceWhalePool(announcements,smoke))showPanel('whale-pool-intro');
   win.setMenuBarVisibility(false);
   win.webContents.on('context-menu', () => menu().popup({ window: win }));
   win.on('always-on-top-changed', publish);
@@ -185,8 +209,10 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   return { state, request, setSettings, observe, menu, publish,
     resize: (bounds: Bounds) => {
       presentation?.stop();
-      const safe = safeBounds(panel ? { ...bounds, width: Math.max(320, bounds.width), height: Math.max(280, bounds.height) } : bounds);
-      if (!panel) view = manualView(view, viewForSize(safe.width, safe.height, view.mode));
+      const safe = safeBounds(panel ? { ...bounds, width: Math.max(320, bounds.width), height: Math.max(280, bounds.height) } : settings.appearance==='whale-pool'&&view.mode!=='approval'?{...bounds,width:Math.max(220,bounds.width),height:Math.max(140,bounds.height)}:bounds);
+      const oldMode=view.mode;
+      if (!panel) view = manualView(view, viewForAppearanceSize(safe.width, safe.height, view.mode,settings.appearance));
+      if(view.mode!==oldMode)applyMaterial();
       win.setBounds(safe); publish(); saveSoon();
     },
     move: async (x: number, y: number) => { presentation?.stop(); const safe=safeBounds({ ...win.getBounds(),x,y });await hooks.position(safe.x,safe.y);saveSoon(); },

@@ -1,0 +1,12 @@
+import {createRequire} from 'node:module';
+import {spawn} from 'node:child_process';
+import {resolve,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {mkdirSync,existsSync} from 'node:fs';
+const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+if(!existsSync(resolve(root,'apps/desktop/out/main/index.js')))throw new Error('请先运行 pnpm build');
+const executable=createRequire(resolve(root,'apps/desktop/package.json'))('electron');
+const profile=resolve(root,'reports/whale-pool-preview');mkdirSync(profile,{recursive:true});
+const env={...process.env,GLASS_USER_DATA_DIR:profile};delete env.ELECTRON_RUN_AS_NODE;delete env.GLASS_SMOKE;
+const child=spawn(executable,[resolve(root,'apps/desktop')],{cwd:root,env,detached:true,stdio:'ignore',windowsHide:true});
+child.unref();console.log('已打开鲸鱼水池开发预览，使用独立本地设置。');

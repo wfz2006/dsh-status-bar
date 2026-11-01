@@ -1,0 +1,52 @@
+.glass[data-appearance=whale-pool] { border-radius:0; background:transparent;box-shadow:none;--fg:#e8f2ff;--muted:#b7cce1;--accent:#9ebfff; }
+.glass[data-appearance=whale-pool]::before,.glass[data-appearance=whale-pool]::after { display:none; }
+.glass[data-appearance=whale-pool]>.drag-strip { position:absolute;top:8px;right:44px;width:60px;height:30px;z-index:4; }
+.pool-view { position:absolute;inset:0;color:#e8f2ff;isolation:isolate;font-family:"Segoe UI Variable Text","Noto Sans SC","Microsoft YaHei UI",sans-serif;font-weight:400; }
+.pool-water { position:absolute;inset:0;width:100%;height:100%;pointer-events:none; }
+.pool-view[data-fallback=true][data-idle=false]::before { content:"";position:absolute;inset:9px;background:radial-gradient(ellipse at 40% 30%,#24445c,#10263e);border:1px solid #8bc6f780;border-radius:45%; }
+.pool-whale-target.task-capsule { position:absolute;top:0;left:0;width:96px;height:96px;padding:0;border:0;border-radius:50%;background:transparent;box-shadow:none!important;z-index:2;overflow:visible;opacity:1; }
+.pool-whale-target.task-capsule:disabled { opacity:1;cursor:default; }
+.pool-whale-art,.pool-whale-effects { position:absolute;left:50%;top:50%;width:150px;height:160px;transform:translate(-50%,-44%);pointer-events:none; }
+.pool-idle-menu { position:absolute;right:9px;top:66px;background:transparent;border:0;padding:2px 6px;color:#a9c7e6;z-index:3;font-size:15px; }
+.pool-attention { position:absolute;left:calc(75% + 18px);top:98px;min-width:24px;height:24px;border:1px solid #adcdf4;border-radius:50%;background:#183c59;color:#e8f2ff;font-size:11px;z-index:3; }
+.pool-sheet { position:absolute;inset:43px 64px 36px;display:flex;flex-direction:column;opacity:0;pointer-events:none;text-shadow:0 1px 3px #07192df0;font-size:13px; }
+.pool-view[data-readable=true] .pool-sheet { opacity:1;pointer-events:auto;transition:opacity 160ms; }
+.pool-heading { min-height:71px;display:flex;align-items:center;padding-left:84px; }
+.glass[data-appearance=whale-pool] .pool-heading h1 { margin:0;font-family:"Segoe UI Variable Text","Noto Sans SC","Microsoft YaHei UI",sans-serif;font-size:18px;font-weight:500;letter-spacing:.025em;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere; }
+.pool-heading p { margin:5px 0 0;color:#b7cce1;font-size:11px; }
+.pool-progress-label { display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:18px 0 13px;color:#b7cce1;font-size:11px; }
+.pool-progress-label>span:last-child { font-size:16px;font-variant-numeric:tabular-nums; }
+.pool-progress-label small { font-size:11px; }
+.pool-steps { padding:0;margin:0;list-style:none;display:grid;gap:9px; }
+.pool-steps li { display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:9px;min-height:27px;line-height:1.6;font-size:12px; }
+.pool-steps li>span:nth-child(2) { min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere; }
+.pool-steps small { font-size:11px;white-space:nowrap;color:#b7cce1; }
+.pool-step-mark { color:#bdd6f0;text-align:center; }
+.pool-steps [data-todo-status=in_progress] .pool-step-mark { font-size:23px; }
+.pool-empty { margin:25px 0 10px;font-size:12px;line-height:1.8;color:#b7cce1; }
+.pool-actions { margin-top:auto;display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding-top:13px; }
+.pool-actions button { padding:4px 0;background:transparent;border:0;color:#c9dcf3;font-size:11px;text-decoration:underline;text-underline-offset:4px; }
+.pool-view[data-layout=stream] .pool-heading { padding-left:0;padding-right:84px; }
+.pool-view[data-layout=stream] .pool-progress-label>span:last-child { font-size:28px; }
+.pool-view[data-layout=stream] .pool-steps { grid-template-columns:repeat(3,minmax(0,1fr));gap:12px; }
+.pool-view[data-layout=stream] .pool-steps li { display:flex;flex-direction:column;align-items:flex-start;gap:7px; }
+.pool-view[data-layout=stream] .pool-step-mark { height:18px; }
+.pool-view[data-layout=letter] .pool-heading { padding:52px 0 0;min-height:106px;text-align:center;justify-content:center; }
+.glass[data-appearance=whale-pool] .pool-view[data-layout=letter] .pool-heading h1 { font-family:"Noto Serif SC","Songti SC","SimSun",serif;font-size:22px;-webkit-line-clamp:1; }
+.pool-view[data-layout=letter] .pool-steps .pool-step-mark { font-size:11px; }
+.pool-view[data-layout=letter] .pool-progress-label { margin-top:12px;margin-bottom:8px; }
+.pool-view[data-layout=letter] .pool-steps { gap:6px; }
+.pool-intro { display:flex;flex:1;flex-direction:column;min-height:0;overflow:auto;padding:12px 25px 24px; }
+.pool-intro-art { align-self:center;position:relative;width:160px;height:96px;display:grid;place-items:center;border-radius:50%;background:radial-gradient(ellipse,#173650bb,transparent 70%); }
+.pool-intro-art svg { width:64px;height:64px;color:#86acff;animation:pool-intro-bob 4s ease-in-out infinite; }
+.pool-intro-eyebrow { margin:1px 0 8px;font-size:11px;color:var(--muted);letter-spacing:.06em; }
+.pool-intro h1 { margin:0;font-size:20px;line-height:1.5;font-weight:600; }
+.pool-intro-copy { margin:10px 0;font-size:13px;line-height:1.7; }
+.pool-intro-note { margin:0;color:var(--muted);font-size:12px;line-height:1.8; }
+.pool-intro-actions { display:flex;gap:10px;flex-wrap:wrap;margin-top:auto;padding-top:20px; }
+.pool-intro-actions button { min-height:36px;padding:7px 12px;border:1px solid var(--line);border-radius:18px;background:var(--reading);color:var(--fg);font-size:12px; }
+.pool-intro-actions .primary-button { background:#9fbff2;color:#102540;border-color:transparent; }
+@keyframes pool-intro-bob { 50%{transform:translateY(-5px) rotate(-3deg);} }
+@media(prefers-reduced-motion:reduce) { .pool-intro-art svg { animation:none; } .pool-view[data-readable=true] .pool-sheet { transition:none; } }
+.glass[data-animation=off] .pool-intro-art svg,.glass[data-animation=reduced] .pool-intro-art svg { animation:none; }
+@media(max-width:370px) { .pool-sheet { left:38px;right:38px; } .pool-heading h1 { font-size:16px; } .pool-heading { padding-left:70px; } .pool-view[data-layout=stream] .pool-heading { padding-right:70px; } .pool-steps { gap:6px; } }

@@ -83,3 +83,7 @@ Windows x64，终端 Node 24.15.0 / pnpm 12.4.1；真实 Electron 44.8.0 进程�
 ### 2026-10-25 代码与交互审查
 
 23 文件214测试、lint/typecheck/build 通过。真实 Electron 的请求草稿、特殊 ID、键盘标签、复制反馈、原生隐藏和 360 DIP 明暗布局已复测；既有 experience/motion/performance/tool-latency 与原生拖动验收通过，旧 desktop-smoke 迁移后整套通过。发现生产 CSS 压缩将独立 scale 改写到 transform，关闭 CSS 压缩后原缩放阈值验收恢复通过，JS 压缩保留。原生内存验收隐藏查询一次超时，独立复跑通过；没有据此声称整体内存改善。未重验安装版 DSH 任务或修改用户 Profile，详见 [审查报告](review-ui-2026-10-25.md)。
+
+### 2026-11-01 鲸鱼水池独立形态
+
+Windows x64 build 26300，终端 Node 24.15.0、pnpm 12.4.1，项目依赖 Electron 44.8.0。在 D 盘独立开发副本构建，并用独立 Electron 配置验证首次安装、旧偏好升级、一次性介绍、三种水池排版与原版视图。DSH CLI 不在当前 PATH，本轮未访问安装版源码、未重验真实模型审批、未改用户 DSH Profile。验证范围与置顶回归时序记录见 [鲸鱼水池形态](whale-pool-form.md)。
