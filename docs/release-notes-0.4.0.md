@@ -5,15 +5,16 @@ glass-material sampling model and the plugin startup path are unchanged.
 
 ## Install
 
-The self-contained tarball is the 0.4.0 install path (155 MB, nothing downloaded later):
-
 ```sh
+# npm: ~880 kB launcher; the first launch fetches the runtime from the npm registry
+dsh plugin --profile web add dsh-status-bar-plugin
+
+# release tarball: 155 MB, self-contained, nothing downloaded later
 dsh plugin --profile web add https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-status-bar.tgz
 ```
 
-The npm launcher `dsh-status-bar-plugin` was not published for this release and still resolves to 0.3.0 on the
-npm registry. Existing 0.3.0 npm installs keep their version-pinned runtime download and are not upgraded by
-this release; use the tarball above to get 0.4.0.
+Both `dsh-status-bar-plugin@0.4.0` and `dsh-status-bar-runtime@0.4.0` are published on the npm registry. An
+existing 0.3.0 npm install keeps its version-pinned runtime download until the launcher is upgraded.
 
 ## What changed
 
