@@ -1,13 +1,15 @@
-import { Menu, nativeTheme, screen, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
+import { Menu, nativeTheme, screen, systemPreferences, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createPresentation } from './presentation';
 import { clampBounds, type Bounds } from '../shared/window';
-import { DEFAULT_SETTINGS, initialView, manualView, normalizeSettings, observeFacts, viewForAppearanceSize, appearanceViewSize, type GlassViewMode, type AttentionFacts } from '../shared/view-model';
+import { EDGE_ORB_SIZE, edgeAtBounds, edgeMotionLayout, edgeReplacementBounds, type EdgeMotion, type EdgeSide } from '../shared/edge-dock';
+import { COMPLETION_FEEDBACK_MS, DEFAULT_SETTINGS, initialView, manualView, normalizeSettings, observeFacts, viewForAppearanceSize, appearanceViewSize, type GlassViewMode, type AttentionFacts } from '../shared/view-model';
 import { WHALE_POOL_FEATURE, normalizeAnnouncements, acknowledgeFeature, shouldIntroduceWhalePool } from '../shared/feature-announcements';
 import type { WindowAction, WindowState, MockAction } from '../shared/api';
 
-type Hooks = { sourceName?: () => string; appearanceChanged?:(pool:boolean)=>void; position:(x:number,y:number)=>Promise<void>; reconnect: () => void; mock: (action: MockAction) => void; openDSH: () => void; canOpenDSH: boolean; quit: () => void; menuChanged: (menu: Menu) => void };
+type Hooks = { sourceName?: () => string; suspendOptics?:(suspended:boolean)=>void; position:(x:number,y:number)=>Promise<void>; reconnect: () => void; mock: (action: MockAction) => void; openDSH: () => void; canOpenDSH: boolean; quit: () => void; menuChanged: (menu: Menu) => void };
+const orbSize = { width: EDGE_ORB_SIZE, height: EDGE_ORB_SIZE };
 export function createWindowController(win: BrowserWindow, directory: string, smoke: boolean, hooks: Hooks) {
   const preferencePath = join(directory, 'glass-ui.json');
   let settings = { ...DEFAULT_SETTINGS };
@@ -32,6 +34,10 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   let sourceConnected = false;
   let panel: WindowState['panel'] = null;
   let panelReturn: { bounds: Bounds; manual: boolean; mode: GlassViewMode } | null = null;
+  let dock: { edge: EdgeSide; normal: Bounds } | undefined;
+  let edgeMotion: EdgeMotion | undefined;
+  let edgeTimer: ReturnType<typeof setTimeout> | undefined;
+  let geometryRevision = 0;
   let completionFeedback = false;
   let completionTimer: ReturnType<typeof setTimeout> | undefined;
   let approvalReturn: GlassViewMode | undefined;
@@ -41,12 +47,12 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   const sizeFor=(mode:GlassViewMode,attention=false)=>appearanceViewSize(mode,attention,settings.appearance);
   function writePreferences(){
     if(smoke||win.isDestroyed())return;
-    try{writeFileSync(preferencePath,JSON.stringify({version:2,settings,announcements,mode:panelReturn?.mode??view.mode,manual:panelReturn?.manual??view.manual,bounds:panelReturn?.bounds??win.getBounds()}));}catch{/* Preference failures must not block tasks. */}
+    try{writeFileSync(preferencePath,JSON.stringify({version:2,settings,announcements,mode:panelReturn?.mode??view.mode,manual:panelReturn?.manual??view.manual,bounds:panelReturn?.bounds??dock?.normal??win.getBounds()}));}catch{/* Preference failures must not block tasks. */}
   }
   function acknowledgeWhalePool(){announcements=acknowledgeFeature(announcements,WHALE_POOL_FEATURE);writePreferences();}
   function applyMaterial(){presentation?.setMaterial(settings.appearance==='whale-pool'&&!panel&&(view.mode==='capsule'||view.mode==='peek')?'clear':settings.material==='solid'?'solid':settings.material==='acrylic'?'acrylic':settings.material==='frosted'?'frosted':'clear');}
   function state(): WindowState {
-    return { ...(presentation?.state() ?? { material: 'acrylic', morphing: null }), visible: !win.isDestroyed() && win.isVisible() && !win.isMinimized(), pinned: !win.isDestroyed() && win.isAlwaysOnTop(), viewMode: view.mode, manualSize: view.manual, panel, settings: { ...settings }, completionFeedback };
+    return { ...presentation.state(), visible: !win.isDestroyed() && win.isVisible() && !win.isMinimized(), pinned: !win.isDestroyed() && win.isAlwaysOnTop(), viewMode: view.mode, manualSize: view.manual, panel, settings: { ...settings }, completionFeedback, dockEdge: dock?.edge, edgeMotion };
   }
   function persist() {
     if (smoke || win.isDestroyed() || panel || presentation?.state().morphing) return;
@@ -55,18 +61,81 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   function saveSoon() { clearTimeout(persistenceTimer); persistenceTimer = setTimeout(persist, 180); }
   function publish() {
     if (win.isDestroyed()) return;
-    hooks.appearanceChanged?.(settings.appearance==='whale-pool'&&!panel&&(view.mode==='capsule'||view.mode==='peek'));
+    hooks.suspendOptics?.(settings.appearance==='whale-pool'&&!panel&&(view.mode==='capsule'||view.mode==='peek'));
     win.webContents.send('glass:window-update', state());
     const applicationMenu = menu();
     Menu.setApplicationMenu(applicationMenu);
     hooks.menuChanged(applicationMenu);
   }
   function safeBounds(bounds: Bounds) { return clampBounds(bounds, screen.getDisplayMatching(bounds).workArea); }
+  function settleEdgeBounds(bounds: Bounds, orb: boolean) {
+    const wasMoving = !!edgeMotion;
+    clearTimeout(edgeTimer);
+    edgeMotion = undefined;
+    presentation.setOrb(orb);
+    win.setBounds(bounds);
+    if (wasMoving) presentation.setEdgeSurface(false);
+    if (!orb) win.setMinimumSize(180, 44);
+  }
+  function restoreCapsule(area?: Bounds) {
+    if (!dock) return false;
+    const normal = dock.normal;
+    dock = undefined;
+    geometryRevision++;
+    presentation.stop(false);
+    settleEdgeBounds(area ? clampBounds(normal, area) : safeBounds(normal), false);
+    return true;
+  }
+  function animateEdge(direction: EdgeMotion['direction'], capsule: Bounds, orb: Bounds, finish: () => void, reduce = false) {
+    if (reduce || settings.animation !== 'full' || systemPreferences.getAnimationSettings().prefersReducedMotion) {
+      finish();
+      return;
+    }
+    const { host, ...endpoints } = edgeMotionLayout(capsule, orb);
+    const duration = direction === 'gather' ? 380 : 560;
+    win.setBounds(host);
+    presentation.setEdgeSurface(true);
+    edgeMotion = { ...endpoints, direction, duration, startedAt: Date.now() };
+    edgeTimer = setTimeout(finish, duration);
+    publish();
+  }
+  function openDock(reduce: boolean) {
+    if (!dock || edgeMotion) return;
+    const orb = win.getBounds();
+    const area = screen.getDisplayMatching(orb).workArea;
+    const capsule = edgeReplacementBounds(orb, dock.normal, area, dock.edge);
+    dock.normal = capsule;
+    geometryRevision++;
+    animateEdge('spread', capsule, orb, () => { restoreCapsule(area); publish(); saveSoon(); }, reduce);
+  }
+  function finishDrop() {
+    if (!settings.edgeDock || settings.appearance !== 'classic' || panel || view.mode !== 'capsule'
+      || presentation.state().morphing || !win.isVisible() || win.isMinimized()) return;
+    const bounds = win.getBounds(), area = screen.getDisplayMatching(bounds).workArea;
+    const edge = edgeAtBounds(bounds, area);
+    if (dock) {
+      dock.normal = edgeReplacementBounds(bounds, dock.normal, area, edge);
+      if (edge) {
+        dock.edge = edge;
+        win.setBounds(edgeReplacementBounds(bounds, orbSize, area, edge));
+      } else restoreCapsule(area);
+      publish();
+    } else if (edge) {
+      const normal = edgeReplacementBounds(bounds, bounds, area, edge);
+      const orb = edgeReplacementBounds(normal, orbSize, area, edge);
+      dock = { edge, normal };
+      geometryRevision++;
+      win.setMinimumSize(EDGE_ORB_SIZE, 44);
+      animateEdge('gather', normal, orb, () => { settleEdgeBounds(orb, true); publish(); saveSoon(); });
+    }
+  }
   function moveTo(bounds: Bounds, reduce = false, duration = 320) {
+    geometryRevision++;
     presentation?.morphTo(safeBounds(bounds), reduce || settings.animation !== 'full', duration);
     saveSoon();
   }
   function showMode(mode: GlassViewMode, reduce = false) {
+    restoreCapsule();
     if(panel==='whale-pool-intro')acknowledgeWhalePool();
     if (mode === 'approval' && view.mode !== 'approval') { approvalReturn = view.mode; approvalSawRequest = false; }
     else if (mode !== 'approval') { approvalReturn = undefined; approvalSawRequest = false; }
@@ -75,8 +144,11 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     applyMaterial();moveTo({ ...win.getBounds(), ...sizeFor(mode, view.pending.length > 0) }, reduce, mode === 'capsule' ? 260 : 320); publish();
   }
   function showPanel(value: Exclude<WindowState['panel'],null>) {
+    restoreCapsule();
     if (!panel) panelReturn = { bounds: win.getBounds(), manual: view.manual, mode: view.mode };
-    panel = value;applyMaterial();moveTo({ ...win.getBounds(), width: 390, height: value === 'settings' ? 510 : 360 }); publish();
+    panel = value; applyMaterial();
+    const size = value === 'settings' ? { width: 464, height: 568 } : { width: 390, height: 360 };
+    moveTo({ ...win.getBounds(), ...size }); publish();
   }
   function back() {
     if(panel==='whale-pool-intro')acknowledgeWhalePool();
@@ -90,6 +162,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('Invalid settings');
     const previousAppearance=settings.appearance;
     settings = normalizeSettings({ ...settings, ...patch });
+    if (dock && (!settings.edgeDock || settings.appearance !== 'classic')) restoreCapsule();
     if(previousAppearance!==settings.appearance){
       if(panelReturn)panelReturn={...panelReturn,manual:false,bounds:{...panelReturn.bounds,...sizeFor(panelReturn.mode,view.pending.length>0)}};
       else{view={...view,manual:false};moveTo({...win.getBounds(),...sizeFor(view.mode,view.pending.length>0)});}
@@ -124,7 +197,9 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
         return;
       }
     }
-    if (view.mode !== old.mode && !panel) {applyMaterial();moveTo({ ...win.getBounds(), ...sizeFor(view.mode, view.pending.length > 0) });}
+    if (view.mode !== old.mode && !panel) {
+      restoreCapsule();applyMaterial();moveTo({ ...win.getBounds(), ...sizeFor(view.mode, view.pending.length > 0) });
+    }
     const attentionChanged = (old.pending.length > 0) !== (view.pending.length > 0);
     if (view.mode === old.mode && view.mode === 'peek' && !view.manual && !panel && attentionChanged) {
       moveTo({ ...win.getBounds(), ...sizeFor('peek', view.pending.length > 0) });
@@ -133,9 +208,9 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
       completionFeedback = true; clearTimeout(completionTimer); publish();
       completionTimer = setTimeout(() => {
         completionFeedback = false;
-        if (sourceConnected && settings.autoCollapse && view.completed === facts.completed && !view.manual && !panel && !view.pending.length) showMode('capsule');
+        if (sourceConnected && settings.autoCollapse && view.completed === facts.completed && !view.manual && !panel && !dock && !view.pending.length) showMode('capsule');
         publish();
-      }, 1500);
+      }, COMPLETION_FEEDBACK_MS);
     }
     if (view.mode !== old.mode) publish();
   }
@@ -177,6 +252,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     switch (action) {
       case 'expand': showMode(view.mode === 'capsule' ? 'peek' : 'expanded', reduce); break;
       case 'collapse': showMode('capsule', reduce); break;
+      case 'restore-capsule': openDock(reduce); break;
       case 'approval': showMode('approval', reduce); break;
       case 'settings': showPanel('settings'); break;
       case 'activity': showPanel('activity'); break;
@@ -205,9 +281,11 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   win.on('show', publish); win.on('hide', publish);
   win.on('minimize', publish); win.on('restore', publish);
   win.on('move', saveSoon); win.on('resize', saveSoon);
-  win.on('closed', () => { clearTimeout(completionTimer); clearTimeout(persistenceTimer); });
+  win.on('closed', () => { clearTimeout(edgeTimer); clearTimeout(completionTimer); clearTimeout(persistenceTimer); });
   return { state, request, setSettings, observe, menu, publish,
     resize: (bounds: Bounds) => {
+      if (dock) return;
+      geometryRevision++;
       presentation?.stop();
       const safe = safeBounds(panel ? { ...bounds, width: Math.max(320, bounds.width), height: Math.max(280, bounds.height) } : settings.appearance==='whale-pool'&&view.mode!=='approval'?{...bounds,width:Math.max(220,bounds.width),height:Math.max(140,bounds.height)}:bounds);
       const oldMode=view.mode;
@@ -215,7 +293,26 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
       if(view.mode!==oldMode)applyMaterial();
       win.setBounds(safe); publish(); saveSoon();
     },
-    move: async (x: number, y: number) => { presentation?.stop(); const safe=safeBounds({ ...win.getBounds(),x,y });await hooks.position(safe.x,safe.y);saveSoon(); },
-    stop: () => { persist(); presentation?.stop(); clearTimeout(completionTimer); clearTimeout(persistenceTimer); },
+    move: async (x: number, y: number, released = false) => {
+      if (edgeMotion) return;
+      if (presentation.state().morphing) presentation.stop();
+      const revision = geometryRevision, current = win.getBounds();
+      const target = { ...current, x, y }, area = screen.getDisplayMatching(target).workArea;
+      const safe = clampBounds(target, area, dock ? orbSize : undefined);
+      if (safe.x !== current.x || safe.y !== current.y) await hooks.position(safe.x, safe.y);
+      if (revision !== geometryRevision || win.isDestroyed()) return;
+      if (released) finishDrop();
+      saveSoon();
+    },
+    displayChanged: (area?: Bounds) => {
+      geometryRevision++;
+      presentation.stop(false);
+      if (!restoreCapsule(area)) {
+        const bounds = win.getBounds();
+        win.setBounds(area ? clampBounds(bounds, area) : safeBounds(bounds));
+      }
+      publish(); saveSoon();
+    },
+    stop: () => { persist(); presentation?.stop(); clearTimeout(edgeTimer); clearTimeout(completionTimer); clearTimeout(persistenceTimer); },
   };
 }

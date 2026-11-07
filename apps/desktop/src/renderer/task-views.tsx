@@ -1,8 +1,8 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import type { Projection } from '@glass/protocol';
-import { formatTokens, taskUsage, deriveTask, deriveSessionSummary } from '../shared/view-model';
+import type { Projection, Session } from '@glass/protocol';
+import { formatTokens, taskUsage, deriveTask, deriveSessionSummary, type CapsuleMotion } from '../shared/view-model';
 import { Icon, type IconName } from './icon';
-import { WhaleCompanion, WhaleEmpty } from './whale-companion';
+import { WhaleArt, WhaleCompanion, WhaleEmpty } from './whale-companion';
 export type Task = ReturnType<typeof deriveTask>;
 export function StatusOrb({ task }: { task: Task }) {
   const symbol = task.status === 'completed' ? '✓' : task.status === 'disconnected' || task.status === 'error' || task.status === 'limit_reached' ? '!' : task.status === 'waiting_approval' || task.status === 'waiting_answer' ? '◇' : task.status === 'cancelled' ? '−' : task.status === 'archived' ? '▦' : '';
@@ -11,12 +11,41 @@ export function StatusOrb({ task }: { task: Task }) {
 function Progress({ task }: { task: Task }) {
   return task.total ? <div className="task-progress" role="progressbar" aria-label="Todo 完成步骤" aria-valuemin={0} aria-valuemax={task.total} aria-valuenow={task.completed}><span style={{ width: task.completed / task.total * 100 + '%' }} /></div> : null;
 }
-function ContextRing({ percent }: { percent: number }) {
+const contextNumber = new Intl.NumberFormat('zh-CN');
+function ContextRing({ percent, context, stale }: {
+  percent: number;
+  context: NonNullable<Session['stats']>['context'];
+  stale: boolean;
+}) {
+  const tooltipId = useId();
+  const area = useRef<HTMLSpanElement>(null);
+  const [dismissed, setDismissed] = useState(false);
   const value = Math.max(0, Math.min(100, percent));
+  const remaining = context ? context.windowTokens - context.projectedTokens : undefined;
   const circumference = 2 * Math.PI * 7;
-  return <span className="context-ring" role="img" aria-label={'上下文占用 ' + value + '%'} title={'上下文 ' + value + '%'}>
-    <svg viewBox="0 0 20 20" aria-hidden="true"><circle className="ring-track" cx="10" cy="10" r="7" /><circle className="ring-value" cx="10" cy="10" r="7" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - value / 100)} /></svg>
-    <b>{value}%</b>
+  useEffect(() => {
+    function dismiss(event: KeyboardEvent) {
+      if (event.key !== 'Escape' || !area.current?.matches(':not([data-dismissed=true]):is(:hover,:focus-within)')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setDismissed(true);
+    }
+    document.addEventListener('keydown', dismiss, true);
+    return () => document.removeEventListener('keydown', dismiss, true);
+  }, []);
+  return <span ref={area} className="context-usage" data-no-window-drag data-dismissed={dismissed}
+    onPointerEnter={() => setDismissed(false)} onFocus={() => setDismissed(false)}>
+    <span className="context-ring" role="img" tabIndex={0} aria-label={'上下文占用 ' + value + '%'} aria-describedby={tooltipId}>
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle className="ring-track" cx="10" cy="10" r="7" /><circle className="ring-value" cx="10" cy="10" r="7" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - value / 100)} /></svg>
+      <b>{value}%</b>
+    </span>
+    <span id={tooltipId} role="tooltip" className="context-tooltip">
+      <strong>上下文占用 {value}%</strong>
+      {context && <span>预计用量 {contextNumber.format(context.projectedTokens)} / {contextNumber.format(context.windowTokens)} Token</span>}
+      <span>{remaining === undefined ? '剩余约 ' + Math.round((100 - value) * 10) / 10 + '%'
+        : (remaining < 0 ? '预计超出 ' : '预计剩余 ') + contextNumber.format(Math.abs(remaining)) + ' Token'}</span>
+      {stale && <span className="metrics-snapshot">离线快照</span>}
+    </span>
   </span>;
 }
 function SessionPicker({ projection, selected, select }: { projection: Projection; selected: string; select: (id: string) => void }) {
@@ -64,8 +93,8 @@ function SessionPicker({ projection, selected, select }: { projection: Projectio
       <span className="picker-label">{current?.title ?? '选择会话'}</span><span className="picker-count" aria-hidden="true">{ids.length}</span><Icon name="chevron" />
     </button>
     <ul id={menuId} className="picker-menu" role="listbox" aria-label="选择会话" aria-hidden={!open} inert={!open}>
-      {sessions.map(session => <li key={session.sessionId} role="presentation"><button type="button" role="option" tabIndex={-1} aria-selected={session.sessionId === selected} className="picker-option" onClick={() => { select(session.sessionId); close(); }}>
-        <span className="picker-status" data-status={session.status} aria-hidden="true" /><span className="picker-option-title">{session.title}</span><small>{session.label}</small>{session.sessionId === selected && <Icon name="check" />}
+      {sessions.map(session => <li key={session.sessionId} role="presentation"><button type="button" role="option" tabIndex={-1} aria-selected={session.sessionId === selected} className="picker-option" data-status={session.status} onClick={() => { select(session.sessionId); close(); }}>
+        <span className="picker-status" data-status={session.status} aria-hidden="true" /><span className="picker-option-title">{session.title}</span><small className="picker-option-state">{session.label}</small>{session.sessionId === selected && <Icon name="check" />}
       </button></li>)}
     </ul>
   </div>;
@@ -129,19 +158,45 @@ function CapsuleTitle({ title, working }: { title: string; working: boolean }) {
     </span>
   </span>;
 }
-export function TaskCapsule({ task, activate }: { task: Task; activate: () => void }) {
+export function TaskCapsule({ task, motion, feedback, activate }: {
+  task: Task;
+  motion: CapsuleMotion;
+  feedback: boolean;
+  activate?: () => void;
+}) {
   const title = task.status === 'disconnected' ? task.label + ' · ' + task.title : task.title;
   const metrics = taskUsage(task);
   const metricsTitle = metrics ? (metrics.stale ? '离线快照 · ' : '') + metrics.turns + ' 轮 · ' + metrics.steps + ' 次执行' + (metrics.speedText ? ' · ' + metrics.speedText : '') : '';
   const working = task.status === 'running' || task.status === 'starting';
-  return <button className="task-capsule" aria-label={task.attentionCount ? '展开待处理请求' : '展开速览'} aria-description="可拖动；右键打开菜单。数据来源与调试状态见设置。" title={title + ' · ' + task.label + (metricsTitle ? ' · ' + metricsTitle : '') + (task.attentionCount ? ' · ' + task.attentionCount + ' 项待处理' : '')} onClick={activate}>
-    <WhaleCompanion state={task.status}><StatusOrb task={task} /></WhaleCompanion><CapsuleTitle title={title} working={working} />
+  const completed = task.status === 'completed';
+  const finishing = completed && feedback;
+  const Element = activate ? 'button' : 'div';
+  return <Element className="task-capsule" data-capsule-motion={motion} data-motion-phase={working ? 'running' : finishing ? 'finishing' : undefined}
+    type={activate ? 'button' : undefined}
+    aria-label={activate ? task.attentionCount ? '展开待处理请求' : completed ? '展开速览，任务已完成' : '展开速览' : undefined}
+    aria-description={activate ? '可拖动；右键打开菜单。数据来源与调试状态见设置。' : undefined}
+    title={title + ' · ' + task.label + (metricsTitle ? ' · ' + metricsTitle : '') + (task.attentionCount ? ' · ' + task.attentionCount + ' 项待处理' : '')}
+    onClick={activate}>
+    {finishing && motion === 'classic' && <span className="completion-reflection" aria-hidden="true" />}
+    {motion === 'silver' && (working || finishing) && <span className="capsule-motion-rim" aria-hidden="true" />}
+    {finishing && motion === 'type' && <span className="capsule-finish-title" aria-hidden="true">任务已完成</span>}
+    <WhaleCompanion state={task.status}>{!completed && <StatusOrb task={task} />}</WhaleCompanion><CapsuleTitle title={title} working={working} />
     {task.attentionCount > 0 && <span className="pending-count" aria-label={task.attentionCount + ' 项待处理请求'}>{task.attentionCount} 待处理</span>}
     {metrics && <span className="capsule-metrics" title={metricsTitle} aria-label={metrics.turns + ' 轮，Agent 执行 ' + metrics.steps + ' 步'}><b>{metrics.turns}</b>轮 · <b>{metrics.steps}</b>步</span>}
     {task.total > 0 && <span className="step-count" aria-label={task.completed + '/' + task.total + ' Todo 步骤完成'}><span className="progress-caption">任务 </span>{task.completed}/{task.total}</span>}
-    {task.status === 'completed' && <span className="capsule-state">已完成</span>}
+    {completed && <span className="capsule-completion"><Icon name="check" />已完成</span>}
     {task.status === 'limit_reached' && <span className="capsule-state">达到上限</span>}
-  </button>;
+  </Element>;
+}
+export function CapsuleEdgeOrb({ task, restore }: { task: Task; restore?: () => void }) {
+  const count = task.attentionCount;
+  const Element = restore ? 'button' : 'div';
+  return <Element type={restore ? 'button' : undefined} className="task-capsule capsule-edge-orb" onClick={restore}
+    aria-label={restore ? '还原胶囊，' + task.label + (count ? '，' + count + ' 项待处理' : '') : undefined}
+    title={restore ? task.title + ' · ' + task.label + ' · 点击还原胶囊' : undefined}>
+    <WhaleCompanion state={task.status}>{count ? null : <StatusOrb task={task} />}</WhaleCompanion>
+    {count > 0 && <span className="capsule-edge-count" aria-hidden="true">{count > 9 ? '9+' : count}</span>}
+  </Element>;
 }
 export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; expand: () => void; approval: () => void; reconnect: () => void }) {
   const failure = task.status === 'disconnected' || task.status === 'error';
@@ -155,21 +210,23 @@ export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; ex
     ].sort((a, b) => b.seq - a.seq).slice(0, 3);
   }, [task.session]);
   return <section className="task-peek" data-attention={task.attentionCount > 0}>
-    <button className="peek-main" aria-label="展开任务详情" onClick={expand}>
-      <div className="task-heading"><h1 title={task.title}>{task.title}</h1>{task.total > 0 && <span className="step-count">{task.completed}/{task.total}</span>}</div>
-      <Progress task={task} />
-      {recent.length > 0 && <div className="peek-process">
-        {recent.map(row => <div className="peek-entry" key={row.key}><Icon name={row.icon} /><span className="peek-entry-title">{row.label}</span><span className="peek-entry-text">{row.text}</span></div>)}
-      </div>}
-      <div className="current-step"><StatusOrb task={task} /><span>{failure ? task.label + '，当前内容可能已过时' : task.current.map(t => t.content).join('、') || task.label}</span>{task.status === 'running' && task.current.length === 0 && <Icon name="whale" className="whale-tail" />}</div>
+    <div className="peek-content">
+      <button className="peek-main" aria-label="展开任务详情" onClick={expand}>
+        <div className="task-heading"><h1 title={task.title}>{task.title}</h1>{task.total > 0 && <span className="step-count">{task.completed}/{task.total}</span>}</div>
+        <Progress task={task} />
+        {recent.length > 0 && <div className="peek-process">
+          {recent.map(row => <div className="peek-entry" key={row.key}><Icon name={row.icon} /><span className="peek-entry-title">{row.label}</span><span className="peek-entry-text">{row.text}</span></div>)}
+        </div>}
+        <div className="current-step"><StatusOrb task={task} /><span>{failure ? task.label + '，当前内容可能已过时' : task.current.map(t => t.content).join('、') || task.label}</span>{task.status === 'running' && task.current.length === 0 && <WhaleArt className="whale-tail" />}</div>
+      </button>
       {metrics && <div className="peek-usage">
         <div className="peek-stats">
           <span><b>{metrics.turns}</b> 轮 · 执行 <b>{metrics.steps}</b> 次{metrics.speedText && <span className="usage-speed" data-live={metrics.live}> · {metrics.speedText}</span>}{metrics.stale && <span className="metrics-snapshot"> · 离线快照</span>}</span>
           <span>{metrics.totalTokens !== undefined && <><b>{formatTokens(metrics.totalTokens)}</b> tok</>}{metrics.cacheHitPercent !== undefined && <span> · 缓存 {metrics.cacheHitPercent}%</span>}</span>
         </div>
-        {metrics.contextPercent !== undefined && <ContextRing percent={metrics.contextPercent} />}
+        {metrics.contextPercent !== undefined && <ContextRing percent={metrics.contextPercent} context={metrics.context} stale={metrics.stale} />}
       </div>}
-    </button>
+    </div>
     {failure ? <button className="attention-link" onClick={reconnect}><span className="control-label">重新连接</span> <span aria-hidden="true">↗</span></button> : task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}
   </section>;
 }
@@ -269,7 +326,7 @@ export function TaskExpanded({ task, projection, selected, select, approval, rec
   return <section className="task-expanded">
     <div className="task-heading"><h1 title={task.title}>{task.title}</h1></div>
     {Object.keys(projection.sessions).length > 1 && <div className="task-picker-row"><SessionPicker projection={projection} selected={selected} select={select} /></div>}
-    <div className="task-meta"><StatusOrb task={task} /><span>{task.label}{projection.stale ? ' · 状态可能过时' : ''}</span>{task.status === 'running' && <Icon name="whale" className="whale-tail" />}{task.total > 0 && <span className="step-count">任务 {task.completed}/{task.total}</span>}</div>
+    <div className="task-meta"><StatusOrb task={task} /><span>{task.label}{projection.stale ? ' · 状态可能过时' : ''}</span>{task.status === 'running' && <WhaleArt className="whale-tail" />}{task.total > 0 && <span className="step-count">任务 {task.completed}/{task.total}</span>}</div>
     {metrics && <div className="task-metrics">
       <div className="metrics-primary"><span><b>{metrics.turns}</b> 轮 · 执行 <b>{metrics.steps}</b> 次</span>
         {metrics.speedText && <span className="usage-speed" data-live={metrics.live}>{metrics.speedText}</span>}

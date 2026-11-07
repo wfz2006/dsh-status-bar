@@ -32,10 +32,6 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 .task-metrics { display:flex; flex-wrap:wrap; gap:2px 10px; margin:0 0 6px; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; }
 .task-metrics b { color:var(--fg); font-weight:600; }
 .capsule-state { flex:0 0 auto; padding:1.5px 7px; border-radius:999px; border:1px solid color-mix(in srgb,var(--success) 32%,transparent); background:color-mix(in srgb,var(--success) 5%,transparent); color:color-mix(in srgb,var(--success) 82%,var(--fg)); font-size:10px; font-weight:600; letter-spacing:.02em; white-space:nowrap; }
-/* Completion is a quiet success rim and a soft orb, never a flood of green. */
-.glass[data-mode=capsule][data-state=completed] .task-capsule { background:color-mix(in srgb,var(--success) 5%,transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--success) 26%,transparent),inset 0 1px 0 #ffffff45; transition:background 260ms ease,box-shadow 260ms ease; }
-.glass[data-mode=capsule][data-state=completed] .task-capsule .status-orb { background:color-mix(in srgb,var(--success) 14%,transparent); }
-.glass[data-mode=capsule][data-state=completed] .glass-optics { box-shadow:inset 0 1px 1px #ffffff5c,inset 0 -1px 1px color-mix(in srgb,var(--success) 32%,transparent); }
 .status-orb { display:inline-flex; flex:0 0 9px; width:9px; height:9px; align-items:center; justify-content:center; border-radius:50%; color:var(--accent); font-size:13px; line-height:1; }
 .status-orb.running { background:#79b8ff; box-shadow:0 0 6px #79b8ff30; animation:orb-breathe 4s ease-in-out infinite; }
 .status-orb.waiting { background:#b4ccdf; }
@@ -44,7 +40,8 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 .status-orb.disconnected,.status-orb.error { color:var(--warning); background:transparent; font-weight:650; }
 .task-peek,.task-expanded,.approval-view,.settings-panel,.activity-panel { display:flex; flex-direction:column; flex:1; min-height:0; padding:6px 18px 16px; }
 .task-peek { padding-top:4px; gap:8px; }
-.peek-main { flex:1; min-height:0; display:flex; flex-direction:column; text-align:left; color:var(--fg); background:transparent; border:0; border-radius:0; padding:4px 0; }
+.peek-content { flex:1; min-height:0; padding-bottom:4px; }
+.peek-main { width:100%; display:flex; flex-direction:column; text-align:left; color:var(--fg); background:transparent; border:0; border-radius:0; padding:4px 0 0; }
 .task-heading { display:flex; align-items:flex-start; gap:12px; flex:0 0 auto; }
 h1 { margin:0; min-width:0; flex:1; font-size:16px; line-height:1.45; font-weight:600; overflow-wrap:anywhere; }
 .task-heading h1 { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
@@ -96,12 +93,11 @@ summary { cursor:pointer; -webkit-app-region:no-drag; padding:5px 0; }
 .activity-list { overflow:auto; min-height:0; flex:1; }.activity-list article { padding:12px; border-radius:14px; background:var(--reading); margin-bottom:8px; }.activity-list strong { font:12px Consolas,monospace; }.activity-list p { font-size:12px; color:var(--muted); line-height:1.6; margin:6px 0 0; }
 .inline-error { color:var(--warning); font-size:11px; margin:2px 16px; }
 .resize-edge { position:absolute; z-index:10; -webkit-app-region:no-drag; touch-action:none; }.resize-n,.resize-s { height:4px; left:30px; right:30px; cursor:ns-resize; }.resize-n { top:0; }.resize-s { bottom:0; }.resize-e,.resize-w { width:4px; top:28px; bottom:28px; cursor:ew-resize; }.resize-e { right:0; }.resize-w { left:0; }.resize-ne,.resize-nw,.resize-se,.resize-sw { width:15px; height:15px; }.resize-ne { right:7px; top:7px; cursor:nesw-resize; }.resize-nw { left:7px; top:7px; cursor:nwse-resize; }.resize-se { right:7px; bottom:7px; cursor:nwse-resize; }.resize-sw { left:7px; bottom:7px; cursor:nesw-resize; }
-.glass[data-morph=expanding]>section { animation:content-reveal 320ms ease both; }.glass[data-morph=collapsing] .task-capsule { animation:content-reveal 220ms ease both; }.glass[data-completion=true] .status-orb.completed { animation:complete-pulse 550ms ease 1; }
+.glass[data-morph=expanding]>section { animation:content-reveal 320ms ease both; }.glass[data-morph=collapsing] .task-capsule { animation:content-reveal 220ms ease both; }
 .glass[data-morph=expanding]>section,.glass[data-morph=collapsing]>section { pointer-events:none; }
 button { transition:background-color 160ms ease; }button:active:not(.task-capsule):not(:disabled) { transform:scale(.985); }
 @keyframes content-reveal { 0%,15% { opacity:0; translate:0 4px; }100% { opacity:1; translate:0 0; } }
 @keyframes orb-breathe { 0%,100% { opacity:.7; }50% { opacity:1; } }
-@keyframes complete-pulse { 0%,100% { scale:1; }50% { scale:1.35; } }
 .glass[data-animation=reduced] *,.glass[data-animation=off] * { animation:none!important; transition:none!important; }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
 @media(max-width:280px) { .task-capsule { padding:0 12px; gap:8px; }.task-peek,.task-expanded { padding-left:12px; padding-right:12px; } }
@@ -135,9 +131,6 @@ button { transition:background-color 160ms ease; }button:active:not(.task-capsul
 .pending-count { color:var(--warning); font-size:10px; white-space:nowrap; flex:0 0 auto; text-shadow:none; }
 /* Keep renderer layers above the transparent optical surface. */
 .glass:not([data-material=solid]) { background:transparent; }
-/* Frosted fallback: without a running sampler the window still reads as smoked
-   glass instead of fully clear; the sampled backdrop itself is blurred in CSS. */
-.glass[data-material=frosted] { background:rgba(26,14,19,.34); }
 .glass>.task-capsule,.glass>section,.glass>.inline-error,.glass>.drag-strip { position:relative; z-index:1; }
 .capsule-title,.task-heading h1,.current-step>span:last-child,.todo>span:last-child,.task-meta,.step-count,.request-session,.command-preview,.command-full,.request-heading,.request-details,.safety-note { -webkit-text-stroke:0; }
 .task-capsule,.task-peek,.task-expanded,.approval-view { text-shadow:none; }
@@ -298,7 +291,7 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .picker-menu{position:absolute;z-index:30;top:calc(100% + 5px);left:0;right:auto;width:max-content;min-width:150px;max-width:min(240px,calc(100vw - 32px));max-height:150px;margin:0;padding:4px;overflow:auto;list-style:none;border:1px solid var(--chrome-edge);border-radius:12px;background:var(--menu-bg,rgba(250,250,252,.94));box-shadow:0 14px 34px rgba(0,0,0,.22);backdrop-filter:blur(24px) saturate(1.25);}
 .picker-option{display:block;width:100%;padding:6px 8px;border:0;border-radius:7px;background:transparent;color:var(--fg);font-size:11.5px;line-height:1.35;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
 .picker-option:hover{background:var(--chrome-hover);}
-.picker-option[aria-selected=true]{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--action-ink);}
+.picker-option[aria-selected=true]{background:color-mix(in srgb,var(--fg) 8%,transparent);}
 .glass{--menu-bg:rgba(250,250,252,.9);}
 .glass[data-theme=dark],.glass[data-theme=auto][data-backdrop-tone=dark]{--menu-bg:rgba(22,24,28,.92);}
 @media(prefers-color-scheme:dark){.glass[data-theme=auto]:not([data-backdrop-tone=light]){--menu-bg:rgba(22,24,28,.92);}}
@@ -348,19 +341,15 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 @keyframes entry-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 .task-panel{animation:panel-in 180ms var(--motion-settle) both;}
 @keyframes panel-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-@keyframes sheen-sweep{0%{transform:translateX(-130%)}60%,100%{transform:translateX(230%)}}
 .glass[data-mode=capsule][data-state=running] .task-capsule{overflow:hidden;}
-.glass[data-mode=capsule][data-state=running] .task-capsule::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(100deg,transparent 36%,rgba(255,255,255,.16) 50%,transparent 64%);animation:sheen-sweep 5.8s ease-in-out infinite;}
 @keyframes attention-breathe{0%,100%{box-shadow:inset 0 0 0 1px transparent}50%{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warning) 30%,transparent),inset 0 1px 0 rgba(255,255,255,.16)}}
 .attention-link{animation:attention-breathe 3.6s ease-in-out infinite;}
-@keyframes completion-bloom{0%{box-shadow:inset 0 0 0 1px transparent}38%{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--success) 44%,transparent),inset 0 0 34px color-mix(in srgb,var(--success) 12%,transparent)}100%{box-shadow:inset 0 0 0 1px transparent}}
-.glass[data-completion=true] .glass-rim{animation:completion-bloom .9s var(--motion-settle);}
 .chrome-button{transition:transform 150ms var(--motion-spring),background-color 150ms var(--motion-settle);}
 .chrome-button:hover{transform:scale(1.05);}
 .chrome-button:active{transform:scale(.94);}
-.glass[data-animation=off] .process-entry,.glass[data-animation=off] .task-panel,.glass[data-animation=off] .attention-link,.glass[data-animation=off] .task-capsule::after,.glass[data-animation=off] .glass-rim{animation:none;}
+.glass[data-animation=off] .process-entry,.glass[data-animation=off] .task-panel,.glass[data-animation=off] .attention-link,.glass[data-animation=off] .task-capsule::after{animation:none;}
 .glass[data-animation=reduced] .process-entry,.glass[data-animation=reduced] .task-panel{animation-duration:1ms;}
-@media (prefers-reduced-motion:reduce){.process-entry,.task-panel,.attention-link,.glass[data-completion=true] .glass-rim{animation:none;}.glass[data-mode=capsule][data-state=running] .task-capsule::after{display:none;}.chrome-button:hover,.chrome-button:active{transform:none;}}
+@media (prefers-reduced-motion:reduce){.process-entry,.task-panel,.attention-link{animation:none;}.glass[data-mode=capsule][data-state=running] .task-capsule::after{display:none;}.chrome-button:hover,.chrome-button:active{transform:none;}}
 
 /* A few more state cues: work in motion, a pop on completion, a card that
    arrives instead of appearing. Zero dependencies; every effect is transform
@@ -369,13 +358,11 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 .glass[data-state=running] .task-progress>span{background-image:linear-gradient(90deg,#79b8ff77,#79b8ff,#b4d9ffcc,#79b8ff);background-size:200% 100%;animation:progress-flow 2.6s linear infinite;}
 @keyframes orb-ripple{0%{box-shadow:0 0 0 0 color-mix(in srgb,#79b8ff 42%,transparent)}70%,100%{box-shadow:0 0 0 5px transparent}}
 .glass[data-state=running] .status-orb.running{animation:orb-breathe 4s ease-in-out infinite,orb-ripple 2.8s ease-out infinite;}
-@keyframes orb-pop{0%{transform:scale(.72)}55%{transform:scale(1.22)}100%{transform:scale(1)}}
-.glass[data-state=completed] .status-orb.completed{animation:orb-pop 460ms var(--motion-spring);}
 @keyframes card-rise{from{opacity:0;transform:translateY(6px) scale(.995)}to{opacity:1;transform:none}}
 .approval-card{animation:card-rise 240ms var(--motion-settle) both;}
 .todo{animation:entry-in 200ms var(--motion-settle) backwards;}
 .glass[data-animation=off] .task-progress>span,.glass[data-animation=off] .status-orb.running,.glass[data-animation=off] .approval-card,.glass[data-animation=off] .todo{animation:none;}
-@media (prefers-reduced-motion:reduce){.glass[data-state=running] .task-progress>span,.glass[data-state=running] .status-orb.running,.glass[data-state=completed] .status-orb.completed,.approval-card,.todo{animation:none;}}
+@media (prefers-reduced-motion:reduce){.glass[data-state=running] .task-progress>span,.glass[data-state=running] .status-orb.running,.approval-card,.todo{animation:none;}}
 
 /* Layout fixes: the tab wrapper must stay in the flex chain or its scrolling
    child loses the height clamp. The peek gets a short live transcript so its

@@ -2,6 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import type {GlassSettings,GlassViewMode} from '../shared/view-model';
 import type {Task} from './task-views';
 import {WaterPoolEngine} from './water-pool-engine';
+import {WHALE_SKIN_BOUNDS,whaleSkinSources} from './whale-skin-art';
 import './vendor/whale-motion.js';
 
 const smooth=(value:number)=>{const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t);};
@@ -11,6 +12,7 @@ export function WhalePool({task,mode,settings,visible,expand,details,approval,me
   const host=useRef<HTMLDivElement>(null),waterCanvas=useRef<HTMLCanvasElement>(null),whaleCanvas=useRef<HTMLCanvasElement>(null),effects=useRef<HTMLCanvasElement>(null),whaleTarget=useRef<HTMLButtonElement>(null);
   const params=useRef({mode,settings,visible,task});params.current={mode,settings,visible,task};
   const wake=useRef<()=>void>(()=>{}),engine=useRef<WaterPoolEngine|null>(null);
+  const whaleAnimator=useRef<WhaleAnimator|null>(null);
   const lastMode=useRef(mode),transition=useRef<{kind:'opening'|'closing';start:number;fromX:number}|null>(null),position=useRef({x:165,y:70});
   const [ready,setReady]=useState(mode!=='capsule'),[fallback,setFallback]=useState(false);
   useEffect(()=>{
@@ -18,6 +20,7 @@ export function WhalePool({task,mode,settings,visible,expand,details,approval,me
     if(!element||!canvas||!actor||!fx)return;
     const water=new WaterPoolEngine(canvas,value=>{setFallback(value);wake.current();});engine.current=water;setFallback(water.fallback);
     const animator=new WhaleMotion.Animator(actor,fx,{showNative:false,travel:false,mainSize:64,energy:.85,pace:1,color:'#86acff'});animator.resize(150,160);animator.setAutonomous(false);
+    whaleAnimator.current=animator;
     const media=matchMedia('(prefers-reduced-motion: reduce)');let frame=0,last=0,lastStatus='',wasReady=false,disposed=false;
     const run=(now:number)=>{
       frame=0;if(disposed)return;
@@ -52,8 +55,18 @@ export function WhalePool({task,mode,settings,visible,expand,details,approval,me
     };
     const start=()=>{if(!frame&&!disposed)frame=requestAnimationFrame(run);};wake.current=start;
     const observer=new ResizeObserver(start);observer.observe(element);media.addEventListener('change',start);document.addEventListener('visibilitychange',start);start();
-    return()=>{disposed=true;cancelAnimationFrame(frame);observer.disconnect();media.removeEventListener('change',start);document.removeEventListener('visibilitychange',start);animator.destroy();water.dispose();engine.current=null;wake.current=()=>{};};
+    return()=>{disposed=true;cancelAnimationFrame(frame);observer.disconnect();media.removeEventListener('change',start);document.removeEventListener('visibilitychange',start);animator.destroy();water.dispose();whaleAnimator.current=null;engine.current=null;wake.current=()=>{};};
   },[]);
+  useEffect(()=>{
+    const animator=whaleAnimator.current;
+    if(!animator)return;
+    if(settings.whaleSkin==='classic'){animator.setSkin(null,WHALE_SKIN_BOUNDS);return;}
+    const image=new Image();
+    image.onload=()=>animator.setSkin(image,WHALE_SKIN_BOUNDS);
+    image.onerror=()=>animator.setSkin(null,WHALE_SKIN_BOUNDS);
+    image.src=whaleSkinSources[settings.whaleSkin];
+    return()=>{image.onload=null;image.onerror=null;};
+  },[settings.whaleSkin]);
   useEffect(()=>{
     if(lastMode.current!==mode){transition.current={kind:mode==='capsule'?'closing':'opening',start:performance.now(),fromX:position.current.x};lastMode.current=mode;if(mode==='capsule')setReady(false);}
     wake.current();

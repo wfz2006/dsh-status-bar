@@ -14,6 +14,15 @@ it('defaults to a calm task capsule and validates persisted preferences', () => 
   expect(normalizeSettings({}).sound).toBe(true);
   expect(normalizeSettings({ animation: 'invalid', theme: 'light', autoApproval: true }).theme).toBe('light');
   expect(normalizeSettings({ animation: 'invalid' }).animation).toBe('full');
+  expect(normalizeSettings({}).capsuleMotion).toBe('classic');
+  expect(normalizeSettings({ capsuleMotion: 'unsupported' }).capsuleMotion).toBe('classic');
+  for (const capsuleMotion of ['classic', 'type', 'silver', 'tide']) {
+    expect(normalizeSettings({ capsuleMotion, animation: 'off' })).toMatchObject({ capsuleMotion, animation: 'off' });
+  }
+  expect(normalizeSettings({}).whaleSkin).toBe('classic');
+  expect(normalizeSettings({ whaleSkin: 'not-a-skin' }).whaleSkin).toBe('classic');
+  expect(normalizeSettings({ whaleSkin: 'pumpkin', appearance: 'whale-pool' }))
+    .toMatchObject({ whaleSkin: 'pumpkin', appearance: 'whale-pool' });
   expect(viewSize('capsule')).toEqual({ width: 288, height: 44 });
   expect(viewSize('peek')).toEqual({ width: 340, height: 190 });
   expect(viewSize('peek', true)).toEqual({ width: 340, height: 236 });
@@ -47,6 +56,7 @@ it('summarises usage stats for the compact and detailed task views', () => {
   let p = initialProjection(); for (const f of mockFrames().slice(0, 2)) p = reduceProjection(p, f);
   const task = deriveTask(p, 'demo-main');
   expect(taskMetrics(task.session)).toEqual({ turns: 3, steps: 42, tokensPerSecond: 218, cacheHitPercent: 96.4, contextPercent: 7.2,
+    context: { projectedTokens: 75_497, windowTokens: 1_048_576 },
     totalTokens: 1_280_200, inputTokens: 18_400, cacheTokens: 1_240_000, outputTokens: 21_800 });
   expect(formatTokens(1_280_200)).toBe('1.3M');
   expect(formatTokens(432_200)).toBe('432K');

@@ -78,7 +78,7 @@ const api: GlassAPI = {
   },
   windowAction: (action, reduceMotion) => ipcRenderer.invoke('glass:window', action, reduceMotion),
   resizeWindow: bounds => ipcRenderer.invoke('glass:resize', bounds),
-  moveWindow: position => ipcRenderer.invoke('glass:move', position),
+  moveWindow: (position, released) => ipcRenderer.invoke('glass:move', position, released),
   setSettings: settings => ipcRenderer.invoke('glass:settings', settings),
   selectSession: id => ipcRenderer.invoke('glass:select-session', id),
   copyApproval: identity => ipcRenderer.invoke('glass:copy-approval', identity),

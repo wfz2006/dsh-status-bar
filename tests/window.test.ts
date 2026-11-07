@@ -1,5 +1,26 @@
 import { expect, it } from 'vitest';
 import { clampBounds, density, morphBounds, roundedRegion, resizeBounds, migrateBounds } from '../apps/desktop/src/shared/window';
+import { EDGE_ORB_SIZE, edgeAtBounds, edgeReplacementBounds, orbRegion } from '../apps/desktop/src/shared/edge-dock';
+
+it('centers the compact whale along each work-area edge on a negative-coordinate display', () => {
+  const area = { x: -1280, y: -160, width: 1280, height: 720 };
+  const size = { width: EDGE_ORB_SIZE, height: EDGE_ORB_SIZE };
+  const capsule = { x: -700, y: 100, width: 288, height: 44 };
+  const left = { ...capsule, x: -1260 };
+  const right = { ...capsule, x: -290 };
+  const top = { ...capsule, y: -140 };
+  const bottom = { ...capsule, y: 506 };
+  expect(edgeAtBounds(capsule, area)).toBeNull();
+  expect(edgeAtBounds({ ...left, x: area.x + 25 }, area)).toBeNull();
+  expect([left, right, top, bottom].map(bounds => edgeAtBounds(bounds, area))).toEqual(['left', 'right', 'top', 'bottom']);
+  expect(edgeReplacementBounds(left, size, area, 'left')).toEqual({ x: -1280, y: 90, ...size });
+  expect(edgeReplacementBounds(right, size, area, 'right')).toEqual({ x: -64, y: 90, ...size });
+  expect(edgeReplacementBounds(top, size, area, 'top')).toEqual({ x: -588, y: -160, ...size });
+  expect(edgeReplacementBounds(bottom, size, area, 'bottom')).toEqual({ x: -588, y: 496, ...size });
+  const region = orbRegion(size.width, size.height);
+  expect(region[0]?.x).toBeGreaterThan(0);
+  expect(region[32]?.width).toBe(size.width);
+});
 it('restores a window into a smaller or replaced work area', () => {
   expect(clampBounds({ x: 2500, y: -800, width: 900, height: 900 }, { x: 0, y: 0, width: 800, height: 600 })).toEqual({ x: 0, y: 0, width: 800, height: 600 });
 });

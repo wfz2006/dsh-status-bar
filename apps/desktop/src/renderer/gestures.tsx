@@ -8,9 +8,10 @@ export function useWindowDrag(root: RefObject<HTMLElement | null>, context: stri
   const motion = useMemo(() => createDragMotion({
     now: () => performance.now(), position: () => ({ x: window.screenX, y: window.screenY }),
     move: point => window.glass.moveWindow(point),
+    release: point => window.glass.moveWindow(point, true),
     requestFrame: callback => requestAnimationFrame(callback), cancelFrame: id => cancelAnimationFrame(id),
     animated: () => !!root.current && root.current.dataset.mode === 'capsule' && root.current.dataset.panel === 'none'
-      && root.current.dataset.morph === 'idle' && root.current.dataset.animation === 'full' && !media.matches,
+      && !root.current.dataset.dockEdge && root.current.dataset.morph === 'idle' && root.current.dataset.animation === 'full' && !media.matches,
     paint: value => {
       const el = root.current; if (!el) return;
       if (!value) {
@@ -55,8 +56,9 @@ export function useWindowDrag(root: RefObject<HTMLElement | null>, context: stri
       if (e.button !== 0 || e.currentTarget.dataset.morph !== 'idle') return;
       if(!(e.target instanceof Element) || e.target.closest('input,select,textarea,label,summary,pre,a,[data-no-window-drag],.resize-edge,button:not(.task-capsule):not(.peek-main)'))return;
       if (!motion.begin(e.pointerId, { x: e.screenX, y: e.screenY })) return;
-      e.preventDefault();
-      e.target.closest<HTMLButtonElement>('button')?.focus({preventScroll:true});
+      // Clear a previous keyboard focus before the browser applies pointer
+      // focus. Cancelling the default and focusing manually keeps its ring.
+      e.target.closest<HTMLButtonElement>('button')?.blur();
       suppress.current = false;
     },
     onPointerMove: (e: PointerEvent<HTMLElement>) => {

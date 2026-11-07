@@ -1,5 +1,5 @@
 import { useEffect,useRef } from 'react';
-import {captureVisibility,framePixelView,type DesktopOpticsBounds,type DesktopOpticsFrame} from '../shared/desktop-optics';
+import {placeBackdrop,framePixelView,type BackdropPlacement,type DesktopOpticsBounds,type DesktopOpticsFrame} from '../shared/desktop-optics';
 import {backdropTone,type BackdropTone} from '../shared/backdrop-tone';
 import type {GlassAppearance} from '../shared/glass-appearance';
 export function DesktopBackdrop({paused,autoTheme,appearance}:{paused:boolean;autoTheme:boolean;appearance:GlassAppearance}) {
@@ -10,11 +10,12 @@ export function DesktopBackdrop({paused,autoTheme,appearance}:{paused:boolean;au
   useEffect(()=>{
     let enabled=false;
     let last:Pick<DesktopOpticsFrame,'left'|'top'|'width'|'height'>|null=null;
+    let painted:BackdropPlacement|null=null;
     let placement='';
     const surface=canvas.current!;
     const context=surface.getContext('2d');
     const root=surface.closest<HTMLElement>('main');let tone:BackdropTone|undefined;
-    const clear=()=>{last=null;placement='';tone=undefined;if(root)delete root.dataset.backdropTone;
+    const clear=()=>{last=null;painted=null;placement='';tone=undefined;if(root)delete root.dataset.backdropTone;
       // clearRect keeps the bitmap/texture allocated. A stopped or hidden
       // capture has no pixels to display; release that backing store too.
       if(surface.width!==0 || surface.height!==0){surface.width=0;surface.height=0;}
@@ -22,19 +23,20 @@ export function DesktopBackdrop({paused,autoTheme,appearance}:{paused:boolean;au
     function position(bounds:DesktopOpticsBounds) {
       if(!last){surface.style.visibility='hidden';return;}
       const expanding=root?.dataset.morph==='expanding';
-      const key=[last.left,last.top,last.width,last.height,bounds.windowLeft,bounds.windowTop,bounds.windowWidth,bounds.windowHeight,expanding].join(',');
+      const viewport={width:window.innerWidth,height:window.innerHeight,scale:window.devicePixelRatio};
+      const key=[last.left,last.top,last.width,last.height,bounds.windowLeft,bounds.windowTop,bounds.windowWidth,bounds.windowHeight,viewport.width,viewport.height,viewport.scale,expanding].join(',');
       if(key===placement)return;
       placement=key;
-      // During expansion, retain only the existing world-pixel intersection.
-      // Never stretch a capsule snapshot, pre-capture the destination, or use
-      // this exception for dragging. The parent clips all uncovered pixels.
-      const visibility=captureVisibility(last,bounds,expanding);
-      if(visibility==='hidden'){surface.style.visibility='hidden';delete surface.dataset.coverage;return;}
-      surface.style.left=-(bounds.windowLeft-last.left)/bounds.windowWidth*100+'%';
-      surface.style.top=-(bounds.windowTop-last.top)/bounds.windowHeight*100+'%';
-      surface.style.width=last.width/bounds.windowWidth*100+'%';
-      surface.style.height=last.height/bounds.windowHeight*100+'%';
-      surface.style.visibility='visible';surface.dataset.windowLeft=String(bounds.windowLeft);surface.dataset.coverage=visibility;
+      // A fast drag can outrun the bounded capture. Hold its last complete
+      // local crop until a fresh frame arrives instead of flashing the layer
+      // off. Resizes still show only valid world-pixel coverage.
+      painted=placeBackdrop(last,bounds,viewport,expanding,painted);
+      if(!painted){surface.style.visibility='hidden';delete surface.dataset.coverage;return;}
+      surface.style.left=painted.left+'%';
+      surface.style.top=painted.top+'%';
+      surface.style.width=painted.width+'%';
+      surface.style.height=painted.height+'%';
+      surface.style.visibility='visible';surface.dataset.windowLeft=String(bounds.windowLeft);surface.dataset.coverage=painted.coverage;
     }
     const offPosition=window.glass.subscribeOpticsPosition(position);
     const update=(state:{enabled:boolean;running:boolean})=>{enabled=state.enabled;if(!state.enabled || !state.running)clear();};

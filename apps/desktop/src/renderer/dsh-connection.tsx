@@ -29,7 +29,9 @@ export function DSHConnection({ projection }: { projection: Projection }) {
   }
   const label = source.mode === 'mock' ? 'Mock 演示 · 不会执行审批' : source.connection === 'connected' ? 'DSH 已连接' : source.connection === 'connecting' ? '正在连接 DSH' : 'DSH 未连接';
   return <fieldset className="settings-group source-settings"><legend>DeepSeek Harness</legend>
-    <p className="source-notice" role="status"><strong>{label}</strong>{origin && <span className="source-origin">{origin}</span>}</p>
+    <p className="source-notice" role="status" data-connection={source.connection} data-source={source.mode}>
+      <strong>{label}</strong>{origin && <span className="source-origin">{origin}</span>}
+    </p>
     <form className="source-connect" onSubmit={event => { event.preventDefault(); void change('connect'); }}>
       <label htmlFor="dsh-authentication-url">官方认证地址</label>
       <input id="dsh-authentication-url" type="password" autoComplete="off" spellCheck={false} value={url} disabled={busy}

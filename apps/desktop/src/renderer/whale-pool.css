@@ -38,7 +38,8 @@
 .pool-view[data-layout=letter] .pool-steps { gap:6px; }
 .pool-intro { display:flex;flex:1;flex-direction:column;min-height:0;overflow:auto;padding:12px 25px 24px; }
 .pool-intro-art { align-self:center;position:relative;width:160px;height:96px;display:grid;place-items:center;border-radius:50%;background:radial-gradient(ellipse,#173650bb,transparent 70%); }
-.pool-intro-art svg { width:64px;height:64px;color:#86acff;animation:pool-intro-bob 4s ease-in-out infinite; }
+.pool-intro-art :is(svg,.whale-skin-art) { width:64px;height:64px;color:#86acff;animation:pool-intro-bob 4s ease-in-out infinite; }
+.pool-intro-art .whale-skin-art { width:86px;height:78px; }
 .pool-intro-eyebrow { margin:1px 0 8px;font-size:11px;color:var(--muted);letter-spacing:.06em; }
 .pool-intro h1 { margin:0;font-size:20px;line-height:1.5;font-weight:600; }
 .pool-intro-copy { margin:10px 0;font-size:13px;line-height:1.7; }
@@ -47,6 +48,6 @@
 .pool-intro-actions button { min-height:36px;padding:7px 12px;border:1px solid var(--line);border-radius:18px;background:var(--reading);color:var(--fg);font-size:12px; }
 .pool-intro-actions .primary-button { background:#9fbff2;color:#102540;border-color:transparent; }
 @keyframes pool-intro-bob { 50%{transform:translateY(-5px) rotate(-3deg);} }
-@media(prefers-reduced-motion:reduce) { .pool-intro-art svg { animation:none; } .pool-view[data-readable=true] .pool-sheet { transition:none; } }
-.glass[data-animation=off] .pool-intro-art svg,.glass[data-animation=reduced] .pool-intro-art svg { animation:none; }
+@media(prefers-reduced-motion:reduce) { .pool-intro-art :is(svg,.whale-skin-art) { animation:none; } .pool-view[data-readable=true] .pool-sheet { transition:none; } }
+.glass:is([data-animation=off],[data-animation=reduced]) .pool-intro-art :is(svg,.whale-skin-art) { animation:none; }
 @media(max-width:370px) { .pool-sheet { left:38px;right:38px; } .pool-heading h1 { font-size:16px; } .pool-heading { padding-left:70px; } .pool-view[data-layout=stream] .pool-heading { padding-right:70px; } .pool-steps { gap:6px; } }

@@ -1,0 +1,88 @@
+/* Effects are clipped to the capsule and leave the window's optical layer still. */
+.task-capsule[data-motion-phase] { overflow:hidden; }
+.capsule-motion-rim,.capsule-finish-title { display:none; }
+.settings-motion-sample[data-playing=false] .task-capsule *,
+.settings-motion-sample[data-playing=false] .task-capsule::after { animation:none!important; }
+.settings-motion-sample[data-playing=false] .capsule-motion-rim { display:none!important; }
+
+@media(prefers-reduced-motion:no-preference) {
+  .glass[data-animation=full] .task-capsule[data-capsule-motion=type][data-motion-phase=running] .wave-char {
+    animation:capsule-letter-lift 4.6s cubic-bezier(.25,.72,.28,1) infinite;
+  }
+  .glass[data-animation=full] .task-capsule[data-capsule-motion=type][data-motion-phase]::after {
+    content:""; position:absolute; left:44px; right:22px; bottom:7px; height:1px;
+    pointer-events:none; z-index:-1; transform-origin:left;
+    background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--accent) 68%,white) 32%,transparent);
+    animation:capsule-letter-line 4.6s var(--motion-settle) infinite;
+  }
+  .glass[data-animation=full] .task-capsule[data-capsule-motion=type][data-motion-phase=finishing]::after {
+    animation:capsule-letter-line 1.42s var(--motion-settle) both;
+  }
+  .glass[data-animation=full] .task-capsule[data-capsule-motion=type][data-motion-phase=finishing] :is(.capsule-title,.capsule-metrics,.step-count) {
+    animation:capsule-original-title 1.42s var(--motion-settle) both;
+  }
+  .glass[data-animation=full] .task-capsule[data-motion-phase=finishing] .capsule-finish-title {
+    display:block; position:absolute; z-index:1; inset-inline:45px 77px;
+    font:600 14px/1.4 var(--font-body); letter-spacing:.06em; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis;
+    color:color-mix(in srgb,var(--fg) 85%,#deb887); pointer-events:none;
+    animation:capsule-finish-title 1.42s var(--motion-settle) both;
+  }
+  .glass[data-animation=full] .capsule-motion-rim {
+    display:block; position:absolute; inset:.55px; padding:1.35px; z-index:2;
+    border-radius:inherit; overflow:hidden; pointer-events:none;
+    mask:linear-gradient(#fff 0 0) content-box exclude,linear-gradient(#fff 0 0);
+  }
+  .glass[data-animation=full] .capsule-motion-rim::before {
+    content:""; position:absolute; inset:-90%;
+    background:conic-gradient(transparent 0deg 245deg,#bedcfd30 279deg,#f0f8ffe0 322deg,#b1d4ff55 339deg,transparent 355deg);
+    animation:capsule-silver-orbit 4.8s linear infinite;
+  }
+  .glass[data-animation=full] .task-capsule[data-motion-phase=finishing] .capsule-motion-rim::before {
+    background:conic-gradient(transparent 0deg 245deg,#d7edff40 279deg,#fff5df 322deg,#ebbd7d88 339deg,transparent 355deg);
+    animation:capsule-silver-close 1.4s var(--motion-settle) both;
+  }
+  .glass[data-animation=full] .task-capsule[data-capsule-motion=silver][data-motion-phase]::after {
+    content:""; position:absolute; inset:1px; z-index:-1; pointer-events:none;
+    background:linear-gradient(108deg,transparent 22%,#b5daff1a 40%,#e1f1ff44 50%,#fff0d41c 58%,transparent 74%);
+    animation:capsule-silver-light 4.8s var(--motion-settle) infinite;
+  }
+  .glass[data-animation=full] .task-capsule[data-capsule-motion=silver][data-motion-phase=finishing]::after {
+    animation:capsule-silver-light 1.4s var(--motion-settle) both;
+  }
+  .glass[data-animation=full] .task-capsule[data-capsule-motion=silver][data-motion-phase=running] .wave-char {
+    animation:capsule-letter-shine 4.8s cubic-bezier(.25,.72,.28,1) infinite;
+  }
+  .glass[data-animation=full] .task-capsule[data-capsule-motion=tide][data-motion-phase=running] .whale-swimmer {
+    animation:capsule-whale-glide 4.4s cubic-bezier(.45,0,.55,1) infinite;
+  }
+  .glass[data-animation=full] .task-capsule[data-capsule-motion=tide][data-motion-phase=running] .wave-char {
+    animation:capsule-letter-tide 4.4s cubic-bezier(.45,0,.55,1) infinite;
+  }
+  .glass[data-animation=full] .task-capsule[data-capsule-motion=tide][data-motion-phase]::after {
+    content:""; position:absolute; left:34px; right:16px; bottom:4px; height:7px; z-index:-1;
+    pointer-events:none; transform-origin:left bottom;
+    background:radial-gradient(ellipse 53% 23% at 44% 70%,#bdedffb5,transparent 96%),
+      radial-gradient(ellipse 46% 26% at 48% 25%,#8fceff70,transparent 96%);
+    animation:capsule-water-trail 4.4s var(--motion-settle) infinite;
+  }
+  .glass[data-animation=full] .task-capsule[data-capsule-motion=tide][data-motion-phase=finishing]::after {
+    animation:capsule-water-arrive 1.42s var(--motion-settle) both;
+  }
+  .glass[data-animation=full] .task-capsule[data-capsule-motion]:is(:hover,:focus-visible) .wave-char {
+    animation-play-state:paused;
+  }
+}
+
+@keyframes capsule-letter-lift { 0%,7%,56%,100% { transform:none; } 22% { transform:translateY(-2.6px); } 34% { transform:translateY(.55px); } }
+@keyframes capsule-letter-line { 0%,10% { opacity:0; transform:scaleX(.08); } 38%,52% { opacity:.9; transform:scaleX(1); } 72%,100% { opacity:0; transform:scaleX(1); } }
+@keyframes capsule-original-title { 0%,100% { opacity:1; transform:none; } 19%,73% { opacity:0; transform:translateY(-9px); } }
+@keyframes capsule-finish-title { 0% { opacity:0; transform:translateY(10px); } 24%,68% { opacity:1; transform:none; } 92%,100% { opacity:0; transform:translateY(-9px); } }
+@keyframes capsule-silver-orbit { to { transform:rotate(360deg); } }
+@keyframes capsule-silver-close { 0% { opacity:0; transform:rotate(-80deg); } 18%,63% { opacity:1; } 100% { opacity:0; transform:rotate(280deg); } }
+@keyframes capsule-silver-light { 0%,10% { opacity:0; transform:translateX(-70%); } 38%,55% { opacity:.86; } 80%,100% { opacity:0; transform:translateX(72%); } }
+@keyframes capsule-letter-shine { 0%,10%,66%,100% { text-shadow:none; } 30% { text-shadow:0 0 7px color-mix(in srgb,var(--accent) 64%,transparent); } }
+@keyframes capsule-whale-glide { 0%,100% { transform:rotate(-3deg); } 39% { transform:translate(5px,-1.5px) rotate(5deg); } 76% { transform:translate(-1px,.75px) rotate(-4deg); } }
+@keyframes capsule-letter-tide { 0%,59%,100% { transform:none; } 25% { transform:translateY(-1.7px); } }
+@keyframes capsule-water-trail { 0% { opacity:0; transform:scaleX(.05); } 25% { opacity:.9; } 73%,100% { opacity:0; transform:scaleX(1) translateX(8px); } }
+@keyframes capsule-water-arrive { 0% { opacity:0; transform:scaleX(.08) scaleY(.8); } 25% { opacity:1; } 56% { opacity:.72; transform:scaleX(1) scaleY(2.5); } 100% { opacity:0; transform:scaleX(1.15) scaleY(4.4); } }

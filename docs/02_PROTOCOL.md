@@ -123,6 +123,8 @@ type UserQuestionView = {
 | `question.respond` | desktop→bridge | requestId, answers | 结构化回答意图 |
 | `glass.error` | bridge→desktop | code, correlationId?, safeMessage | 安全错误解释 |
 
+会话统计可附带 `context: { projectedTokens, windowTokens }`。两项分别来自 DSH 的预计上下文用量与窗口上限。没有这组明细的旧快照仍可使用 `contextPercent`。累计 Token 消耗单独记录在 `tokens` 中。
+
 ## 5. 初始同步与重连算法
 
 1. Renderer 通过受限 preload 请求连接；Main 负责 token 握手。

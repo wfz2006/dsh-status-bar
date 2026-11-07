@@ -241,7 +241,7 @@ else {
       mock: action => { if (source.mode === 'mock') mockAction(action); else void useMock().then(() => mockAction(action)); }, quit: () => app.quit(),
       canOpenDSH: true, openDSH: createDshLauncher(win, app.getPath('userData')),
       menuChanged: () => {},
-      appearanceChanged:pool=>optics?.setSuspended(pool),
+      suspendOptics:suspended=>optics?.setSuspended(suspended),
     });
     optics=createDesktopOptics(win,join(here,'../../native/RegionCapture.exe'));
     optics.setSuspended(ui.state().settings.appearance==='whale-pool'&&ui.state().panel===null&&(ui.state().viewMode==='capsule'||ui.state().viewMode==='peek'));
@@ -318,9 +318,10 @@ else {
       if (!finiteRecord(value, ['x', 'y', 'width', 'height'])) throw new Error('Invalid bounds');
       ui!.resize({ x: Math.round(value.x!), y: Math.round(value.y!), width: Math.min(900, Math.round(value.width!)), height: Math.min(1000, Math.round(value.height!)) });
     });
-    ipcMain.handle('glass:move', (event, value: unknown) => {
+    ipcMain.handle('glass:move', (event, value: unknown, released: unknown) => {
       assertSender(event); if (!finiteRecord(value, ['x', 'y'])) throw new Error('Invalid position');
-      return ui!.move(Math.round(value.x!), Math.round(value.y!));
+      if (released !== undefined && typeof released !== 'boolean') throw new Error('Invalid drag state');
+      return ui!.move(Math.round(value.x!), Math.round(value.y!), released === true);
     });
     ipcMain.handle('glass:select-session', (event, id: unknown) => {
       assertSender(event); if (typeof id !== 'string' || !Object.hasOwn(state.sessions, id)) throw new Error('Unknown Session');
@@ -338,8 +339,8 @@ else {
     else { update({ kind: 'transport.closed' }); publishSource(); }
     watchdog = setInterval(() => { if (socket && Date.now() - lastReceived > 9000) { update({ kind: 'transport.closed' }); socket.terminate(); } }, 1000);
     globalShortcut.register('CommandOrControl+Shift+G', () => win.isVisible() ? win.hide() : win.show());
-    screen.on('display-removed', () => win.setBounds(clampBounds(win.getBounds(), screen.getPrimaryDisplay().workArea)));
-    screen.on('display-metrics-changed', () => win.setBounds(clampBounds(win.getBounds(), screen.getDisplayMatching(win.getBounds()).workArea)));
+    screen.on('display-removed', () => ui?.displayChanged(screen.getPrimaryDisplay().workArea));
+    screen.on('display-metrics-changed', () => ui?.displayChanged());
     if (devURL) await win.loadURL(devURL); else await win.loadFile(rendererFile);
     const startupLink = dshLinkFromArgs(process.argv);
     // The DSH bundle hands over the authenticated host link on launch. Connect once the

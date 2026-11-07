@@ -1,21 +1,30 @@
 import type { Projection, Session } from '@glass/protocol';
 import { DEFAULT_GLASS_APPEARANCE, normalizeGlassAppearance, type GlassAppearance } from './glass-appearance';
+import { normalizeWhaleSkin, type WhaleSkin } from './whale-skins';
 export type GlassViewMode = 'capsule' | 'peek' | 'expanded' | 'approval';
+export const CAPSULE_MOTIONS = ['classic', 'type', 'silver', 'tide'] as const;
+export type CapsuleMotion = typeof CAPSULE_MOTIONS[number];
+export const COMPLETION_FEEDBACK_MS = 1500;
 export type GlassSettings = GlassAppearance & {
-  appearance: 'classic' | 'whale-pool'; poolLayout: 'clear' | 'stream' | 'letter'; poolContour: 'pearl' | 'mirror' | 'drop';
+  appearance: 'classic' | 'whale-pool'; whaleSkin: WhaleSkin; poolLayout: 'clear' | 'stream' | 'letter'; poolContour: 'pearl' | 'mirror' | 'drop';
   theme: 'auto' | 'light' | 'dark'; strength: 'clear' | 'balanced' | 'readable';
   defaultView: 'capsule' | 'peek' | 'remember-last'; autoApproval: boolean; autoCollapse: boolean;
-  animation: 'full' | 'reduced' | 'off'; pin: 'always' | 'on-notification' | 'normal';
+  edgeDock: boolean;
+  animation: 'full' | 'reduced' | 'off'; capsuleMotion: CapsuleMotion; pin: 'always' | 'on-notification' | 'normal';
   material: 'system' | 'transparent' | 'acrylic' | 'frosted' | 'solid'; sound: boolean;
 };
-export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, appearance:'classic',poolLayout:'clear',poolContour:'pearl', theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, animation: 'full', pin: 'always', material: 'frosted', sound: true };
+export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, appearance:'classic',whaleSkin:'classic',poolLayout:'clear',poolContour:'pearl', theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, edgeDock: true, animation: 'full', capsuleMotion: 'classic', pin: 'always', material: 'frosted', sound: true };
 export function normalizeSettings(value: unknown): GlassSettings {
   if (!value || typeof value !== 'object') return { ...DEFAULT_SETTINGS };
   const v = value as Record<string, unknown>;
   function choice<T extends string>(key: string, options: readonly T[], fallback: T): T { return options.includes(v[key] as T) ? v[key] as T : fallback; }
   return { ...normalizeGlassAppearance(v), appearance:choice('appearance',['classic','whale-pool'],'classic'),poolLayout:choice('poolLayout',['clear','stream','letter'],'clear'),poolContour:choice('poolContour',['pearl','mirror','drop'],'pearl'), theme: choice('theme', ['auto', 'light', 'dark'], 'auto'), strength: choice('strength', ['clear', 'balanced', 'readable'], 'balanced'),
     defaultView: choice('defaultView', ['capsule', 'peek', 'remember-last'], 'capsule'), autoApproval: v.autoApproval === true, autoCollapse: v.autoCollapse === true,
-    animation: choice('animation', ['full', 'reduced', 'off'], 'full'), pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], DEFAULT_SETTINGS.material), sound: v.sound !== false };
+    animation: choice('animation', ['full', 'reduced', 'off'], 'full'),
+    capsuleMotion: choice('capsuleMotion', CAPSULE_MOTIONS, DEFAULT_SETTINGS.capsuleMotion),
+    edgeDock: v.edgeDock !== false,
+    whaleSkin: normalizeWhaleSkin(v.whaleSkin),
+    pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], DEFAULT_SETTINGS.material), sound: v.sound !== false };
 }
 export function viewSize(mode: GlassViewMode, attention = false) {
   return { capsule: { width: 288, height: 44 }, peek: { width: 340, height: attention ? 236 : 190 }, expanded: { width: 400, height: 360 }, approval: { width: 400, height: 300 } }[mode];
@@ -83,9 +92,11 @@ export function taskMetrics(session: Session | undefined) {
   const stats = session?.stats;
   if (!stats) return undefined;
   const totalTokens = stats.tokens?.total ?? 0;
-  if (stats.turns === 0 && stats.steps === 0 && totalTokens === 0) return undefined;
+  if (stats.turns === 0 && stats.steps === 0 && totalTokens === 0 && stats.contextPercent === undefined && !stats.context) return undefined;
+  const contextPercent = stats.contextPercent ?? (stats.context
+    ? Math.round(Math.min(100, stats.context.projectedTokens / stats.context.windowTokens * 100) * 10) / 10 : undefined);
   return { turns: stats.turns, steps: stats.steps, tokensPerSecond: stats.tokensPerSecond, cacheHitPercent: stats.cacheHitPercent,
-    contextPercent: stats.contextPercent, totalTokens: stats.tokens?.total, inputTokens: stats.tokens?.input,
+    contextPercent, context: stats.context, totalTokens: stats.tokens?.total, inputTokens: stats.tokens?.input,
     cacheTokens: stats.tokens?.cacheRead, outputTokens: stats.tokens?.output };
 }
 /** A recorded speed is live only while this task is running on a current connection. */

@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { createDragMotion, releaseOffset, type DragPaint, type Point } from '../apps/desktop/src/renderer/drag-motion';
 
-function fixture(animated = true, transport?: (p: Point) => Promise<unknown>) {
+function fixture(animated = true, transport?: (p: Point) => Promise<unknown>, release?: (p: Point) => Promise<unknown>) {
   let time = 0, id = 0, position = { x: 100, y: 100 };
   const frames = new Map<number, (time: number) => void>();
   const moves: Point[] = [], paints: DragPaint[] = [];
@@ -10,6 +10,7 @@ function fixture(animated = true, transport?: (p: Point) => Promise<unknown>) {
     requestFrame: cb => { frames.set(++id, cb); return id; }, cancelFrame: id => { frames.delete(id); },
     paint: p => { paints.push(p); },
     move: async p => { moves.push(p); if (transport) await transport(p); position = p; },
+    release,
   });
   async function advance(ms: number) {
     time += ms;
@@ -87,6 +88,22 @@ it('finishes an in-progress spring when reduced motion is requested', async () =
   f.disable(); await f.advance(16);
   expect(f.moves.at(-1)).toEqual({ x: 160, y: 100 });
   expect(f.frames.size).toBe(0); expect(f.paints.at(-1)).toBe(null);
+});
+
+it('delivers a single committed release after pending movement settles, even without animation', async () => {
+  const releases: Point[] = [];
+  const acknowledgements: (() => void)[] = [];
+  const f = fixture(false, () => new Promise<void>(resolve => acknowledgements.push(resolve)),
+    async point => { releases.push(point); });
+  await f.drag();
+  f.motion.end(1);
+  expect(releases).toEqual([]);
+  acknowledgements.shift()!();
+  await f.advance(1);
+  expect(releases).toEqual([{ x: 160, y: 100 }]);
+  f.motion.begin(2, { x: 150, y: 120 });
+  f.motion.end(2);
+  expect(releases).toHaveLength(1);
 });
 
 it('flushes only the newest queued target when the native transport catches up', async () => {

@@ -6,6 +6,7 @@ import { join } from 'node:path';
 const electron = vi.hoisted(() => ({
   Menu: { setApplicationMenu: vi.fn(), buildFromTemplate: vi.fn((items: unknown[]) => ({ items, popup: vi.fn() })) },
   nativeTheme: { themeSource: 'system' },
+  systemPreferences: { getAnimationSettings: () => ({ prefersReducedMotion: false }) },
   screen: { getDisplayMatching: () => ({ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }) },
   app: { relaunch: vi.fn(), exit: vi.fn() },
   dialog: { showOpenDialog: vi.fn(async () => ({ canceled: true, filePaths: [] as string[] })) },
@@ -13,7 +14,7 @@ const electron = vi.hoisted(() => ({
 }));
 vi.mock('electron', () => electron);
 vi.mock('../apps/desktop/src/main/presentation', () => ({ createPresentation: (win: { setBounds: (b: unknown) => void }) => {let material='clear';return ({
-  state: () => ({ material, morphing: null }), setMaterial: vi.fn((value:string)=>{material=value;}), applyShape: vi.fn(), stop: vi.fn(),
+  state: () => ({ material, morphing: null }), setMaterial: vi.fn((value:string)=>{material=value;}), applyShape: vi.fn(), stop: vi.fn(), setOrb: vi.fn(), setEdgeSurface: vi.fn(),
   morphTo: (bounds: unknown) => win.setBounds(bounds),
 });} }));
 import { createWindowController } from '../apps/desktop/src/main/window-controller';
@@ -31,14 +32,67 @@ function setup() {
     isVisible: vi.fn(() => true), isMinimized: vi.fn(() => false),
     isDestroyed: () => false, getBounds: () => ({ ...bounds }), setBounds: vi.fn((b: typeof bounds) => { bounds = b; }),
     isAlwaysOnTop: () => pinned, setAlwaysOnTop: vi.fn((value: boolean) => { pinned = value; }),
-    setMenuBarVisibility: vi.fn(), on: vi.fn(), show: vi.fn(), hide: vi.fn(),
+    setMenuBarVisibility: vi.fn(), setMinimumSize: vi.fn(), on: vi.fn(), show: vi.fn(), hide: vi.fn(),
     webContents: { send: vi.fn(), on: vi.fn(), reload: vi.fn() },
   };
+  const suspendOptics = vi.fn();
   const ui = createWindowController(win as unknown as Parameters<typeof createWindowController>[0], '', true, {
-    position: async () => {}, reconnect: vi.fn(), mock: vi.fn(), openDSH: vi.fn(), canOpenDSH: false, quit: vi.fn(), menuChanged: vi.fn(),
+    position: async (x, y) => { bounds = { ...bounds, x, y }; }, suspendOptics, reconnect: vi.fn(), mock: vi.fn(), openDSH: vi.fn(), canOpenDSH: false, quit: vi.fn(), menuChanged: vi.fn(),
   });
-  controllers.push(ui); return { ui, win };
+  controllers.push(ui); return { ui, win, suspendOptics };
 }
+describe('capsule edge motion', () => {
+  it.each([
+    ['left', 15, 180, 'x', 0], ['right', 1920, 180, 'x', 1920],
+    ['top', 340, 12, 'y', 0], ['bottom', 340, 1080, 'y', 1080],
+  ] as const)('gathers and spreads at the %s edge with a fixed host and live optics', async (edge, x, y, axis, limit) => {
+    vi.useFakeTimers();
+    try {
+      const { ui, win, suspendOptics } = setup();
+      await ui.move(x, y, true);
+      const gather = ui.state().edgeMotion!;
+      expect(gather).toMatchObject({ direction: 'gather' });
+      expect(ui.state().dockEdge).toBe(edge);
+      const farSide = edge === 'right' || edge === 'bottom';
+      const dimension = axis === 'x' ? 'width' : 'height';
+      const host = win.getBounds();
+      for (const local of [gather.capsule, gather.orb]) {
+        expect(host[axis] + local[axis] + (farSide ? local[dimension] : 0)).toBe(limit);
+      }
+      win.setBounds.mockClear();
+      vi.advanceTimersByTime(gather.duration - 1);
+      expect(win.setBounds).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(win.getBounds()).toMatchObject({ width: 64, height: 64 });
+      expect(suspendOptics).toHaveBeenLastCalledWith(false);
+      const spread = ui.request('restore-capsule').edgeMotion!;
+      expect(spread).toMatchObject({ direction: 'spread', capsule: gather.capsule, orb: gather.orb });
+      expect(win.getBounds()).toEqual(host);
+      vi.advanceTimersByTime(spread.duration);
+      expect(ui.state()).toMatchObject({ dockEdge: undefined, edgeMotion: undefined });
+      expect(win.getBounds()).toEqual({ ...gather.capsule, x: host.x + gather.capsule.x, y: host.y + gather.capsule.y });
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('restores immediately on reduced motion and cancels pending geometry on a mode change', async () => {
+    vi.useFakeTimers();
+    try {
+      const { ui, win } = setup();
+      ui.setSettings({ animation: 'reduced' });
+      await ui.move(0, 180, true);
+      expect(ui.state()).toMatchObject({ dockEdge: 'left', edgeMotion: undefined });
+      ui.setSettings({ animation: 'full' });
+      expect(ui.request('restore-capsule', true)).toMatchObject({ dockEdge: undefined, edgeMotion: undefined });
+      await ui.move(0, 180, true);
+      expect(ui.state().edgeMotion?.direction).toBe('gather');
+      ui.request('settings');
+      const settingsBounds = win.getBounds();
+      vi.runAllTimers();
+      expect(ui.state()).toMatchObject({ panel: 'settings', dockEdge: undefined, edgeMotion: undefined });
+      expect(win.getBounds()).toEqual(settingsBounds);
+    } finally { vi.useRealTimers(); }
+  });
+});
 describe('window controller request policy', () => {
   it('keeps the original menu forms independent of the whale pool choice', () => {
     const {ui,win}=setup();ui.setSettings({appearance:'whale-pool'});

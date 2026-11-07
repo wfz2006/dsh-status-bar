@@ -10,6 +10,7 @@ export const sessionStatsSchema = z.object({
   tokensPerSecond: z.number().nonnegative().max(1_000_000).optional(),
   cacheHitPercent: z.number().min(0).max(100).optional(),
   contextPercent: z.number().min(0).max(100).optional(),
+  context: z.object({ projectedTokens: seq, windowTokens: seq.positive() }).strict().optional(),
   tokens: z.object({ input: seq, cacheRead: seq, cacheWrite: seq, output: seq, total: seq }).strict().optional(),
 }).strict();
 export const capabilitiesSchema = z.object({

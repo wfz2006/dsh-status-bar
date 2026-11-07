@@ -21,14 +21,40 @@
     radial-gradient(120% 80% at 10% -12%, rgba(255,255,255,.16), transparent 46%),
     radial-gradient(90% 70% at 104% 112%, rgba(150,200,255,.07), transparent 58%); }
 .glass[data-material=solid] .glass-material::after { display:none; }
-.glass[data-material=frosted] .glass-material::after { opacity:.34; }
 .glass[data-material=solid] .glass-material { background:transparent; }
-/* Frosted theme: deep-smoked glass. The sampled desktop is pushed down in
-   brightness and up in colour, then covered by a dark translucent smoke layer
-   with a top light line. Text tokens switch to the dark set. */
-.glass[data-material=frosted] .desktop-backdrop { filter:blur(30px) saturate(1.35) brightness(.74) contrast(1.06); transform:scale(1.08); }
-.glass-frost { position:absolute; inset:0; z-index:0; border-radius:inherit; pointer-events:none;
+
+/* The coat sits above the lens and below the adjustable tint. It keeps
+   bright desktop colors from bleeding through the reading area. */
+.glass[data-appearance=classic][data-material=frosted] {
+  --ink-3:#b4bfce;
+  --frost-focus:var(--accent);
+  background:rgb(15 23 34 / .58);
+}
+.glass[data-appearance=classic][data-material=frosted] .desktop-backdrop {
+  filter:blur(24px) saturate(.92) brightness(.70);
+  transform:scale(1.08);
+}
+.glass-frost { position:absolute; inset:0; z-index:1; border-radius:inherit; pointer-events:none;
   background:
-    radial-gradient(140% 120% at 18% -20%, rgba(255,255,255,.16), rgba(255,255,255,.05) 42%, transparent 70%),
-    linear-gradient(180deg, rgba(48,26,32,.36), rgba(22,13,17,.54) 58%, rgba(36,21,27,.44));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.20),inset 0 0 0 1px rgba(255,255,255,.05); }
+    radial-gradient(100% 72% at 18% -28%, rgb(218 235 255 / .18), transparent 66%),
+    linear-gradient(180deg, rgb(22 30 43 / .55), rgb(17 23 34 / .65) 58%, rgb(15 23 32 / .58));
+}
+.glass[data-appearance=classic][data-material=frosted] .glass-material::after { opacity:.38; }
+.glass[data-appearance=classic][data-material=frosted] .glass-rim { opacity:.74; }
+.glass[data-appearance=classic][data-material=frosted]:is([data-state=waiting_approval],[data-state=waiting_answer],[data-state=limit_reached]) {
+  --frost-focus:var(--warning);
+}
+.glass[data-appearance=classic][data-material=frosted]:is([data-state=error],[data-state=disconnected]) {
+  --frost-focus:var(--danger);
+}
+.glass[data-appearance=classic][data-material=frosted] :is(.task-peek .current-step,.todo.in_progress) {
+  border-radius:8px;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--frost-focus) 14%,transparent),transparent 94%);
+}
+.glass[data-appearance=classic][data-material=frosted] .task-peek .current-step {
+  width:100%;
+  padding-inline:7px;
+}
+.glass[data-appearance=classic][data-material=frosted] :is(.command-preview,.command-full) {
+  background:rgb(4 10 19 / .25);
+}

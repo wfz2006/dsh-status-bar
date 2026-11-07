@@ -213,7 +213,19 @@ describe('dsh host contract', () => {
     await expect.poll(() => h.state().sessions['s1']?.stats?.turns, { timeout: 3000 }).toBe(5);
     expect(h.state().sessions['s1']?.stats).toEqual({
       turns: 5, steps: 137, tokensPerSecond: 254, cacheHitPercent: 95.6, contextPercent: 9.9,
+      context: { projectedTokens: 103981, windowTokens: 1048576 },
       tokens: { input: 404103, cacheRead: 8790912, cacheWrite: 0, output: 159154, total: 9354169 },
+    });
+  });
+
+  it('retains exact context pressure above the window limit when other usage stats are absent', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', stats: {
+      contextPressure: { projectedTokens: 110000, contextWindow: 100000 },
+    } }] });
+    await h.adapter.connect(h.host.link());
+    await expect.poll(() => h.state().sessions['s1']?.stats, { timeout: 3000 }).toEqual({
+      turns: 0, steps: 0, contextPercent: 100,
+      context: { projectedTokens: 110000, windowTokens: 100000 },
     });
   });
 

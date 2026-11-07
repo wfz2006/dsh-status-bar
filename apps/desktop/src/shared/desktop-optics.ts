@@ -16,6 +16,32 @@ export function captureVisibility(frame:Pick<CaptureHeader,'left'|'top'|'width'|
   const intersects=frame.left<bounds.windowLeft+bounds.windowWidth && frame.left+frame.width>bounds.windowLeft && frame.top<bounds.windowTop+bounds.windowHeight && frame.top+frame.height>bounds.windowTop;
   return expanding && intersects?'intersection':'hidden';
 }
+export type BackdropPlacement = {
+  left:number; top:number; width:number; height:number;
+  viewport:{width:number;height:number;scale:number};
+  coverage:'full'|'intersection'|'retained';
+};
+/** Percentage placement inside the window. Retaining a complete local crop
+ * bridges capture latency without blanking the glass or stretching a resize. */
+export function placeBackdrop(frame:Pick<CaptureHeader,'left'|'top'|'width'|'height'>,bounds:DesktopOpticsBounds,viewport:BackdropPlacement['viewport'],expanding:boolean,previous:BackdropPlacement|null):BackdropPlacement|null {
+  const coverage=captureVisibility(frame,bounds,expanding);
+  if(coverage==='hidden') {
+    // DIP-to-screen rounding can change reported capture sizes by two pixels
+    // at 150% scale during a position-only move. The renderer viewport tells
+    // us whether the actual surface resized or changed display scale.
+    if(previous && previous.coverage!=='intersection' && previous.viewport.width===viewport.width && previous.viewport.height===viewport.height && previous.viewport.scale===viewport.scale) {
+      return {...previous,coverage:'retained'};
+    }
+    return null;
+  }
+  return {
+    left:(frame.left-bounds.windowLeft)/bounds.windowWidth*100,
+    top:(frame.top-bounds.windowTop)/bounds.windowHeight*100,
+    width:frame.width/bounds.windowWidth*100,
+    height:frame.height/bounds.windowHeight*100,
+    viewport,coverage,
+  };
+}
 export function projectCaptureFrame(frame:DesktopOpticsFrame,bounds:DesktopOpticsBounds):DesktopOpticsFrame|null {
   if(!captureCoversWindow(frame,bounds))return null;
   const left=Math.max(frame.left,bounds.windowLeft-48),top=Math.max(frame.top,bounds.windowTop-48);

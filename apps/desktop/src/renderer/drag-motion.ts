@@ -5,6 +5,7 @@ type DragEnvironment = {
   now(): number;
   position(): Point;
   move(point: Point): Promise<unknown>;
+  release?(point: Point): Promise<unknown>;
   requestFrame(callback: (time: number) => void): number;
   cancelFrame(id: number): void;
   animated(): boolean;
@@ -31,7 +32,7 @@ export function recentVelocity(velocity: Point, age: number): Point {
 export function createDragMotion(env: DragEnvironment) {
   let gesture: { id: number; origin: Point; start: Sample; last: Sample; velocity: Point; moved: boolean } | null = null;
   let landing: { anchor: Point; velocity: Point; time: number } | null = null;
-  let pending: Point | null = null;
+  let pending: { point: Point; released: boolean } | null = null;
   let busy = false;
   let frame: number | null = null;
   let lastFrame = 0;
@@ -44,12 +45,13 @@ export function createDragMotion(env: DragEnvironment) {
     try {
       while (pending) {
         const next = pending; pending = null;
-        await env.move(next);
+        if (next.released && env.release) await env.release(next.point);
+        else await env.move(next.point);
       }
     } catch { pending = null; }
     finally { busy = false; }
   }
-  function move(point: Point) { pending = point; void flush(); }
+  function move(point: Point, released = false) { pending = { point, released }; void flush(); }
   function wake() { if (frame === null) frame = env.requestFrame(tick); }
   function resetPaint() { visual = { x: 0, y: 0 }; env.paint(null); }
   function cancel() {
@@ -62,7 +64,7 @@ export function createDragMotion(env: DragEnvironment) {
     if (!env.animated()) {
       // Finish an interrupted release at its intended drop position, but do
       // not stop an ordinary drag when the user disables animation.
-      if (landing) move(landing.anchor);
+      if (landing) move(landing.anchor, true);
       landing = null; resetPaint(); return;
     }
     const dt = Math.min(48, Math.max(1, time - lastFrame)); lastFrame = time;
@@ -74,7 +76,7 @@ export function createDragMotion(env: DragEnvironment) {
     if (landing) {
       const age = time - landing.time;
       const offset = releaseOffset(landing.velocity, age);
-      if (age >= DRAG_RELEASE_MS) { move(landing.anchor); landing = null; resetPaint(); return; }
+      if (age >= DRAG_RELEASE_MS) { move(landing.anchor, true); landing = null; resetPaint(); return; }
       if (time - lastNativeFrame >= 16) {
         lastNativeFrame = time;
         move({ x: landing.anchor.x + offset.x, y: landing.anchor.y + offset.y });
@@ -118,16 +120,18 @@ export function createDragMotion(env: DragEnvironment) {
       if (!g || g.id !== id) return;
       gesture = null;
       const velocity = recentVelocity(g.velocity, env.now() - g.last.time);
+      const anchor = { x: g.origin.x + g.last.x - g.start.x, y: g.origin.y + g.last.y - g.start.y };
       if (g.moved && env.animated() && Math.hypot(velocity.x, velocity.y) > .08) {
-        landing = { anchor: { x: g.origin.x + g.last.x - g.start.x, y: g.origin.y + g.last.y - g.start.y }, velocity, time: env.now() };
+        landing = { anchor, velocity, time: env.now() };
         lastNativeFrame = 0; wake();
       } else {
         if (frame !== null) env.cancelFrame(frame);
         frame = null; resetPaint();
+        if (g.moved && env.release) move(anchor, true);
       }
     },
     owns(id: number) { return gesture?.id === id; },
-    finish() { const anchor = landing?.anchor; cancel(); if (anchor) move(anchor); },
+    finish() { const anchor = landing?.anchor; cancel(); if (anchor) move(anchor, true); },
     cancel,
   };
 }

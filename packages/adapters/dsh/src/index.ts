@@ -31,14 +31,20 @@ function sessionStats(stats: RecordValue, tokens: RecordValue, pressure: RecordV
   const cacheWrite = statNumber(tokens.cacheWriteTokens); const output = statNumber(tokens.outputTokens);
   const decodeMs = statNumber(stats.decodeMs); const decodeTokens = statNumber(stats.decodeTokens);
   const projected = statNumber(pressure.projectedTokens); const contextWindow = statNumber(pressure.contextWindow);
-  if (turns === undefined && steps === undefined && input === undefined && cacheRead === undefined) return undefined;
+  const contextPercent = projected !== undefined && contextWindow !== undefined && contextWindow > 0
+    ? round(Math.min(100, projected / contextWindow * 100), 1) : undefined;
+  const context = projected !== undefined && Number.isSafeInteger(projected)
+    && contextWindow !== undefined && contextWindow > 0 && Number.isSafeInteger(contextWindow)
+    ? { projectedTokens: projected, windowTokens: contextWindow } : undefined;
+  if (turns === undefined && steps === undefined && input === undefined && cacheRead === undefined && contextPercent === undefined) return undefined;
   const tokenTotal = (input ?? 0) + (cacheRead ?? 0) + (cacheWrite ?? 0) + (output ?? 0);
   const cacheHit = cacheRead !== undefined && input !== undefined && cacheRead + input > 0 ? round(cacheRead / (cacheRead + input) * 100, 1) : undefined;
   return {
     turns: Math.floor(turns ?? 0), steps: Math.floor(steps ?? 0),
     ...(decodeMs !== undefined && decodeMs > 0 && decodeTokens !== undefined ? { tokensPerSecond: round(decodeTokens / decodeMs * 1000, 0) } : {}),
     ...(cacheHit !== undefined ? { cacheHitPercent: cacheHit } : {}),
-    ...(projected !== undefined && contextWindow !== undefined && contextWindow > 0 ? { contextPercent: round(projected / contextWindow * 100, 1) } : {}),
+    ...(contextPercent !== undefined ? { contextPercent } : {}),
+    ...(context ? { context } : {}),
     ...(tokenTotal > 0 ? { tokens: { input: input ?? 0, cacheRead: cacheRead ?? 0, cacheWrite: cacheWrite ?? 0, output: output ?? 0, total: tokenTotal } } : {}),
   };
 }

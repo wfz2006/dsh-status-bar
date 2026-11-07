@@ -29,9 +29,9 @@ export function resizeBounds(start: Bounds, edge: ResizeEdge, dx: number, dy: nu
   return { x: edge.includes('w') ? start.x + start.width - width : start.x,
     y: edge.includes('n') ? start.y + start.height - height : start.y, width, height };
 }
-export function clampBounds(bounds: Bounds, area: Bounds): Bounds {
-  const width = Math.min(Math.max(bounds.width, 180), area.width);
-  const height = Math.min(Math.max(bounds.height, 44), area.height);
+export function clampBounds(bounds: Bounds, area: Bounds, minimum = { width: 180, height: 44 }): Bounds {
+  const width = Math.min(Math.max(bounds.width, minimum.width), area.width);
+  const height = Math.min(Math.max(bounds.height, minimum.height), area.height);
   return { width, height,
     x: Math.max(area.x, Math.min(bounds.x, area.x + area.width - width)),
     y: Math.max(area.y, Math.min(bounds.y, area.y + area.height - height)) };

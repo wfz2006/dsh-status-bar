@@ -2,11 +2,47 @@
 .whale-companion { position:relative; flex:0 0 24px; width:24px; height:25px; color:var(--accent); }
 .whale-swimmer { position:absolute; inset:1px 0 0; display:grid; place-items:center; transform-origin:60% 60%; transition:transform 360ms var(--motion-release),color 240ms var(--motion-enter); }
 .whale-swimmer > .ui-icon { width:23px; height:23px; }
+.whale-skin-art { display:block; flex:none; object-fit:contain; pointer-events:none; }
+.whale-swimmer > .whale-skin-art {
+  position:absolute; left:50%; top:50%; width:32px; height:29px; transform:translate(-50%,-58%);
+}
+.whale-skin-art.whale-tail { width:19px; height:17px; }
+.glass[data-mode=capsule][data-dock-edge] { --radius:32px; }
+@property --edge-x { syntax:'<length>'; inherits:true; initial-value:0px; }
+@property --edge-y { syntax:'<length>'; inherits:true; initial-value:0px; }
+@property --edge-width { syntax:'<length>'; inherits:true; initial-value:0px; }
+@property --edge-height { syntax:'<length>'; inherits:true; initial-value:0px; }
+@property --edge-radius { syntax:'<length>'; inherits:true; initial-value:0px; }
+/* Share DIP geometry with the rim instead of promoting a separate clip-path
+   animation on the transparent Electron surface at fractional display scale. */
+.glass[data-mode=capsule][data-edge-motion] {
+  --radius:0px;
+  clip-path:inset(var(--edge-y) calc(100% - var(--edge-x) - var(--edge-width))
+    calc(100% - var(--edge-y) - var(--edge-height)) var(--edge-x) round var(--edge-radius));
+}
+.glass[data-edge-motion] .glass-rim-line {
+  x:calc(var(--edge-x) + .8px); y:calc(var(--edge-y) + .8px);
+  width:calc(var(--edge-width) - 1.6px); height:calc(var(--edge-height) - 1.6px);
+  rx:calc(var(--edge-radius) - .8px); ry:calc(var(--edge-radius) - .8px);
+}
+.edge-motion-content { position:absolute; z-index:1; pointer-events:none; }
+.edge-motion-caption { border-radius:15px; }
+.edge-motion-caption .whale-companion { visibility:hidden; }
+.capsule-edge-orb { justify-content:center; padding:0; }
+.capsule-edge-orb .whale-companion { flex-basis:34px; width:34px; height:35px; }
+.capsule-edge-orb .whale-swimmer > .ui-icon { width:33px; height:33px; }
+.capsule-edge-orb .whale-swimmer > .whale-skin-art { width:45px; height:41px; }
+.capsule-edge-orb .whale-companion .status-orb.completed { color:#ffe1ab; }
+.capsule-edge-count {
+  position:absolute; right:8px; bottom:9px; display:grid; place-items:center;
+  min-width:15px; height:15px; padding:0 3px; border-radius:10px;
+  color:#ffebc8; background:#3e3440; box-shadow:0 0 0 1px #f5d19e90;
+  font:600 9px/1 var(--font-caption);
+}
 .whale-companion > .status-orb { position:absolute; right:-1px; bottom:0; width:9px; height:9px; font-size:10px; line-height:1; background:var(--menu-bg); box-shadow:0 0 0 1.5px color-mix(in srgb,var(--menu-bg) 80%,transparent); animation:none; }
 .whale-companion > .status-orb.running { width:5px; height:5px; right:0; bottom:1px; background:var(--accent); }
 .whale-companion > .status-orb:is(.starting,.stopping,.idle,.unknown,.empty,.archived) { width:5px; height:5px; right:0; bottom:1px; }
-.whale-companion[data-whale-state=completed] { color:var(--success); }
-.whale-companion[data-whale-state=completed] .whale-swimmer { animation:whale-greet 680ms var(--motion-release) both; }
+:is(.glass[data-completion=true],.task-capsule[data-motion-phase=finishing]) .whale-companion[data-whale-state=completed] .whale-swimmer { animation:whale-greet 680ms var(--motion-release) both; }
 .whale-companion:is([data-whale-state=disconnected],[data-whale-state=error],[data-whale-state=cancelled],[data-whale-state=archived]) .whale-swimmer { color:var(--ink-3); }
 .whale-companion:is([data-whale-state=running],[data-whale-state=starting]) .whale-swimmer { animation:whale-swim 3.8s cubic-bezier(.45,0,.55,1) infinite; }
 .whale-bubble { position:absolute; width:2px; height:2px; top:2px; right:4px; border:1px solid currentColor; border-radius:50%; opacity:0; }
@@ -20,6 +56,7 @@
 .whale-empty-art { position:relative; display:grid; place-items:center; width:54px; height:42px; color:var(--accent); }
 .whale-empty-art::after { content:""; position:absolute; bottom:1px; left:7px; right:7px; height:1px; background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--accent) 28%,transparent),transparent); }
 .whale-empty-art > .ui-icon { width:38px; height:38px; transform:rotate(-8deg); opacity:.8; }
+.whale-empty-art > .whale-skin-art { width:50px; height:44px; }
 .whale-empty-art i { position:absolute; right:6px; top:1px; width:5px; height:5px; border:1px solid color-mix(in srgb,var(--accent) 50%,transparent); border-radius:50%; }
 .whale-empty-art i + i { right:0; top:9px; width:3px; height:3px; }
 .whale-signature { display:flex; align-items:center; padding-right:84px; color:var(--accent); }

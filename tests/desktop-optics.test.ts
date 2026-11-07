@@ -1,5 +1,5 @@
 import { describe,expect,it } from 'vitest';
-import { decodeCaptureHeader, CAPTURE_HEADER_BYTES,projectCaptureFrame,captureVisibility,framePixelView } from '../apps/desktop/src/shared/desktop-optics';
+import { decodeCaptureHeader, CAPTURE_HEADER_BYTES,projectCaptureFrame,captureVisibility,framePixelView,placeBackdrop } from '../apps/desktop/src/shared/desktop-optics';
 function header(values:number[]) {const b=Buffer.alloc(CAPTURE_HEADER_BYTES);b.write('DSHG');values.forEach((v,i)=>b.writeInt32LE(v,4+i*4));return b;}
 it('reuses received RGBA bytes including a nonzero byte offset without changing pixels',()=>{
   const buffer=Uint8Array.from([99,88,1,2,255,255,6,7,8,255,77]);
@@ -39,4 +39,38 @@ it('retains only an expanding intersection while keeping drag coverage strict',(
   expect(captureVisibility(frame,{...expanded,windowLeft:400},true)).toBe('hidden');
   // Expanding does not relax Main's cropping/coverage rule or acquire new pixels.
   expect(projectCaptureFrame({...frame,...capsule,pixels:new Uint8Array(200*100*4)},expanded)).toBeNull();
+});
+
+it('keeps the last complete local crop visible through fast motion until fresh pixels arrive', () => {
+  const frame = { left: 10, top: 10, width: 200, height: 100 };
+  const window = { windowLeft: 30, windowTop: 30, windowWidth: 140, windowHeight: 60 };
+  const viewport = { width: 140, height: 60, scale: 1 };
+  const full = placeBackdrop(frame, window, viewport, false, null)!;
+  expect(full.coverage).toBe('full');
+  const moved = { ...window, windowLeft: 300 };
+  const retained = placeBackdrop(frame, moved, viewport, false, full);
+  expect(retained).toEqual({ ...full, coverage: 'retained' });
+  expect(placeBackdrop(frame, { ...moved, windowLeft: 900 }, viewport, false, retained)).toEqual(retained);
+  expect(placeBackdrop(frame, { ...moved, windowHeight: 62 }, viewport, false, retained)).toEqual(retained);
+  const fresh = { ...frame, left: 280 };
+  expect(placeBackdrop(fresh, moved, viewport, false, retained)).toEqual(full);
+  // Re-entering existing world pixels resumes accurate alignment immediately.
+  const returned = placeBackdrop(frame, { ...window, windowLeft: 40 }, viewport, false, retained)!;
+  expect(returned.coverage).toBe('full');
+  expect(returned.left).toBeCloseTo(-30 / 140 * 100);
+});
+
+it('never retains a missing, partial, or differently sized backdrop', () => {
+  const frame = { left: 10, top: 10, width: 200, height: 100 };
+  const window = { windowLeft: 30, windowTop: 30, windowWidth: 140, windowHeight: 60 };
+  const viewport = { width: 140, height: 60, scale: 1 };
+  const full = placeBackdrop(frame, window, viewport, false, null)!;
+  expect(placeBackdrop(frame, { ...window, windowLeft: 300 }, viewport, false, null)).toBeNull();
+  expect(placeBackdrop(frame, { ...window, windowLeft: 300 }, { ...viewport, scale: 1.5 }, false, full)).toBeNull();
+  const resized = { ...window, windowHeight: 300 };
+  const expandedViewport = { ...viewport, height: 300 };
+  expect(placeBackdrop(frame, resized, expandedViewport, false, full)).toBeNull();
+  const partial = placeBackdrop(frame, resized, expandedViewport, true, full)!;
+  expect(partial.coverage).toBe('intersection');
+  expect(placeBackdrop(frame, { ...resized, windowLeft: 300 }, expandedViewport, false, partial)).toBeNull();
 });

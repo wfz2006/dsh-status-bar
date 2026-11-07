@@ -1,5 +1,5 @@
 import {useEffect,useRef} from 'react';
-import {Icon} from './icon';
+import {WhaleArt} from './whale-companion';
 
 export function WhalePoolIntro({tryNow,later}:{tryNow:()=>void;later:()=>void}){
   const heading=useRef<HTMLHeadingElement>(null);
@@ -13,7 +13,7 @@ export function WhalePoolIntro({tryNow,later}:{tryNow:()=>void;later:()=>void}){
       if(event.shiftKey&&document.activeElement===buttons[0]||!event.shiftKey&&document.activeElement===buttons[buttons.length-1]){event.preventDefault();target?.focus();}
     }
   }}>
-    <div className="pool-intro-art" aria-hidden="true"><Icon name="whale"/><span/><span/></div>
+    <div className="pool-intro-art" aria-hidden="true"><WhaleArt/><span/><span/></div>
     <p className="pool-intro-eyebrow">新增外观</p>
     <h1 id="pool-intro-title" ref={heading}>小鲸鱼有自己的水池了</h1>
     <p className="pool-intro-copy">安静待机，轻点游动，水痕慢慢铺开成任务面板。</p>
