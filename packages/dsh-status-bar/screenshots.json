@@ -1,7 +1,10 @@
 [
-  "assets/capsule.png",
-  "assets/peek.png",
-  "assets/expanded.png",
-  "assets/approval.png",
-  "assets/settings.png"
+  "assets/screenshots/hero.webp",
+  "assets/screenshots/edge-dock.webp",
+  "assets/screenshots/skins.webp",
+  "assets/screenshots/motion.webp",
+  "assets/screenshots/context.webp",
+  "assets/screenshots/details.webp",
+  "assets/screenshots/capsule-complete.webp",
+  "assets/screenshots/pool-clear.webp"
 ]
