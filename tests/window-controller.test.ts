@@ -92,6 +92,41 @@ describe('capsule edge motion', () => {
       expect(win.getBounds()).toEqual(settingsBounds);
     } finally { vi.useRealTimers(); }
   });
+
+  it('spreads from the dropped orb in the desktop interior after the pointer is released', async () => {
+    vi.useFakeTimers();
+    try {
+      const { ui, win } = setup();
+      await ui.move(0, 180, true);
+      vi.advanceTimersByTime(ui.state().edgeMotion!.duration);
+      await ui.move(540, 304);
+      expect(ui.state()).toMatchObject({ dockEdge: 'left', edgeMotion: undefined });
+      expect(win.getBounds()).toEqual({ x: 540, y: 304, width: 64, height: 64 });
+
+      await ui.move(540, 304, true);
+      const spread = ui.state().edgeMotion!;
+      expect(spread).toMatchObject({ direction: 'spread', orb: { x: 112, y: 0, width: 64, height: 64 },
+        capsule: { x: 0, y: 10, width: 288, height: 44 } });
+      expect(win.getBounds()).toEqual({ x: 428, y: 304, width: 288, height: 64 });
+      vi.advanceTimersByTime(spread.duration);
+      expect(ui.state()).toMatchObject({ dockEdge: undefined, edgeMotion: undefined });
+      expect(win.getBounds()).toEqual({ x: 428, y: 314, width: 288, height: 44 });
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('docks a resting whale pool and restores the same appearance and size', async () => {
+    const { ui, win } = setup();
+    ui.setSettings({ appearance: 'whale-pool', animation: 'reduced' });
+    const normal = win.getBounds();
+    await ui.move(1920, 180, true);
+    expect(ui.state()).toMatchObject({ viewMode: 'capsule', dockEdge: 'right' });
+    expect(win.getBounds()).toMatchObject({ x: 1856, width: 64, height: 64 });
+    ui.setSettings({ whaleSkin: 'sakura' });
+    expect(ui.state().dockEdge).toBe('right');
+    ui.request('restore-capsule');
+    expect(ui.state()).toMatchObject({ dockEdge: undefined, settings: { appearance: 'whale-pool', whaleSkin: 'sakura' } });
+    expect(win.getBounds()).toMatchObject({ x: 1920 - normal.width, width: normal.width, height: normal.height });
+  });
 });
 describe('window controller request policy', () => {
   it('keeps the original menu forms independent of the whale pool choice', () => {

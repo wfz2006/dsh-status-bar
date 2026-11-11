@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { GlassAPI, WindowAction, WindowState } from '../shared/api';
 import { DEFAULT_SETTINGS, deriveTask, viewForSize, type GlassViewMode } from '../shared/view-model';
 import { chimeFor, type ChimeSnapshot } from '../shared/sound';
-import { playChime } from './sound';
+import { playChime, stopChime } from './sound';
 import { useGlass } from './store';
 import { ResizeHandles,useWindowDrag } from './gestures';
 import { CapsuleEdgeOrb, TaskCapsule, TaskPeek, TaskExpanded } from './task-views';
@@ -47,8 +47,8 @@ function App() {
     if (root.current) observer.observe(root.current);
     return () => { unsubscribe(); unsubscribeWindow(); observer.disconnect(); };
   }, [replace]);
-  async function action(value: WindowAction) {
-    try { setWindowState(await window.glass.windowAction(value, matchMedia('(prefers-reduced-motion: reduce)').matches)); }
+  async function action(value: WindowAction, reduceNativeMotion = false) {
+    try { setWindowState(await window.glass.windowAction(value, reduceNativeMotion || matchMedia('(prefers-reduced-motion: reduce)').matches)); }
     catch { setError('操作未完成，请稍后重试'); }
   }
   async function chooseSession(id: string) {
@@ -56,21 +56,23 @@ function App() {
   }
   const task = useMemo(() => deriveTask(projection, selected), [projection, selected]);
   const chime = useRef<ChimeSnapshot | null>(null);
+  const { sound, soundPreset } = windowState.settings;
   useEffect(() => {
     const next = { sessionId: selected, status: task.status, attention: task.attentionCount };
-    const kind = chimeFor(chime.current, next, windowState.settings.sound);
+    const kind = chimeFor(chime.current, next, sound);
     chime.current = next;
-    if (kind) playChime(kind);
-  }, [selected, task.status, task.attentionCount, windowState.settings.sound]);
+    if (!sound) stopChime();
+    if (kind) playChime(kind, soundPreset);
+  }, [selected, task.status, task.attentionCount, sound, soundPreset]);
   const { dockEdge, edgeMotion } = windowState;
   const mode = dockEdge ? 'capsule' : windowState.settings.appearance==='whale-pool'?windowState.viewMode:windowState.morphing === 'collapsing' && windowState.viewMode === 'capsule' ? settledMode.current : windowState.morphing || windowState.panel ? windowState.viewMode : layoutMode === 'expanded' && windowState.viewMode === 'approval' ? 'approval' : layoutMode;
   const pool=windowState.settings.appearance==='whale-pool'&&!windowState.panel&&(mode==='capsule'||mode==='peek');
-  const drag = useWindowDrag(root, `${mode}:${windowState.panel}:${windowState.morphing}:${dockEdge}:${edgeMotion?.direction}`, windowState.settings.animation);
+  const {whenSettled, ...drag} = useWindowDrag(root, `${mode}:${windowState.panel}:${windowState.morphing}:${dockEdge}:${edgeMotion?.direction}`, windowState.settings.animation, windowState.settings.edgeDock);
   if (!windowState.morphing) settledMode.current = mode;
   const invoke = (value: WindowAction) => () => void action(value);
   return <WhaleSkinContext.Provider value={windowState.settings.whaleSkin}><main ref={root} {...drag} className="glass" data-mode={mode} data-panel={windowState.panel ?? 'none'}
     data-appearance={pool?'whale-pool':'classic'}
-    data-dock-edge={dockEdge} data-edge-motion={edgeMotion?.direction}
+    data-dock-edge={dockEdge} data-edge-motion={edgeMotion?.direction} data-pool-dock={pool && dockEdge ? true : undefined}
     data-state={task.status} data-material={windowState.material} data-strength={windowState.settings.strength}
     data-theme={pool||windowState.material === 'frosted' ? 'dark' : windowState.settings.theme} data-morph={edgeMotion ? 'edge' : windowState.morphing ?? 'idle'}
     data-animation={windowState.settings.animation} data-completion={windowState.completionFeedback}
@@ -88,8 +90,8 @@ function App() {
       </div>
     </div>}
     {error && mode !== 'capsule' && <p className="inline-error" role="alert">{error}</p>}
-    {edgeMotion ? <CapsuleEdgeMotion surface={root} motion={edgeMotion} task={task} style={windowState.settings.capsuleMotion} feedback={windowState.completionFeedback} />
-    : dockEdge ? <CapsuleEdgeOrb task={task} restore={invoke('restore-capsule')} />
+    {edgeMotion ? <CapsuleEdgeMotion surface={root} motion={edgeMotion} task={task} style={windowState.settings.capsuleMotion} feedback={windowState.completionFeedback} pool={pool} />
+    : dockEdge ? <CapsuleEdgeOrb task={task} restore={invoke('restore-capsule')} pool={pool} />
     : windowState.panel==='whale-pool-intro'?<WhalePoolIntro tryNow={invoke('try-whale-pool')} later={invoke('dismiss-whale-pool')}/>:windowState.panel === 'settings' ? <GlassSettingsPanel value={windowState.settings} projection={projection} back={invoke('back')} showPoolIntro={invoke('introduce-whale-pool')}
       update={patch => {
         setWindowState(current => ({ ...current, settings: { ...current.settings, ...patch } }));
@@ -100,7 +102,7 @@ function App() {
       mock={value => { void window.glass.mockAction(value).catch(() => setError('调试操作未完成')); }} />
     : windowState.panel === 'activity' ? <section className="activity-panel"><div className="panel-heading"><button className="back-button" aria-label="返回" title="返回" onClick={invoke('back')}><Icon name="back"/></button><h1>最近活动</h1></div>
       <div className="activity-list">{task.session?.activities.length ? task.session.activities.map(a => <article key={a.callId} data-tool-status={a.status??'running'}><div className="activity-heading"><strong>{a.toolName}</strong><span className="activity-status">{{pending:'等待执行',running:'执行中',success:'已完成',error:'执行失败',cancelled:'已取消'}[a.status??'running']}</span></div><p>{a.summary}</p>{a.resultSummary && <p className="activity-result">{a.resultSummary}</p>}</article>) : <WhaleEmpty>此会话暂无工具活动</WhaleEmpty>}</div></section>
-    : pool ? <WhalePool task={task} mode={mode} settings={windowState.settings} visible={windowState.visible!==false} expand={invoke('expand')} details={invoke('expand')} approval={invoke('approval')} menu={invoke('menu')} reconnect={invoke('reconnect')}/>
+    : pool ? <WhalePool task={task} mode={mode} morphing={windowState.morphing} settings={windowState.settings} visible={windowState.visible!==false} settleDrag={whenSettled} expand={() => action('expand', true)} details={invoke('expand')} approval={invoke('approval')} menu={invoke('menu')} reconnect={invoke('reconnect')}/>
     : mode === 'capsule' ? <TaskCapsule task={task} motion={windowState.settings.capsuleMotion} feedback={windowState.completionFeedback} activate={invoke(task.attentionCount ? 'approval' : 'expand')} />
     : mode === 'peek' ? <TaskPeek task={task} expand={invoke('expand')} approval={invoke('approval')} reconnect={invoke('reconnect')} />
     : mode === 'expanded' ? <TaskExpanded task={task} projection={projection} selected={selected} select={id => void chooseSession(id)} approval={invoke('approval')} reconnect={invoke('reconnect')} />

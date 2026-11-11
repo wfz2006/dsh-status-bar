@@ -188,12 +188,14 @@ export function TaskCapsule({ task, motion, feedback, activate }: {
     {task.status === 'limit_reached' && <span className="capsule-state">达到上限</span>}
   </Element>;
 }
-export function CapsuleEdgeOrb({ task, restore }: { task: Task; restore?: () => void }) {
+export function CapsuleEdgeOrb({ task, restore, pool = false }: { task: Task; restore?: () => void; pool?: boolean }) {
   const count = task.attentionCount;
   const Element = restore ? 'button' : 'div';
+  const label = pool ? '还原小鲸鱼' : '还原胶囊';
   return <Element type={restore ? 'button' : undefined} className="task-capsule capsule-edge-orb" onClick={restore}
-    aria-label={restore ? '还原胶囊，' + task.label + (count ? '，' + count + ' 项待处理' : '') : undefined}
-    title={restore ? task.title + ' · ' + task.label + ' · 点击还原胶囊' : undefined}>
+    aria-label={restore ? label + '，' + task.label + (count ? '，' + count + ' 项待处理' : '') : undefined}
+    title={restore ? task.title + ' · ' + task.label + ' · 点击' + label : undefined}>
+    {pool && <span className="pool-edge-water" aria-hidden="true" />}
     <WhaleCompanion state={task.status}>{count ? null : <StatusOrb task={task} />}</WhaleCompanion>
     {count > 0 && <span className="capsule-edge-count" aria-hidden="true">{count > 9 ? '9+' : count}</span>}
   </Element>;

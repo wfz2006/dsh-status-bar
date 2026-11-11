@@ -1,20 +1,40 @@
 .glass[data-appearance=whale-pool] { border-radius:0; background:transparent;box-shadow:none;--fg:#e8f2ff;--muted:#b7cce1;--accent:#9ebfff; }
 .glass[data-appearance=whale-pool]::before,.glass[data-appearance=whale-pool]::after { display:none; }
 .glass[data-appearance=whale-pool]>.drag-strip { position:absolute;top:8px;right:44px;width:60px;height:30px;z-index:4; }
-.pool-view { position:absolute;inset:0;color:#e8f2ff;isolation:isolate;font-family:"Segoe UI Variable Text","Noto Sans SC","Microsoft YaHei UI",sans-serif;font-weight:400; }
+.pool-view {
+  --pool-inset:clamp(20px,calc(20vw - 24px),64px);
+  --pool-top:43px; --pool-bottom:32px;
+  --pool-lane-width:104px; --pool-lane-height:118px; --pool-lane-gap:8px;
+  --pool-lane-left:var(--pool-inset);
+  position:absolute;inset:0;color:#e8f2ff;isolation:isolate;font-family:"Segoe UI Variable Text","Noto Sans SC","Microsoft YaHei UI",sans-serif;font-weight:400;
+}
+.pool-view[data-layout=stream] { --pool-lane-left:calc(100% - var(--pool-inset) - var(--pool-lane-width)); }
+.pool-view[data-layout=letter] { --pool-lane-left:calc((100% - var(--pool-lane-width)) / 2); }
 .pool-water { position:absolute;inset:0;width:100%;height:100%;pointer-events:none; }
-.pool-view[data-fallback=true][data-idle=false]::before { content:"";position:absolute;inset:9px;background:radial-gradient(ellipse at 40% 30%,#24445c,#10263e);border:1px solid #8bc6f780;border-radius:45%; }
-.pool-whale-target.task-capsule { position:absolute;top:0;left:0;width:96px;height:96px;padding:0;border:0;border-radius:50%;background:transparent;box-shadow:none!important;z-index:2;overflow:visible;opacity:1; }
-.pool-whale-target.task-capsule:disabled { opacity:1;cursor:default; }
+.pool-view[data-fallback=true][data-idle=false]::before {
+  content:"";position:absolute;inset:9px;border:1px solid #8bc6f780;border-radius:45%;pointer-events:none;
+  background:radial-gradient(ellipse at calc(40% + var(--pool-slosh-x,0px)) calc(30% + var(--pool-slosh-y,0px)),#315877,#10263e);
+}
+.pool-view[data-fallback=true] .pool-water { visibility:hidden; }
+.pool-whale-layer { position:absolute;inset:0;z-index:2;pointer-events:none; }
+.pool-whale-lane { position:absolute;top:0;left:var(--pool-lane-left);width:var(--pool-lane-width);height:var(--pool-lane-height); }
+/* Once the text is visible, contain both the ornamented whale and its bubbles in the same slot used by the layout. */
+.pool-view[data-readable=true] .pool-whale-layer {
+  clip-path:inset(0 calc(100% - var(--pool-lane-left) - var(--pool-lane-width)) calc(100% - var(--pool-lane-height)) var(--pool-lane-left));
+}
+.pool-whale-target.task-capsule { position:absolute;top:0;left:0;width:96px;height:96px;padding:0;border:0;border-radius:50%;background:transparent;box-shadow:none!important;overflow:visible;opacity:1;pointer-events:auto; }
+.pool-whale-target.task-capsule:disabled { opacity:1;cursor:default;pointer-events:none; }
 .pool-whale-art,.pool-whale-effects { position:absolute;left:50%;top:50%;width:150px;height:160px;transform:translate(-50%,-44%);pointer-events:none; }
 .pool-idle-menu { position:absolute;right:9px;top:66px;background:transparent;border:0;padding:2px 6px;color:#a9c7e6;z-index:3;font-size:15px; }
 .pool-attention { position:absolute;left:calc(75% + 18px);top:98px;min-width:24px;height:24px;border:1px solid #adcdf4;border-radius:50%;background:#183c59;color:#e8f2ff;font-size:11px;z-index:3; }
-.pool-sheet { position:absolute;inset:43px 64px 36px;display:flex;flex-direction:column;opacity:0;pointer-events:none;text-shadow:0 1px 3px #07192df0;font-size:13px; }
+.pool-sheet { position:absolute;inset:var(--pool-top) var(--pool-inset) var(--pool-bottom);z-index:3;display:flex;flex-direction:column;opacity:0;pointer-events:none;text-shadow:0 1px 3px #07192df0;font-size:13px; }
 .pool-view[data-readable=true] .pool-sheet { opacity:1;pointer-events:auto;transition:opacity 160ms; }
-.pool-heading { min-height:71px;display:flex;align-items:center;padding-left:84px; }
+.pool-heading { flex:none;min-height:calc(var(--pool-lane-height) + var(--pool-lane-gap) - var(--pool-top));display:flex;align-items:center;padding-left:calc(var(--pool-lane-width) + var(--pool-lane-gap)); }
+.pool-heading > div { min-width:0;max-width:100%; }
 .glass[data-appearance=whale-pool] .pool-heading h1 { margin:0;font-family:"Segoe UI Variable Text","Noto Sans SC","Microsoft YaHei UI",sans-serif;font-size:18px;font-weight:500;letter-spacing:.025em;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere; }
-.pool-heading p { margin:5px 0 0;color:#b7cce1;font-size:11px; }
-.pool-progress-label { display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:18px 0 13px;color:#b7cce1;font-size:11px; }
+.pool-heading p { margin:5px 0 0;color:#b7cce1;font-size:11px;overflow-wrap:anywhere; }
+.pool-content { flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#5a88a9 transparent; }
+.pool-progress-label { display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:10px 0 12px;color:#b7cce1;font-size:11px; }
 .pool-progress-label>span:last-child { font-size:16px;font-variant-numeric:tabular-nums; }
 .pool-progress-label small { font-size:11px; }
 .pool-steps { padding:0;margin:0;list-style:none;display:grid;gap:9px; }
@@ -24,14 +44,14 @@
 .pool-step-mark { color:#bdd6f0;text-align:center; }
 .pool-steps [data-todo-status=in_progress] .pool-step-mark { font-size:23px; }
 .pool-empty { margin:25px 0 10px;font-size:12px;line-height:1.8;color:#b7cce1; }
-.pool-actions { margin-top:auto;display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding-top:13px; }
+.pool-actions { flex:none;display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding-top:8px; }
 .pool-actions button { padding:4px 0;background:transparent;border:0;color:#c9dcf3;font-size:11px;text-decoration:underline;text-underline-offset:4px; }
-.pool-view[data-layout=stream] .pool-heading { padding-left:0;padding-right:84px; }
+.pool-view[data-layout=stream] .pool-heading { padding-left:0;padding-right:calc(var(--pool-lane-width) + var(--pool-lane-gap)); }
 .pool-view[data-layout=stream] .pool-progress-label>span:last-child { font-size:28px; }
 .pool-view[data-layout=stream] .pool-steps { grid-template-columns:repeat(3,minmax(0,1fr));gap:12px; }
 .pool-view[data-layout=stream] .pool-steps li { display:flex;flex-direction:column;align-items:flex-start;gap:7px; }
 .pool-view[data-layout=stream] .pool-step-mark { height:18px; }
-.pool-view[data-layout=letter] .pool-heading { padding:52px 0 0;min-height:106px;text-align:center;justify-content:center; }
+.pool-view[data-layout=letter] .pool-heading { padding:calc(var(--pool-lane-height) + var(--pool-lane-gap) - var(--pool-top)) 0 0;min-height:0;text-align:center;justify-content:center; }
 .glass[data-appearance=whale-pool] .pool-view[data-layout=letter] .pool-heading h1 { font-family:"Noto Serif SC","Songti SC","SimSun",serif;font-size:22px;-webkit-line-clamp:1; }
 .pool-view[data-layout=letter] .pool-steps .pool-step-mark { font-size:11px; }
 .pool-view[data-layout=letter] .pool-progress-label { margin-top:12px;margin-bottom:8px; }
@@ -50,4 +70,18 @@
 @keyframes pool-intro-bob { 50%{transform:translateY(-5px) rotate(-3deg);} }
 @media(prefers-reduced-motion:reduce) { .pool-intro-art :is(svg,.whale-skin-art) { animation:none; } .pool-view[data-readable=true] .pool-sheet { transition:none; } }
 .glass:is([data-animation=off],[data-animation=reduced]) .pool-intro-art :is(svg,.whale-skin-art) { animation:none; }
-@media(max-width:370px) { .pool-sheet { left:38px;right:38px; } .pool-heading h1 { font-size:16px; } .pool-heading { padding-left:70px; } .pool-view[data-layout=stream] .pool-heading { padding-right:70px; } .pool-steps { gap:6px; } }
+@media(max-width:370px) {
+  .glass[data-appearance=whale-pool] .pool-heading h1,
+  .glass[data-appearance=whale-pool] .pool-view[data-layout=letter] .pool-heading h1 { font-size:16px; }
+  .pool-steps { gap:6px; }
+}
+@media(max-width:300px),(max-height:270px) {
+  .pool-view { --pool-top:36px;--pool-bottom:12px;--pool-lane-width:84px;--pool-lane-height:84px; }
+  .pool-progress-label,.pool-view[data-layout=letter] .pool-progress-label { margin:4px 0 7px; }
+  .pool-view[data-layout=stream] .pool-progress-label>span:last-child { font-size:18px; }
+}
+@media(max-width:300px) {
+  .pool-view[data-layout=stream] .pool-steps { grid-template-columns:1fr;gap:6px; }
+  .pool-view[data-layout=stream] .pool-steps li { display:grid;gap:9px; }
+  .pool-actions { gap:8px; }
+}

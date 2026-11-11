@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chimeFor } from '../apps/desktop/src/shared/sound';
+import { normalizeSettings } from '../apps/desktop/src/shared/view-model';
 
 const base = { sessionId: 's1', status: 'working', attention: 0 };
 
@@ -22,5 +23,16 @@ describe('chimeFor', () => {
 
   it('prefers the approval chime when a completion and a request land together', () => {
     expect(chimeFor(base, { ...base, status: 'completed', attention: 1 }, true)).toBe('approval');
+  });
+});
+
+describe('chime settings', () => {
+  it('uses the original chime for older settings and unknown presets', () => {
+    expect(normalizeSettings({ sound: true })).toMatchObject({ sound: true, soundPreset: 'classic' });
+    expect(normalizeSettings({ soundPreset: 'unknown' }).soundPreset).toBe('classic');
+  });
+
+  it('keeps the selected chime even while automatic sound is muted', () => {
+    expect(normalizeSettings({ sound: false, soundPreset: 'water' })).toMatchObject({ sound: false, soundPreset: 'water' });
   });
 });

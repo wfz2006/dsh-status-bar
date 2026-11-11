@@ -99,26 +99,25 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     edgeTimer = setTimeout(finish, duration);
     publish();
   }
-  function openDock(reduce: boolean) {
+  function openDock(reduce: boolean, dropArea?: Bounds) {
     if (!dock || edgeMotion) return;
     const orb = win.getBounds();
-    const area = screen.getDisplayMatching(orb).workArea;
-    const capsule = edgeReplacementBounds(orb, dock.normal, area, dock.edge);
+    const area = dropArea ?? screen.getDisplayMatching(orb).workArea;
+    const capsule = edgeReplacementBounds(orb, dock.normal, area, dropArea ? null : dock.edge);
     dock.normal = capsule;
     geometryRevision++;
     animateEdge('spread', capsule, orb, () => { restoreCapsule(area); publish(); saveSoon(); }, reduce);
   }
-  function finishDrop() {
-    if (!settings.edgeDock || settings.appearance !== 'classic' || panel || view.mode !== 'capsule'
+  function finishDrop(area: Bounds) {
+    if (!settings.edgeDock || panel || view.mode !== 'capsule'
       || presentation.state().morphing || !win.isVisible() || win.isMinimized()) return;
-    const bounds = win.getBounds(), area = screen.getDisplayMatching(bounds).workArea;
+    const bounds = win.getBounds();
     const edge = edgeAtBounds(bounds, area);
     if (dock) {
+      if (!edge) { openDock(false, area); return; }
+      dock.edge = edge;
       dock.normal = edgeReplacementBounds(bounds, dock.normal, area, edge);
-      if (edge) {
-        dock.edge = edge;
-        win.setBounds(edgeReplacementBounds(bounds, orbSize, area, edge));
-      } else restoreCapsule(area);
+      win.setBounds(edgeReplacementBounds(bounds, orbSize, area, edge));
       publish();
     } else if (edge) {
       const normal = edgeReplacementBounds(bounds, bounds, area, edge);
@@ -162,7 +161,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('Invalid settings');
     const previousAppearance=settings.appearance;
     settings = normalizeSettings({ ...settings, ...patch });
-    if (dock && (!settings.edgeDock || settings.appearance !== 'classic')) restoreCapsule();
+    if (dock && (!settings.edgeDock || previousAppearance !== settings.appearance)) restoreCapsule();
     if(previousAppearance!==settings.appearance){
       if(panelReturn)panelReturn={...panelReturn,manual:false,bounds:{...panelReturn.bounds,...sizeFor(panelReturn.mode,view.pending.length>0)}};
       else{view={...view,manual:false};moveTo({...win.getBounds(),...sizeFor(view.mode,view.pending.length>0)});}
@@ -301,7 +300,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
       const safe = clampBounds(target, area, dock ? orbSize : undefined);
       if (safe.x !== current.x || safe.y !== current.y) await hooks.position(safe.x, safe.y);
       if (revision !== geometryRevision || win.isDestroyed()) return;
-      if (released) finishDrop();
+      if (released) finishDrop(area);
       saveSoon();
     },
     displayChanged: (area?: Bounds) => {

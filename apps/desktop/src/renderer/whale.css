@@ -15,7 +15,7 @@
 @property --edge-radius { syntax:'<length>'; inherits:true; initial-value:0px; }
 /* Share DIP geometry with the rim instead of promoting a separate clip-path
    animation on the transparent Electron surface at fractional display scale. */
-.glass[data-mode=capsule][data-edge-motion] {
+.glass[data-mode=capsule][data-edge-motion]:not([data-pool-dock]) {
   --radius:0px;
   clip-path:inset(var(--edge-y) calc(100% - var(--edge-x) - var(--edge-width))
     calc(100% - var(--edge-y) - var(--edge-height)) var(--edge-x) round var(--edge-radius));
@@ -29,6 +29,11 @@
 .edge-motion-caption { border-radius:15px; }
 .edge-motion-caption .whale-companion { visibility:hidden; }
 .capsule-edge-orb { justify-content:center; padding:0; }
+.pool-edge-water {
+  position:absolute; inset:0; z-index:-1; border-radius:50%; pointer-events:none;
+  background:radial-gradient(ellipse at 40% 30%, #24445c, #10263e 78%);
+  border:1px solid #8bc6f780; box-shadow:inset 0 0 8px #73c4f03b;
+}
 .capsule-edge-orb .whale-companion { flex-basis:34px; width:34px; height:35px; }
 .capsule-edge-orb .whale-swimmer > .ui-icon { width:33px; height:33px; }
 .capsule-edge-orb .whale-swimmer > .whale-skin-art { width:45px; height:41px; }

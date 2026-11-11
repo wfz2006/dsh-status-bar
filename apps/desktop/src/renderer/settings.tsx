@@ -5,10 +5,12 @@ import type { MockAction } from '../shared/api';
 import type { DesktopOpticsState } from '../shared/desktop-optics';
 import { DEFAULT_GLASS_APPEARANCE } from '../shared/glass-appearance';
 import { WHALE_SKINS } from '../shared/whale-skins';
+import { CHIME_PRESETS } from '../shared/sound';
 import { Icon, type IconName } from './icon';
 import { DSHConnection } from './dsh-connection';
 import { TaskCapsule, type Task } from './task-views';
 import { WhaleArt } from './whale-companion';
+import { playChime } from './sound';
 
 declare const __GLASS_BUILD__: string;
 type Update = (patch: Partial<GlassSettings>) => void;
@@ -230,7 +232,7 @@ export function GlassSettingsPanel({ value, update, projection, mock, back, show
             options={[['capsule','胶囊'],['peek','速览'],['remember-last','记住上次']]} />
           <SettingSelect label="置顶行为" value={value.pin} onChange={pin => update({ pin })}
             options={[['normal','普通'],['always','始终置顶'],['on-notification','有待处理请求时']]} />
-          <SettingToggle label="靠边自动收纳" detail="原版玻璃的胶囊拖到屏幕边缘，松手后变成鲸鱼小球。"
+          <SettingToggle label="靠边自动收纳" detail="将原版胶囊或收起的小鲸鱼拖到屏幕边缘，松手后收成小球。"
             checked={value.edgeDock} onChange={edgeDock => update({ edgeDock })} />
         </fieldset>
         <fieldset className="settings-group"><legend>任务提醒</legend>
@@ -238,6 +240,14 @@ export function GlassSettingsPanel({ value, update, projection, mock, back, show
             onChange={autoApproval => update({ autoApproval })} />
           <SettingToggle label="完成后自动收起" checked={value.autoCollapse} onChange={autoCollapse => update({ autoCollapse })} />
           <SettingToggle label="提示音" checked={value.sound} onChange={sound => update({ sound })} />
+          <SettingSelect label="提示音风格" value={value.soundPreset} onChange={soundPreset => update({ soundPreset })}
+            options={CHIME_PRESETS} />
+          <div className="settings-preview-controls" role="group" aria-label="试听提示音">
+            <button type="button" className="quiet-button" disabled={!value.sound}
+              onClick={() => playChime('complete', value.soundPreset)}>试听完成</button>
+            <button type="button" className="quiet-button" disabled={!value.sound}
+              onClick={() => playChime('approval', value.soundPreset)}>试听待处理</button>
+          </div>
         </fieldset>
         <fieldset className="settings-group"><legend>快捷操作</legend>
           <p className="settings-shortcut-note muted">隐藏后按 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>G</kbd> 恢复。<br />退出后在 DSH 输入 <code>/status-bar</code> 重新打开。</p>

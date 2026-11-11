@@ -75,7 +75,7 @@
   class Animator {
     constructor(canvas,effects,options={}){
       this.canvas=canvas;this.effects=effects;this.fx=effects?.getContext('2d');
-      this.options={energy:1,pace:1,showNative:true,travel:true,mainSize:160,color:'#86acff',...options};
+      this.options={energy:1,pace:1,showNative:true,travel:true,mainSize:160,heading:0,color:'#86acff',...options};
       this.pose=neutral();this.velocity=Object.fromEntries(Object.keys(this.pose).map(k=>[k,0]));
       this.clock=0;this.elapsed=0;this.phase=.5;this.action='idle';this.autonomous=true;this.nextAuto=6.0;this.nextBlink=2.2;
       this.blinkStart=-10;this.seed=4271;this.frame=0;this.last=0;this.visible=true;this.frozen=false;this.pointer={x:0,y:0,active:false};
@@ -221,11 +221,12 @@
     render(){
       if(!this.width||!this.height)return;
       const p=this.pose,actors=this.actors(),energy=this.options.energy,breathe=this.reduced?1:1+Math.sin(this.clock*1.8)*.009;
+      const yaw=p.yaw+this.options.heading;
       if(this.gl){
         const gl=this.gl,u=this.uniforms;gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.useProgram(this.program);
         gl.uniform2f(u.resolution,this.width,this.height);
         gl.uniform4fv(u.artBox,this.artBox);
-        gl.uniform4f(u.pose,p.roll+(this.reduced?0:Math.sin(this.clock*.82)*.014),p.sx*breathe,p.sy*breathe,p.yaw);
+        gl.uniform4f(u.pose,p.roll+(this.reduced?0:Math.sin(this.clock*.82)*.014),p.sx*breathe,p.sy*breathe,yaw);
         gl.uniform4f(u.joints,this.phase,(this.reduced?0:p.tail*energy),this.reduced?0:p.fin,0);gl.uniform1f(u.eye,p.eye);
         for(const actor of actors){gl.uniform2f(u.origin,actor.x,actor.y);gl.uniform1f(u.size,actor.size);gl.drawArrays(gl.TRIANGLES,0,this.count);}
       }else{
@@ -233,7 +234,7 @@
         const [left,top,width,height]=this.artBox;
         for(const a of actors){
           const scale=a.size/24;
-          ctx.save();ctx.translate(a.x,a.y);ctx.rotate(p.roll);ctx.scale(p.sx*Math.cos(p.yaw),p.sy);
+          ctx.save();ctx.translate(a.x,a.y);ctx.rotate(p.roll);ctx.scale(p.sx*Math.cos(yaw),p.sy);
           ctx.drawImage(this.textureCanvas,(left-12)*scale,(top-12)*scale,width*scale,height*scale);
           ctx.restore();
         }
@@ -246,7 +247,7 @@
       for(const a of actors)for(let i=0;i<events.length;i++){
         const t=this.elapsed-events[i],life=1.48;if(t<0||t>life)continue;
         const s=a.size/160,q=t/life,r=(3.2+i*.7+q*2.7)*s;
-        const x=a.x-a.size*.21+(Math.sin(q*4+i*.9)*9+(i-1)*5)*s;
+        const x=a.x-a.size*.21*Math.cos(this.pose.yaw+this.options.heading)+(Math.sin(q*4+i*.9)*9+(i-1)*5)*s;
         const y=a.y-a.size*.27-(q*67+q*q*14)*s;
         ctx.strokeStyle='rgba(164,214,245,'+((1-smooth(q))*.75).toFixed(3)+')';ctx.lineWidth=Math.max(.6,s*.95);
         ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.stroke();

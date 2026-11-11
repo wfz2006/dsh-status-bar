@@ -1,5 +1,6 @@
 import {vertex,fragment,oceanFragment} from './water-pool-shaders';
-export type PoolFrame={width:number;height:number;centerX:number;centerY:number;rx:number;ry:number;headX:number;tailX:number;routeY:number;reveal:number;show:number;time:number;contour:'pearl'|'mirror'|'drop';reduced:boolean};
+import type { PoolDragFrame } from './pool-drag-motion';
+export type PoolFrame={width:number;height:number;centerX:number;centerY:number;rx:number;ry:number;headX:number;headY:number;tailX:number;tailY:number;reveal:number;show:number;time:number;contour:'pearl'|'mirror'|'drop';reduced:boolean;drag?:PoolDragFrame};
 
 /** Transparent water only: no desktop image, storage, network or task state. */
 export class WaterPoolEngine{
@@ -98,11 +99,13 @@ export class WaterPoolEngine{
     gl.uniform1f(this.location(ocean,'time'),frame.reduced?0:frame.time);gl.uniform1f(this.location(ocean,'strength'),.75);gl.uniform1f(this.location(ocean,'dark'),1);
     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.textures[0]!);gl.drawArrays(gl.TRIANGLES,0,6);
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,w,h);gl.useProgram(main);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
-    const scalar:Record<string,number>={phase:frame.time*1.5,energy:0,bubble:0,clarity:.94,dark:1,scale:dpr,corner:82,shape:frame.contour==='mirror'?1:frame.contour==='drop'?2:0,taper:frame.contour==='drop'?.115:0,companion:1,reveal:frame.reveal,show:frame.show};
+    const drag=frame.reduced?undefined:frame.drag;
+    const scalar:Record<string,number>={phase:frame.time*1.5,energy:drag?.energy??0,bubble:0,clarity:.94,dark:1,scale:dpr,corner:82,shape:frame.contour==='mirror'?1:frame.contour==='drop'?2:0,taper:frame.contour==='drop'?.115:0,companion:1,reveal:frame.reveal,show:frame.show};
     for(const [key,value]of Object.entries(scalar))gl.uniform1f(this.location(main,key),value);
-    for(const [key,value]of Object.entries({size:[w,h],center:[frame.centerX*dpr,frame.centerY*dpr],radius:[frame.rx*dpr,frame.ry*dpr],flow:[0,0],bead:[-1000,-1000]}))gl.uniform2f(this.location(main,key),value[0]!,value[1]!);
-    gl.uniform3f(this.location(main,'route'),frame.headX*dpr,frame.tailX*dpr,frame.routeY*dpr);
-    gl.uniform4f(this.location(main,'ripple'),-1000,-1000,10,0);gl.uniform4f(this.location(main,'ripple2'),-1000,-1000,10,0);gl.drawArrays(gl.TRIANGLES,0,6);
+    for(const [key,value]of Object.entries({size:[w,h],center:[frame.centerX*dpr,frame.centerY*dpr],radius:[frame.rx*dpr,frame.ry*dpr],flow:[drag?.flowX??0,drag?.flowY??0],slosh:[drag?.sloshX??0,drag?.sloshY??0],bead:[-1000,-1000]}))gl.uniform2f(this.location(main,key),value[0]!,value[1]!);
+    gl.uniform4f(this.location(main,'route'),frame.headX*dpr,frame.headY*dpr,frame.tailX*dpr,frame.tailY*dpr);
+    gl.uniform4f(this.location(main,'ripple'),frame.centerX*dpr,frame.centerY*dpr,drag?.rippleAge??0,drag?.rippleStrength??0);
+    gl.uniform4f(this.location(main,'ripple2'),-1000,-1000,10,0);gl.drawArrays(gl.TRIANGLES,0,6);
   }
   dispose(){
     this.canvas.removeEventListener('webglcontextlost',this.lost);this.canvas.removeEventListener('webglcontextrestored',this.restored);

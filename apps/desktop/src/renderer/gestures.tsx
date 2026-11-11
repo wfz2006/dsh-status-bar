@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, type RefObject, type PointerEvent, type MouseEvent } from 'react';
-import { resizeBounds, type Bounds, type ResizeEdge } from '../shared/window';
-import { createDragMotion } from './drag-motion';
+import { clampBounds, resizeBounds, type Bounds, type ResizeEdge } from '../shared/window';
+import { edgeAtBounds } from '../shared/edge-dock';
+import { createDragMotion, windowDragProfile } from './drag-motion';
 
-export function useWindowDrag(root: RefObject<HTMLElement | null>, context: string, animation: string) {
+export function useWindowDrag(root: RefObject<HTMLElement | null>, context: string, animation: string, edgeDock: boolean) {
   const suppress = useRef(false);
   const media = useMemo(() => matchMedia('(prefers-reduced-motion: reduce)'), []);
   const motion = useMemo(() => createDragMotion({
@@ -10,10 +11,17 @@ export function useWindowDrag(root: RefObject<HTMLElement | null>, context: stri
     move: point => window.glass.moveWindow(point),
     release: point => window.glass.moveWindow(point, true),
     requestFrame: callback => requestAnimationFrame(callback), cancelFrame: id => cancelAnimationFrame(id),
-    animated: () => !!root.current && root.current.dataset.mode === 'capsule' && root.current.dataset.panel === 'none'
-      && !root.current.dataset.dockEdge && root.current.dataset.morph === 'idle' && root.current.dataset.animation === 'full' && !media.matches,
+    profile: () => windowDragProfile(root.current?.dataset, media.matches),
+    allowNativeSpring: anchor => {
+      if (!edgeDock) return true;
+      const display = window.screen as Screen & { availLeft?: number; availTop?: number };
+      const area = { x: display.availLeft ?? 0, y: display.availTop ?? 0, width: display.availWidth, height: display.availHeight };
+      const drop = clampBounds({ ...anchor, width: window.outerWidth, height: window.outerHeight }, area);
+      return edgeAtBounds(drop, area) === null;
+    },
     paint: value => {
       const el = root.current; if (!el) return;
+      if (el.dataset.appearance === 'whale-pool') el.dispatchEvent(new CustomEvent('glass:drag-motion', { detail: value }));
       if (!value) {
         delete el.dataset.drag;
         for (const key of ['--drag-x', '--drag-y', '--drag-lean', '--drag-energy']) el.style.removeProperty(key);
@@ -25,7 +33,7 @@ export function useWindowDrag(root: RefObject<HTMLElement | null>, context: stri
       el.style.setProperty('--drag-lean', (value.x * 2.9).toFixed(3) + 'deg');
       el.style.setProperty('--drag-energy', value.energy.toFixed(3));
     },
-  }), [root, media]);
+  }), [root, media, edgeDock]);
   useEffect(() => {
     const cancel = () => motion.cancel();
     const visibility = () => { if (document.hidden) cancel(); };
@@ -52,10 +60,15 @@ export function useWindowDrag(root: RefObject<HTMLElement | null>, context: stri
     if (motion.owns(e.pointerId)) { motion.cancel(); suppress.current = true; }
   }
   return {
+    whenSettled: motion.whenSettled,
     onPointerDownCapture: (e: PointerEvent<HTMLElement>) => {
       if (e.button !== 0 || e.currentTarget.dataset.morph !== 'idle') return;
       if(!(e.target instanceof Element) || e.target.closest('input,select,textarea,label,summary,pre,a,[data-no-window-drag],.resize-edge,button:not(.task-capsule):not(.peek-main)'))return;
-      if (!motion.begin(e.pointerId, { x: e.screenX, y: e.screenY })) return;
+      const {appearance, dockEdge} = e.currentTarget.dataset;
+      if (!motion.begin(e.pointerId, { x: e.screenX, y: e.screenY }, appearance === 'whale-pool' && !dockEdge)) return;
+      // Capture on the original target so a fast first movement cannot leave
+      // the window, while an ordinary click still reaches its button.
+      e.target.setPointerCapture(e.pointerId);
       // Clear a previous keyboard focus before the browser applies pointer
       // focus. Cancelling the default and focusing manually keeps its ring.
       e.target.closest<HTMLButtonElement>('button')?.blur();
@@ -66,11 +79,10 @@ export function useWindowDrag(root: RefObject<HTMLElement | null>, context: stri
       if (!(e.buttons & 1)) { cancelPointer(e); return; }
       if (motion.update(e.pointerId, { x: e.screenX, y: e.screenY })) {
         e.preventDefault();
-        if (!e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.setPointerCapture(e.pointerId);
         suppress.current = true;
       }
     },
-    onPointerUp: (e: PointerEvent<HTMLElement>) => motion.end(e.pointerId),
+    onPointerUp: (e: PointerEvent<HTMLElement>) => motion.end(e.pointerId, { x: e.screenX, y: e.screenY }),
     onPointerCancel: cancelPointer,
     onLostPointerCapture: cancelPointer,
     onClickCapture: (e:MouseEvent<HTMLElement>) => { if(suppress.current && e.detail!==0){e.preventDefault();e.stopPropagation();}suppress.current=false; },

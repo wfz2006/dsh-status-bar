@@ -1,5 +1,5 @@
 type WhaleAnimator = {
-  options:{mainSize:number;energy:number;pace:number};
+  options:{mainSize:number;energy:number;pace:number;heading:number};
   resize(width:number,height:number):void;setStatus(status:string):boolean;play(name:string):boolean;
   setReduced(reduced:boolean):void;setVisible(visible:boolean):void;setAutonomous(enabled:boolean):void;destroy():void;
   setSkin(image:HTMLImageElement|null,bounds:readonly [number,number,number,number]):void;

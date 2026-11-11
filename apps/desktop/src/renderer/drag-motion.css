@@ -1,6 +1,6 @@
-/* Local capsule experiment. The filtered glass and native hit rectangle never
-   scale or rotate: only the swimmer/content and a light reflection respond. */
-.glass[data-mode=capsule] {
+/* Keep the filtered surface and the native hit rectangle fixed. The capsule
+   moves its decorations, while peek only moves the reflection below the text. */
+.glass:is([data-mode=capsule],[data-mode=peek]) {
   --drag-x:0px; --drag-y:0px; --drag-lean:0deg; --drag-energy:0;
 }
 .glass[data-mode=capsule] .task-capsule > :is(.capsule-title,.capsule-metrics,.step-count) {
@@ -24,16 +24,22 @@
 }
 .glass[data-mode=capsule][data-drag=pressed] .task-capsule > .whale-companion { scale:.88; }
 .glass[data-mode=capsule][data-drag] .whale-swimmer { animation-play-state:paused; }
-.glass[data-mode=capsule] .glass-material::before {
+.glass:is([data-mode=capsule],[data-mode=peek]) .glass-material::before {
   content:""; position:absolute; inset:0; z-index:3; border-radius:inherit; pointer-events:none;
   background:linear-gradient(112deg,transparent 8%,rgba(255,255,255,.14) 30%,rgba(255,255,255,.32) 46%,transparent 72%);
   opacity:0; translate:calc(var(--drag-x) * -12) 0;
   transition:opacity 240ms cubic-bezier(.16,1,.3,1),translate 260ms cubic-bezier(.16,1,.3,1);
 }
-.glass[data-mode=capsule][data-drag] .glass-material::before {
-  opacity:calc(.42 + var(--drag-energy) * .58); transition:opacity 140ms cubic-bezier(.16,1,.3,1);
+.glass:is([data-mode=capsule],[data-mode=peek])[data-drag] .glass-material::before {
+  opacity:calc(var(--drag-reflection-base,.42) + var(--drag-energy) * var(--drag-reflection-gain,.58));
+  transition:opacity 140ms cubic-bezier(.16,1,.3,1);
+}
+.glass[data-mode=peek] {
+  --drag-reflection-base:.16;
+  --drag-reflection-gain:.48;
 }
 .glass[data-mode=capsule][data-drag] .task-capsule { cursor:grabbing; }
+.glass[data-mode=peek][data-drag] :is(.peek-main,.task-heading,.current-step,.drag-strip) { cursor:grabbing; }
 .glass:is([data-animation=reduced],[data-animation=off]) .task-capsule > :is(.capsule-title,.capsule-metrics,.step-count,.whale-companion) {
   translate:none; rotate:none; scale:none; transition:none;
 }

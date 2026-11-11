@@ -1,6 +1,7 @@
 import type { Projection, Session } from '@glass/protocol';
 import { DEFAULT_GLASS_APPEARANCE, normalizeGlassAppearance, type GlassAppearance } from './glass-appearance';
 import { normalizeWhaleSkin, type WhaleSkin } from './whale-skins';
+import { DEFAULT_CHIME_PRESET, normalizeChimePreset, type ChimePreset } from './sound';
 export type GlassViewMode = 'capsule' | 'peek' | 'expanded' | 'approval';
 export const CAPSULE_MOTIONS = ['classic', 'type', 'silver', 'tide'] as const;
 export type CapsuleMotion = typeof CAPSULE_MOTIONS[number];
@@ -11,9 +12,9 @@ export type GlassSettings = GlassAppearance & {
   defaultView: 'capsule' | 'peek' | 'remember-last'; autoApproval: boolean; autoCollapse: boolean;
   edgeDock: boolean;
   animation: 'full' | 'reduced' | 'off'; capsuleMotion: CapsuleMotion; pin: 'always' | 'on-notification' | 'normal';
-  material: 'system' | 'transparent' | 'acrylic' | 'frosted' | 'solid'; sound: boolean;
+  material: 'system' | 'transparent' | 'acrylic' | 'frosted' | 'solid'; sound: boolean; soundPreset: ChimePreset;
 };
-export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, appearance:'classic',whaleSkin:'classic',poolLayout:'clear',poolContour:'pearl', theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, edgeDock: true, animation: 'full', capsuleMotion: 'classic', pin: 'always', material: 'frosted', sound: true };
+export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, appearance:'classic',whaleSkin:'classic',poolLayout:'clear',poolContour:'pearl', theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, edgeDock: true, animation: 'full', capsuleMotion: 'classic', pin: 'always', material: 'frosted', sound: true, soundPreset: DEFAULT_CHIME_PRESET };
 export function normalizeSettings(value: unknown): GlassSettings {
   if (!value || typeof value !== 'object') return { ...DEFAULT_SETTINGS };
   const v = value as Record<string, unknown>;
@@ -24,7 +25,8 @@ export function normalizeSettings(value: unknown): GlassSettings {
     capsuleMotion: choice('capsuleMotion', CAPSULE_MOTIONS, DEFAULT_SETTINGS.capsuleMotion),
     edgeDock: v.edgeDock !== false,
     whaleSkin: normalizeWhaleSkin(v.whaleSkin),
-    pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], DEFAULT_SETTINGS.material), sound: v.sound !== false };
+    pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], DEFAULT_SETTINGS.material),
+    sound: v.sound !== false, soundPreset: normalizeChimePreset(v.soundPreset) };
 }
 export function viewSize(mode: GlassViewMode, attention = false) {
   return { capsule: { width: 288, height: 44 }, peek: { width: 340, height: attention ? 236 : 190 }, expanded: { width: 400, height: 360 }, approval: { width: 400, height: 300 } }[mode];
