@@ -1,18 +1,18 @@
-The whale pool now responds when you drag it, and the whale keeps its place while the window opens near a screen edge. This update also adds five notification sounds and improves the classic glass peek and the docked whale orb.
+水池现在会跟着拖动回应，鲸鱼在窗口贴边展开时也能保持在落点。这次更新还加了五种提示音，并改进了经典玻璃的「探头」和贴边收纳后的小水球。
 
-## What changed
+## 更新内容
 
-- **Whale pool.** The water follows the direction and speed of a drag, then settles after a gentle sway. The whale and its bubbles have a reserved area in each of the three layouts, so the task text stays readable when the pool opens or the window is small.
-- **Opening near an edge.** The floating whale settles at the drop point before expanding, including when clicked immediately after release. The window is positioned in one step. The whale stays at its starting position until it begins to swim, turns toward the destination when needed, then turns back as it reaches the task panel.
-- **Edge docking.** The collapsed whale pool can dock as a small water orb. When you drag a docked orb back onto the desktop and release it, the appearance expands at the drop position.
-- **Classic glass.** Dragging the peek view shifts the reflection slightly and settles at the drop position.
-- **Notification sounds.** Choose from 经典双音, 水滴, 玻璃风铃, 木琴 and 电子脉冲 under **Settings → Window → 任务提醒**. The two preview buttons play the sounds for task completion and requests that need attention.
+- **鲸鱼水池。** 水面会跟随拖动的方向和速度流动，再轻轻回摆后稳定下来。鲸鱼和它的气泡在三种版式里都各有一块保留区域，所以当水池展开或窗口变小，任务文字仍然清晰可读。
+- **贴边展开。** 悬浮的鲸鱼会先停在落点，再展开——包括松手后立刻点击的情况。窗口一步就位。鲸鱼在开始游动前停在起始位置，需要时转向目标，到达任务面板时再转回来。
+- **贴边收纳。** 收起状态下的鲸鱼水池可以缩成一个小水球贴在屏幕边缘。把贴边的小水球拖回桌面并松手，外观会在落点处展开。
+- **经典玻璃。** 拖动「探头」视图时，倒影会轻微偏移，并停在落点。
+- **提示音。** 在 **设置 → 窗口 → 任务提醒** 里可以在经典双音、水滴、玻璃风铃、木琴和电子脉冲之间切换。两个试听按钮分别播放任务完成和需要确认时的声音。
 
-We tested drag, release and immediate click at all four edges and four corners on Windows 11 at 150% display scaling. All 16 native window trials opened in one resize.
+我们在 Windows 11、150% 显示缩放下测试了四条边和四个角的拖动、松手与立即点击，16 次原生窗口试验都在一次调整内打开。
 
-## Install on Windows 11 x64
+## 在 Windows 11 x64 上安装
 
-Use the self-contained GitHub bundle in a terminal with the DSH CLI installed, then restart DSH.
+在已安装 DSH CLI 的终端里运行下面的命令，安装 GitHub 上的自包含发行包，然后重启 DSH。
 
 ```powershell
 dsh plugin --profile web add https://github.com/wfz2006/dsh-status-bar/releases/download/v0.4.1/dsh-status-bar.tgz
