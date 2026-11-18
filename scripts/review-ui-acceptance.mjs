@@ -6,7 +6,7 @@ import { fixture } from './native-fixture.mjs';
 import { FakeHost } from '../tests/helpers/dsh-host.ts';
 
 const scenario = process.argv[2] ?? 'all';
-const output = resolve('reports/review-ui');
+const output = resolve(process.env.GLASS_REPORT_DIR ?? 'reports/review-ui');
 const f = await fixture();
 const host = new FakeHost(); host.sessions = [{ sessionId: 'review', running: true, title: '审查 · 交互细节' }];
 const report = { result: 'FAIL', scenario, checks: [], errors: [] };

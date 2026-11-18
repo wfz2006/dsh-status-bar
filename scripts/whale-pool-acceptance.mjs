@@ -59,14 +59,79 @@ const mock=await mkdtemp(join(profiles,'mock-'));run=await launch(mock,true);
 try{
   await run.page.evaluate(()=>window.glass.setSettings({appearance:'whale-pool',animation:'off'}));
   await run.page.getByRole('button',{name:/小鲸鱼，.*点击展开水池/}).click();await run.page.locator('.pool-view[data-readable=true]').waitFor();
+  await expect(run.page.locator('.pool-view')).toBeFocused();
+  const sheet=run.page.locator('.pool-sheet');
+  const details=run.page.getByRole('button',{name:/任务详情/});
+  const whale=run.page.getByRole('button',{name:/点击展开水池/});
+  assert.equal(await sheet.evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
   for(const layout of ['clear','stream','letter']){
     await run.page.evaluate(poolLayout=>window.glass.setSettings({poolLayout}),layout);
     await run.page.locator(`.pool-view[data-layout=${layout}]`).waitFor();
     await run.page.screenshot({path:join(output,`pool-${layout}.png`),omitBackground:true});
     assert.equal(await run.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     assert.ok(await run.page.locator('.pool-heading h1').textContent());
+    const active=run.page.locator('.pool-steps [aria-current=step]');
+    await expect(active).toContainText('进行中');
+    assert.deepEqual(await active.evaluate(el=>{
+      const style=getComputedStyle(el);
+      return [style.boxShadow,style.borderInlineStartWidth,style.backgroundColor,getComputedStyle(el.children[1]).fontWeight];
+    }),['none','0px','rgba(0, 0, 0, 0)','400'],'The current step keeps the original unboxed, light text in '+layout);
+    assert.ok(await details.evaluate(el=>el.getBoundingClientRect().height>=32));
+    if(layout==='letter'){
+      await expect(run.page.locator('.pool-steps li')).toHaveCount(3);
+      assert.ok(await run.page.locator('.pool-content').evaluate(el=>el.scrollHeight<=el.clientHeight+1),'Three sample steps fit in the default letter layout');
+    }
   }
   checks.push('All three retained layouts render live Mock projections without horizontal overflow');
+  checks.push('Current steps have no left rail, main action is at least 32 DIP high, and all three letter rows fit');
+  await run.page.keyboard.press('Escape');
+  await expect(whale).toBeFocused();
+  await run.page.emulateMedia({reducedMotion:'no-preference'});
+  await run.page.evaluate(()=>window.glass.setSettings({animation:'full'}));
+  await run.page.evaluate(() => {
+    window.poolFlightFrames = new Promise(resolve => {
+      const pool = document.querySelector('.pool-view'), actor = pool.querySelector('.pool-whale-target');
+      const display = [], poses = [];
+      let previous;
+      function sample(time) {
+        if (pool.dataset.transition === 'opening') {
+          display.push(time);
+          if (actor.style.transform !== previous) { poses.push(time); previous = actor.style.transform; }
+        } else if (display.length) {
+          const intervals = times => times.slice(1).map((time, i) => time - times[i]).sort((a, b) => a - b);
+          const median = times => intervals(times)[Math.floor((times.length - 1) / 2)];
+          resolve({ displayIntervalMs: median(display), movingIntervalMs: median(poses), poses: poses.length });
+          return;
+        }
+        requestAnimationFrame(sample);
+      }
+      requestAnimationFrame(sample);
+    });
+  });
+  await run.page.keyboard.press('Enter');
+  await expect(details).toBeFocused();
+  await expect(sheet).toHaveAttribute('aria-hidden','false');
+  await expect(run.page.locator('.pool-view')).toHaveAttribute('data-transition','idle');
+  const flight = await run.page.evaluate(() => Promise.race([window.poolFlightFrames,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('No complete opening flight was observed')), 5000))]));
+  console.info('Measured opening flight',flight);
+  await writeFile(join(output,'opening-cadence.json'),JSON.stringify(flight,null,2));
+  assert.ok(flight.poses > 2 && flight.movingIntervalMs <= 1.6 * flight.displayIntervalMs,
+    'The moving whale should update on adjacent display frames during the flight');
+  await run.page.keyboard.press('Escape');
+  await expect(whale).toBeFocused();
+  await run.page.emulateMedia({reducedMotion:'reduce'});
+  await run.page.keyboard.press('Space');
+  await expect(details).toBeFocused();
+  assert.equal(await sheet.evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
+  await run.page.keyboard.press('Escape');
+  await expect(whale).toBeFocused();
+  await run.page.emulateMedia({reducedMotion:'no-preference'});
+  await run.page.evaluate(()=>window.glass.setSettings({animation:'reduced'}));
+  await whale.click();
+  await expect(run.page.locator('.pool-view')).toBeFocused();
+  assert.equal(await sheet.evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
+  checks.push('Enter and Space land on details, pointer opening focuses the pool, Escape restores the whale, and motion preferences take effect');
   await run.page.evaluate(()=>{window.__poolContextLoss=document.querySelector('.pool-water').getContext('webgl').getExtension('WEBGL_lose_context');window.__poolContextLoss.loseContext();});
   await run.page.locator('.pool-view[data-fallback=true]').waitFor();
   await run.page.evaluate(()=>window.__poolContextLoss.restoreContext());

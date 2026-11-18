@@ -1,7 +1,8 @@
 // Real end-to-end probe: official local DSH host (isolated DSH_HOME + observe-only fixture patch)
 // <-> built Electron app, driving the same settings field a user would paste into.
 // Never prints the authentication token or the host link with its token.
-import { _electron as electron } from '@playwright/test';
+import { _electron as electron, expect } from '@playwright/test';
+import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
@@ -14,7 +15,8 @@ const repo = resolve(fileURLToPath(new URL('..', import.meta.url)));
 process.chdir(repo);
 const exe = process.env.DSH_EXE ?? 'D:\\DSH\\DeepSeek Harness.exe';
 const cli = process.env.DSH_CLI ?? 'D:\\DSH\\resources\\app.asar\\dsh\\node_modules\\@deepseek-ai\\dsh-desktop-host\\lib\\cli.js';
-const home = resolve('.local-dsh-probe');
+const home = await mkdtemp(join(tmpdir(), 'glass-official-dsh-'));
+const output = resolve(process.env.GLASS_LIVE_EVIDENCE_DIR ?? 'reports/code-ux-fix-2026-11-18/live');
 const redact = value => String(value).replace(/token=[A-Za-z0-9_-]+/g, 'token=<redacted>');
 const log = (...args) => console.log(...args);
 const result = { steps: [] };
@@ -47,6 +49,7 @@ try {
     setTimeout(() => { clearInterval(timer); accept(); }, 6000);
   });
   step('fixture-created', { marker: hostText.includes('fixture appended') });
+  assert.ok(hostText.includes('fixture appended'), 'the synthetic DSH session was not created');
 
   // 2. Verify the dedicated answer-capable operator contract used by Glass.
   const operatorUrl = new URL('/connect', origin);
@@ -63,6 +66,9 @@ try {
   });
   const rpcBody = await rpc.json().catch(() => null);
   const items = rpcBody?.result?.value?.items;
+  assert.equal(auth.status, 302);
+  assert.equal(rpcBody?.result?.ok, true);
+  assert.ok(cookie && Array.isArray(items) && items.length > 0);
   step('operator-auth-contract', {
     status: auth.status, locationPath: location ? new URL(location, origin).pathname : null, cookieCount: setCookie.length,
     rpcStatus: rpc.status, rpcType: rpcBody?.type ?? null, rpcOk: rpcBody?.result?.ok ?? null,
@@ -89,6 +95,8 @@ try {
       streamEvents.push({ streamId: message.streamId, type: message.type, valueType: message.value?.type, errorCode: message.error?.code });
     });
   }).finally(() => ws.close());
+  assert.ok(streamEvents.some(event => event.streamId === 'control' && event.valueType === 'baseline'));
+  assert.ok(streamEvents.some(event => event.streamId === 'gateway' && event.valueType === 'ready'));
   step('operator-stream-probe', { activeSessionAvailable: Boolean(activeSession), events: streamEvents });
 
   // 3. Real Electron app connected through the real settings field.
@@ -104,11 +112,17 @@ try {
   step('app-start', { mode: startSource.mode, connection: startSource.connection, sessions: Object.keys(startState.sessions).length });
 
   const mainId = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].id);
-  await app.evaluate(({ Menu, BrowserWindow }, { id, mainId }) => {
+  const menu = id => app.evaluate(({ Menu, BrowserWindow }, { id, mainId }) => {
     const item = Menu.getApplicationMenu()?.getMenuItemById(id);
     if (!item) throw new Error('missing menu ' + id);
     item.click(item, BrowserWindow.fromId(mainId), {});
-  }, { id: 'settings', mainId });
+  }, { id, mainId });
+  async function connectionSettings() {
+    await menu('settings');
+    await page.getByRole('tab', { name: '连接', exact: true }).click();
+    await expect(page.getByRole('tabpanel', { name: '连接' })).toBeVisible();
+  }
+  await connectionSettings();
   const input = page.locator('#dsh-authentication-url');
   await input.waitFor({ timeout: 10000 });
   await input.fill(link);
@@ -122,6 +136,8 @@ try {
   const sessions = Object.values(liveState.sessions);
   const todos = sessions.flatMap(session => (session.todos ?? []).map(todo => todo.content + ':' + todo.status));
   const token = link.split('token=')[1];
+  assert.equal(JSON.stringify(liveState).includes(token), false);
+  await expect(page.getByText('DSH 已连接', { exact: true }).first()).toBeVisible();
   step('connected', {
     mode: liveSource.mode, connection: liveSource.connection, endpoint: liveSource.endpoint, error: liveSource.error,
     capabilities: liveState.capabilities,
@@ -131,14 +147,26 @@ try {
     todos,
     tokenLeakedIntoRenderer: JSON.stringify(liveState).includes(token),
   });
-  await mkdir(resolve('docs/evidence/live-dsh'), { recursive: true });
-  await page.screenshot({ path: resolve('docs/evidence/live-dsh/connected.png') });
-  step('screenshot', { path: 'docs/evidence/live-dsh/connected.png' });
+  await page.getByRole('button', { name: '返回' }).click();
+  await menu('view-expanded');
+  await page.getByRole('tab', { name: /^步骤 1\/2$/ }).click();
+  const steps = page.getByRole('tabpanel');
+  await expect(steps.locator('.todo-list li')).toHaveCount(2);
+  await expect(steps.locator('.todo.completed')).toBeVisible();
+  await expect(steps.locator('.todo.in_progress')).toBeVisible();
+  const visibleSteps = await steps.locator('.todo-list li').allTextContents();
+  assert.ok(todos.some(todo => todo.endsWith(':completed')) && todos.some(todo => todo.endsWith(':in_progress')));
+  await mkdir(output, { recursive: true });
+  await page.screenshot({ path: join(output, 'steps.png'), animations: 'disabled' });
+  step('visible-steps', { visibleSteps, screenshot: join(output, 'steps.png') });
 
   // 4. Disconnect through the same settings panel.
+  await connectionSettings();
   await page.getByRole('button', { name: '断开连接' }).click();
   await page.waitForFunction(() => window.glass.getSourceState().then(source => source.mode === 'dsh' && source.connection === 'disconnected'), null, { timeout: 12000 });
   const afterDisconnect = await page.evaluate(() => window.glass.getState());
+  assert.equal(Object.keys(afterDisconnect.sessions).length, 0);
+  await expect(page.getByText('DSH 未连接', { exact: true }).first()).toBeVisible();
   step('disconnected', { sessions: Object.keys(afterDisconnect.sessions).length, connection: afterDisconnect.connection });
 
   // 5. Wrong token must be rejected by the official host, not silently accepted.
@@ -156,9 +184,8 @@ try {
 } finally {
   try { if (app) await app.close(); } catch { /* already closed */ }
   try { if (host) host.kill(); } catch { /* already gone */ }
-  await writeFile(resolve('.local-dsh-probe/live-integration.json'), JSON.stringify(result, null, 2));
-  await mkdir(resolve('docs/evidence/live-dsh'), { recursive: true });
-  await writeFile(resolve('docs/evidence/live-dsh/result.json'), JSON.stringify(result, null, 2));
+  await mkdir(output, { recursive: true });
+  await writeFile(join(output, 'result.json'), JSON.stringify(result, null, 2));
   log('---', result.outcome, '---');
   if (result.outcome !== 'PASS') process.exitCode = 1;
 }

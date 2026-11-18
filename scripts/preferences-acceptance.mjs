@@ -19,6 +19,16 @@ for (let launch = 0; launch < 2; launch++) {
     await page.locator('main').waitFor();
     const state = await page.evaluate(() => window.glass.getWindowState());
     assert.equal(state.manualSize, true); assert.equal(state.viewMode, 'expanded'); assert.equal(state.settings.theme, 'dark');
+    const intro = page.getByRole('button', { name: '暂时保留当前形态' });
+    if (launch === 0) await intro.click();
+    await expect(intro).toHaveCount(0);
+    await expect.poll(async () => (await page.evaluate(() => window.glass.getWindowState())).morphing).toBe(null);
+    // Keep production preference persistence enabled, then start the demo explicitly.
+    await app.evaluate(({ BrowserWindow, Menu }) => {
+      const item = Menu.getApplicationMenu()?.getMenuItemById('mock-restart');
+      if (!item?.enabled) throw new Error('Mock replay is unavailable');
+      item.click(item, BrowserWindow.getAllWindows()[0], {});
+    });
     await expect.poll(async () => (await page.evaluate(() => window.glass.getState())).approvals.length, { timeout: 12000 }).toBe(1);
     const afterApproval=await page.evaluate(() => window.glass.getWindowState());
     assert.equal(afterApproval.viewMode, 'expanded',JSON.stringify({launch,initial:state,afterApproval}));
@@ -29,10 +39,15 @@ for (let launch = 0; launch < 2; launch++) {
       await page.evaluate(() => window.glass.resizeWindow({ x: 130, y: 110, width: 480, height: 390 }));
       await page.evaluate(() => window.glass.setSettings({ strength: 'readable' }));
       await page.evaluate(() => window.glass.setSettings({tintColor:'#4090e0',tintOpacity:27,brightness:125}));
+      await page.evaluate(() => window.glass.setOpticsEnabled(false));
       await expect.poll(async () => JSON.parse(await readFile(path, 'utf8')).bounds.width).toBe(480);
       assert.equal(JSON.parse(await readFile(path, 'utf8')).manual, true);
-    } else {assert.equal(state.settings.strength, 'readable');assert.deepEqual({tintColor:state.settings.tintColor,tintOpacity:state.settings.tintOpacity,brightness:state.settings.brightness},{tintColor:'#4090e0',tintOpacity:27,brightness:125});assert.equal((await page.evaluate(()=>window.glass.getOpticsState())).enabled,false);}
+    } else {
+      assert.equal(state.settings.strength, 'readable');
+      assert.deepEqual({ tintColor: state.settings.tintColor, tintOpacity: state.settings.tintOpacity, brightness: state.settings.brightness }, { tintColor: '#4090e0', tintOpacity: 27, brightness: 125 });
+      assert.deepEqual(await page.evaluate(() => window.glass.getOpticsState()), { enabled: false, running: false, error: null });
+    }
   } finally { await app.close(); }
 }
-await writeFile(resolve('docs/evidence/redesign/preferences-acceptance.json'), JSON.stringify({ result: 'PASS', launches: 2, scope: 'Isolated profile: theme/strength/manual bounds survive restart and pending snapshot does not replace custom geometry' }, null, 2));
+await writeFile(resolve('docs/evidence/redesign/preferences-acceptance.json'), JSON.stringify({ result: 'PASS', launches: 2, scope: 'Isolated profile: theme, tint, optics preference and manual bounds survive restart and a pending approval preserves the custom geometry' }, null, 2));
 console.log('Preferences and manual-size protection across two actual Electron launches: PASS');

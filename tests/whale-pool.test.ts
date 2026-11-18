@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS, normalizeSettings, appearanceViewSize } from '../apps/desktop/src/shared/view-model';
 import { WHALE_POOL_FEATURE, normalizeAnnouncements, acknowledgeFeature, shouldIntroduceWhalePool } from '../apps/desktop/src/shared/feature-announcements';
-import { samplePoolOpening } from '../apps/desktop/src/renderer/pool-whale-flight';
+import { samplePoolClosing, samplePoolOpening } from '../apps/desktop/src/renderer/pool-whale-flight';
 
 describe('optional whale pool appearance', () => {
   it('keeps the existing appearance and original sizes for old preferences', () => {
     expect(DEFAULT_SETTINGS.appearance).toBe('classic');
     expect(normalizeSettings({material:'solid',pin:'normal'})).toMatchObject({appearance:'classic',material:'solid',pin:'normal',poolLayout:'clear',poolContour:'pearl'});
     expect(appearanceViewSize('capsule',false,'classic')).toEqual({width:288,height:44});
-    expect(appearanceViewSize('approval',false,'whale-pool')).toEqual({width:400,height:300});
+    expect(appearanceViewSize('approval',false,'classic')).toEqual({width:400,height:300});
   });
   it('accepts the new appearance with each layout and rejects unknown values', () => {
     for(const poolLayout of ['clear','stream','letter'])expect(normalizeSettings({appearance:'whale-pool',poolLayout,poolContour:'mirror'})).toMatchObject({appearance:'whale-pool',poolLayout,poolContour:'mirror'});
@@ -17,6 +17,7 @@ describe('optional whale pool appearance', () => {
   it('allocates enough native space for the independent idle whale and pool', () => {
     expect(appearanceViewSize('capsule',false,'whale-pool')).toEqual({width:220,height:140});
     expect(appearanceViewSize('peek',false,'whale-pool')).toEqual({width:440,height:360});
+    expect(appearanceViewSize('approval',false,'whale-pool')).toEqual({width:480,height:420});
   });
 });
 describe('first install and first feature update notice', () => {
@@ -41,21 +42,28 @@ describe('whale pool opening route', () => {
   const right = { x: 328, y: 70, yaw: 0 };
 
   it('turns in place before swimming right and turns back at the destination', () => {
-    const turning = samplePoolOpening(left, right, 0.12);
+    const frames = Array.from({ length: 300 }, (_, index) => samplePoolOpening(left, right, index / 100));
+    const turn = frames.findIndex(frame => frame.swim === 0 && frame.yaw > 0 && frame.yaw < Math.PI);
+    const swim = frames.findIndex(frame => frame.swim > 0 && frame.swim < 1);
+    const arrival = frames.findIndex(frame => frame.swim === 1 && frame.yaw > 0 && frame.yaw < Math.PI);
+    expect(turn).toBeGreaterThanOrEqual(0);
+    expect(swim).toBeGreaterThan(turn);
+    expect(arrival).toBeGreaterThan(swim);
+    const turning = frames[turn]!;
     expect(turning.x).toBe(left.x);
     expect(turning.yaw).toBeGreaterThan(0);
     expect(turning.yaw).toBeLessThan(Math.PI);
     expect(turning.swim).toBe(0);
     expect(turning.reveal).toBe(0);
 
-    const swimming = samplePoolOpening(left, right, 0.7);
+    const swimming = frames[swim]!;
     expect(swimming.x).toBeGreaterThan(left.x);
     expect(swimming.x).toBeLessThan(right.x);
     expect(swimming.yaw).toBe(Math.PI);
     expect(swimming.swim).toBeGreaterThan(0);
     expect(swimming.swim).toBeLessThan(1);
 
-    const arriving = samplePoolOpening(left, right, 1.5);
+    const arriving = frames[arrival]!;
     expect(arriving.x).toBe(right.x);
     expect(arriving.swim).toBe(1);
     expect(arriving.yaw).toBeGreaterThan(0);
@@ -74,4 +82,29 @@ describe('whale pool opening route', () => {
     expect(samplePoolOpening(halfway, right, 0)).toMatchObject(halfway);
     expect(samplePoolOpening(halfway, right, 0.12).yaw).toBeGreaterThan(halfway.yaw);
   });
+
+  it('reveals the sheet before the final docking turn and settles within a second', () => {
+    const leftward = samplePoolOpening(right, left, 0.60);
+    const rightward = samplePoolOpening(left, right, 0.76);
+    for (const pose of [leftward, rightward]) {
+      expect(pose.reveal).toBeCloseTo(1, 8);
+      expect(pose.swim).toBeLessThan(1);
+      expect(pose.settled).toBe(false);
+    }
+    expect(samplePoolOpening(left, right, 0.96)).toMatchObject({ x:right.x, yaw:0, reveal:1, settled:true });
+  });
+});
+
+it('keeps a whale closing from the bottom-right inside the shrinking native viewport', () => {
+  const pose = { x: 380, y: 280, yaw: Math.PI / 2 };
+  const expanded = { width: 440, height: 360 };
+  const capsule = { width: 220, height: 140 };
+  const idle = { x: 165, y: 70 };
+  expect(samplePoolClosing(pose, expanded, expanded, { x: 330, y: 70 }, 0)).toMatchObject(pose);
+  const shrinking = samplePoolClosing(pose, expanded, capsule, idle, .12);
+  expect(shrinking.x).toBeGreaterThan(idle.x);
+  expect(shrinking.x).toBeLessThan(capsule.width - 20);
+  expect(shrinking.y).toBeGreaterThan(idle.y);
+  expect(shrinking.y).toBeLessThan(capsule.height);
+  expect(samplePoolClosing(pose, expanded, capsule, idle, .36)).toEqual({ ...idle, yaw: 0, progress: 1 });
 });

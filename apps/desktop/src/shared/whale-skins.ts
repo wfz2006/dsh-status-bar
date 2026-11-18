@@ -1,5 +1,7 @@
 export const WHALE_SKINS = [
   { id: 'classic', name: '原版蓝鲸' },
+  { id: 'starlit', name: '星夜蓝' },
+  { id: 'sailor', name: '海盐水手' },
   { id: 'star-wish', name: '星愿' },
   { id: 'seigaiha', name: '青海波' },
   { id: 'sakura', name: '樱吹雪' },

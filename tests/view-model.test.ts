@@ -40,6 +40,11 @@ it('keeps the frosted glass theme as an explicit material',()=>{
   expect(normalizeSettings({ material: 'frosted', pin: 'normal', theme: 'light' })).toMatchObject({ material: 'frosted', pin: 'normal', theme: 'light' });
   expect(normalizeSettings({ material: 'nonsense' }).material).toBe('frosted');
 });
+it('preserves the explicit choice to disable desktop sampling across unrelated settings updates', () => {
+  expect(normalizeSettings({ material: 'frosted' }).desktopOptics).toBeNull();
+  const settings = normalizeSettings({ material: 'frosted', desktopOptics: false });
+  expect(normalizeSettings({ ...settings, soundPreset: 'soft' }).desktopOptics).toBe(false);
+});
 it('derives status and progress from source facts, not Todo completion', () => {
   let p = initialProjection();
   for (const f of mockFrames().slice(0, 2)) p = reduceProjection(p, f);
@@ -77,6 +82,7 @@ it('keeps business approval facts independent of user-selected form', () => {
   expect(observeFacts(initialView(), facts, DEFAULT_SETTINGS).mode).toBe('capsule');
   const automatic = observeFacts(initialView(), facts, { ...DEFAULT_SETTINGS, autoApproval: true });
   expect(automatic.mode).toBe('approval'); expect(automatic.returnMode).toBe('capsule');
+  expect(observeFacts(automatic, { pending: [], completed: null, holdApproval: true }, DEFAULT_SETTINGS).mode).toBe('approval');
   expect(observeFacts(automatic, { pending: [], completed: null }, DEFAULT_SETTINGS).mode).toBe('capsule');
   const manual = manualView(initialView(), 'expanded');
   expect(observeFacts(manual, facts, { ...DEFAULT_SETTINGS, autoApproval: true }).mode).toBe('expanded');

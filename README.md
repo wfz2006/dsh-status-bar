@@ -41,8 +41,8 @@
 
 | 设置 → 外观 | 设置 → 动效 |
 | --- | --- |
-| ![外观设置中的原版玻璃、鲸鱼水池和 14 款鲸鱼外观](docs/images/homepage/skins.webp) | ![动效设置中的胶囊完成预览和四套动效](docs/images/homepage/motion.webp) |
-| 原版蓝鲸加 13 款造型。星愿、樱吹雪、南瓜魔女和深海磷光等外观可在两种形态里共用。 | **经典掠光、字光落印、流银巡航、鲸游潮汐** 均可预览运行与完成效果。动画支持完整、减少和关闭。 |
+| ![外观设置中的原版玻璃、鲸鱼水池和鲸鱼造型](docs/images/homepage/skins.webp) | ![动效设置中的胶囊完成预览和四套动效](docs/images/homepage/motion.webp) |
+| 原版蓝鲸和 15 款装扮可在两种形态里共用。新加入的「星夜蓝」和「海盐水手」也会随任务游动、倾听和眨眼。 | **经典掠光、字光落印、流银巡航、鲸游潮汐** 均可预览运行与完成效果。动画支持完整、减少和关闭。 |
 
 在 **设置 → 窗口 → 任务提醒** 可以试听任务完成和需要确认时的提示音，并在经典双音、水滴、玻璃风铃、木琴和电子脉冲之间切换。
 
@@ -50,7 +50,7 @@
 
 ## 安装与启动
 
-项目面向 **Windows 11 x64**。[v0.4.1](docs/release-notes-0.4.1.md) 带来了水池拖动回摆、更平滑的贴边展开和五种可选提示音。
+项目面向 **Windows 11 x64**。v0.4.2 让鲸鱼的整只眼睛沿一道弧线闭合，也会在输入回答、等待审批和任务完成时做出不同的动作。[查看动图与更新说明](docs/release-notes-0.4.2.md)
 
 在已安装 DSH CLI 的终端运行以下命令，安装 GitHub 上的自包含发行包。
 
@@ -58,7 +58,7 @@
 dsh plugin --profile web add https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-status-bar.tgz
 ```
 
-也可以用 `dsh plugin --profile web add dsh-status-bar-plugin` 安装 npm 渠道的版本，首次启动时会下载该版本对应的运行时。
+使用 DSH 桌面版时，将命令里的 `--profile web` 换成 `--profile desktop`。也可以用 `dsh plugin --profile web add dsh-status-bar-plugin` 安装 npm 渠道的版本，首次启动时会下载该版本对应的运行时。
 
 重启 DSH 后，插件会启动悬浮窗并连接当前宿主。隐藏后按 `Ctrl+Shift+G` 恢复，退出后可以在 DSH 会话里输入 `/status-bar` 重新打开。自动启动和自定义 Profile 的说明见[插件文档](packages/dsh-status-bar/README.md)。
 

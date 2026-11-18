@@ -38,3 +38,10 @@ export function launcherPidFromArgs(argv: readonly string[]): number | undefined
   const pid = Number(value);
   return Number.isSafeInteger(pid) && pid > 0 ? pid : undefined;
 }
+
+/** Stable for one loaded plugin. Fresh one-use login links can still belong to that host. */
+export function dshInstanceFromArgs(argv: readonly string[]): string | undefined {
+  const arg = argv.find(value => value.startsWith('--dsh-instance='));
+  const id = arg?.slice('--dsh-instance='.length);
+  return id && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id) ? id : undefined;
+}

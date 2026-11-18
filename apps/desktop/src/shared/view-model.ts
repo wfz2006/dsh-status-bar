@@ -12,9 +12,10 @@ export type GlassSettings = GlassAppearance & {
   defaultView: 'capsule' | 'peek' | 'remember-last'; autoApproval: boolean; autoCollapse: boolean;
   edgeDock: boolean;
   animation: 'full' | 'reduced' | 'off'; capsuleMotion: CapsuleMotion; pin: 'always' | 'on-notification' | 'normal';
-  material: 'system' | 'transparent' | 'acrylic' | 'frosted' | 'solid'; sound: boolean; soundPreset: ChimePreset;
+  material: 'system' | 'transparent' | 'acrylic' | 'frosted' | 'solid'; desktopOptics: boolean | null;
+  sound: boolean; soundPreset: ChimePreset;
 };
-export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, appearance:'classic',whaleSkin:'classic',poolLayout:'clear',poolContour:'pearl', theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, edgeDock: true, animation: 'full', capsuleMotion: 'classic', pin: 'always', material: 'frosted', sound: true, soundPreset: DEFAULT_CHIME_PRESET };
+export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, appearance:'classic',whaleSkin:'classic',poolLayout:'clear',poolContour:'pearl', theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, edgeDock: true, animation: 'full', capsuleMotion: 'classic', pin: 'always', material: 'frosted', desktopOptics: null, sound: true, soundPreset: DEFAULT_CHIME_PRESET };
 export function normalizeSettings(value: unknown): GlassSettings {
   if (!value || typeof value !== 'object') return { ...DEFAULT_SETTINGS };
   const v = value as Record<string, unknown>;
@@ -26,14 +27,15 @@ export function normalizeSettings(value: unknown): GlassSettings {
     edgeDock: v.edgeDock !== false,
     whaleSkin: normalizeWhaleSkin(v.whaleSkin),
     pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], DEFAULT_SETTINGS.material),
+    desktopOptics: typeof v.desktopOptics === 'boolean' ? v.desktopOptics : null,
     sound: v.sound !== false, soundPreset: normalizeChimePreset(v.soundPreset) };
 }
 export function viewSize(mode: GlassViewMode, attention = false) {
   return { capsule: { width: 288, height: 44 }, peek: { width: 340, height: attention ? 236 : 190 }, expanded: { width: 400, height: 360 }, approval: { width: 400, height: 300 } }[mode];
 }
 export function appearanceViewSize(mode: GlassViewMode, attention: boolean, appearance: GlassSettings['appearance']) {
-  if(appearance!=='whale-pool' || mode==='approval')return viewSize(mode,attention);
-  return {capsule:{width:220,height:140},peek:{width:440,height:360},expanded:{width:480,height:440}}[mode];
+  if(appearance!=='whale-pool')return viewSize(mode,attention);
+  return {capsule:{width:220,height:140},peek:{width:440,height:360},expanded:{width:480,height:440},approval:{width:480,height:420}}[mode];
 }
 export function viewForSize(width: number, height: number, current: GlassViewMode): GlassViewMode {
   if (height < 96) return 'capsule';
@@ -48,12 +50,12 @@ export function viewForAppearanceSize(width:number,height:number,current:GlassVi
 export type ViewState = { mode: GlassViewMode; manual: boolean; returnMode: GlassViewMode | null; pending: string[]; completed: string | null };
 export function initialView(mode: GlassViewMode = 'capsule'): ViewState { return { mode, manual: false, returnMode: null, pending: [], completed: null }; }
 export function manualView(state: ViewState, mode: GlassViewMode): ViewState { return { ...state, mode, manual: true, returnMode: null }; }
-export type AttentionFacts = { pending: string[]; completed: string | null };
+export type AttentionFacts = { pending: string[]; completed: string | null; holdApproval?: boolean; notifyCompletion?: boolean };
 export function observeFacts(state: ViewState, facts: AttentionFacts, settings: GlassSettings): ViewState {
   let next = { ...state, pending: facts.pending, completed: facts.completed };
   const newRequest = facts.pending.some(id => !state.pending.includes(id));
   if (newRequest && settings.autoApproval && !state.manual) next = { ...next, mode: 'approval', returnMode: state.returnMode ?? state.mode };
-  if (!facts.pending.length && state.returnMode && !state.manual) next = { ...next, mode: state.returnMode, returnMode: null };
+  if (!facts.pending.length && !facts.holdApproval && state.returnMode && !state.manual) next = { ...next, mode: state.returnMode, returnMode: null };
   return next;
 }
 function describeSession(p: Projection, session: Session | undefined, pending: boolean, questions: boolean) {
@@ -63,24 +65,42 @@ function describeSession(p: Projection, session: Session | undefined, pending: b
     : pending || session.phase === 'waiting-approval' ? 'waiting_approval' : questions || session.phase === 'waiting-question' ? 'waiting_answer'
     : session.agentStatus === 'running' ? 'running' : session.agentStatus === 'starting' ? 'starting' : session.agentStatus === 'stopping' ? 'stopping'
     : session.agentStatus === 'idle' ? 'idle' : 'unknown';
-  const labels = { disconnected: p.connection === 'connecting' || p.connection === 'reconnecting' ? '正在重连' : p.connection === 'incompatible' ? '协议不兼容' : '连接已断开',
+  const labels = { disconnected: p.connection === 'connecting' ? '正在连接' : p.connection === 'reconnecting' ? '正在重连'
+    : p.connection === 'incompatible' ? '协议不兼容' : p.connection === 'connected' && p.stale ? '状态待同步' : '连接已断开',
     waiting_approval: '等待确认', error: '任务出错', completed: '已完成', limit_reached: '达到输出上限', waiting_answer: '等待回答', running: '进行中', starting: '正在启动', stopping: '正在停止',
     idle: '空闲', unknown: '状态待同步', empty: '尚无会话', cancelled: '已取消', archived: '已归档' };
-  return { status, label: labels[status] };
+  return { status, label: labels[status] } as const;
 }
 export function deriveSessionSummary(p: Projection, id: string) {
   const session = Object.hasOwn(p.sessions, id) ? p.sessions[id] : undefined;
   const matches = (request: Projection['questions'][number] | Projection['approvals'][number]) => request.sessionId === id && request.runtimeId === p.runtimeId && request.sourceEpoch === p.epoch && (request.status === 'pending' || request.status === 'submitting');
   return { sessionId: id, title: session?.title || '尚无任务', ...describeSession(p, session, p.approvals.some(matches), p.questions.some(matches)) };
 }
+function terminalSession(session: Session | undefined) {
+  return !!session && ['finished', 'limit-reached', 'error', 'cancelled', 'archived'].includes(session.phase);
+}
 export function deriveTask(p: Projection, selected: string) {
   const session = Object.hasOwn(p.sessions, selected) ? p.sessions[selected] : undefined;
   const todos = session?.todos ?? [];
-  const terminal = !!session && ['finished', 'limit-reached', 'error', 'cancelled', 'archived'].includes(session.phase);
+  const terminal = terminalSession(session);
   const pending = terminal ? [] : p.approvals.filter(a => a.sessionId === selected && a.runtimeId === p.runtimeId && a.sourceEpoch === p.epoch && (a.status === 'pending' || a.status === 'submitting'));
   const questions = terminal ? [] : p.questions.filter(q => q.sessionId === selected && q.runtimeId === p.runtimeId && q.sourceEpoch === p.epoch && (q.status === 'pending' || q.status === 'submitting'));
   return { session, title: session?.title || '尚无任务', todos, current: todos.filter(t => t.status === 'in_progress'), completed: todos.filter(t => t.status === 'completed').length,
     total: todos.length, pending, questions, attentionCount: pending.length + questions.length, ...describeSession(p, session, pending.length > 0, questions.length > 0) };
+}
+export function otherPendingRequests(p: Projection, selected: string) {
+  if (p.connection !== 'connected' || p.stale) return [];
+  const targets = [
+    ...p.approvals.map(request => ({ kind: 'approval' as const, request, label: request.reason })),
+    ...p.questions.map(request => ({ kind: 'question' as const, request, label: request.questions[0]?.question ?? '需要你的回答' })),
+  ];
+  return targets.flatMap(target => {
+    const { request } = target;
+    if (request.sessionId === selected || request.runtimeId !== p.runtimeId || request.sourceEpoch !== p.epoch ||
+        request.status !== 'pending' && request.status !== 'submitting' || !Object.hasOwn(p.sessions, request.sessionId)) return [];
+    const session = p.sessions[request.sessionId]!;
+    return terminalSession(session) ? [] : [{ ...target, title: session.title }];
+  });
 }
 /** Compact token counts in the same 1.3M / 432K shape DSH's own status bar uses. */
 export function formatTokens(value: number): string {

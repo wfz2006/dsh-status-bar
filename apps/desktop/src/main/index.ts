@@ -2,17 +2,18 @@ import { app, BrowserWindow, ipcMain, screen, globalShortcut, clipboard } from '
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import WebSocket from 'ws';
 import { createBridge } from '@glass/bridge';
 import { createMockAdapter, mockSnapshot, mockWelcome, type MockScenario } from '@glass/mock';
-import { createDshAdapter } from '@glass/dsh';
+import { createDshAdapter, parseHostLink, type DshPublication } from '@glass/dsh';
 import { frameSchema, initialProjection, reduceProjection, type Frame, type LocalEvent } from '@glass/protocol';
 import { clampBounds, type Bounds } from '../shared/window';
-import { dshLinkFromArgs, launcherPidFromArgs } from '../shared/launch';
+import { dshInstanceFromArgs, dshLinkFromArgs, launcherPidFromArgs } from '../shared/launch';
 import { deriveTask } from '../shared/view-model';
-import type { MockAction, WindowAction, SourceState } from '../shared/api';
-import { assertApprovalResponse, assertQuestionResponse } from './request-gate';
+import { poolEvent } from '../shared/pool-events';
+import type { DesktopProjection, HistoryPagination, MockAction, RequestKind, SubmissionResult, WindowAction, SourceState } from '../shared/api';
+import { assertApprovalResponse, assertQuestionResponse, identityOf, type RequestIdentity } from './request-gate';
 import { createWindowController } from './window-controller';
 import { createDesktopOptics } from './desktop-optics';
 import {createWindowPositioner} from './window-positioner';
@@ -45,13 +46,36 @@ let lastReceived = 0;
 let dsh: ReturnType<typeof createDshAdapter> | undefined;
 let source: SourceState = { mode: smoke ? 'mock' : 'dsh', connection: 'disconnected', endpoint: null, error: null };
 let sourceGeneration = 0;
+let sourceLauncher: number | undefined;
+let launcherWatch: ReturnType<typeof setInterval> | undefined;
+let history: HistoryPagination | undefined;
+// Only a random, process-local scope crosses IPC. An authentication link never does.
+let draftHost: { fingerprint: string; plugin?: string; scope: string } | undefined;
+let sessionBeforeReconnect: string | undefined;
+let cueSequence = 0;
+let lastPoolEvent: DesktopProjection['poolEvent'];
 const responses = new Set<string>();
+const submissions = new Map<string, SubmissionResult>();
 // Coalesce projection pushes: the adapter can publish several frames for one
 // adapter turn (status, transcript, approval) and the renderer only needs the
 // newest projection per animation frame.
-let pendingState: typeof state | undefined;
+let pendingState: DesktopProjection | undefined;
 let stateTimer: ReturnType<typeof setTimeout> | undefined;
 const projectionPublisher = new ProjectionPublisher();
+let projectedState: typeof state | undefined;
+let desktopState: DesktopProjection | undefined;
+function desktopProjection(): DesktopProjection {
+  if (!desktopState || state !== projectedState || selected !== desktopState.selectedSession || history !== desktopState.history ||
+      draftHost?.scope !== desktopState.draftScope || lastPoolEvent !== desktopState.poolEvent) {
+    projectedState = state;
+    desktopState = { ...state, selectedSession: selected, history, draftScope: draftHost?.scope, poolEvent: lastPoolEvent };
+  }
+  return desktopState;
+}
+function queueProjection() {
+  pendingState = desktopProjection();
+  stateTimer ??= setTimeout(flushState, 16);
+}
 function flushState() {
   stateTimer = undefined;
   if (!win || win.isDestroyed() || !win.isVisible()) return;
@@ -72,24 +96,34 @@ function publishSource() {
   ui?.publish();
 }
 function resetSource(mode: SourceState['mode']) {
+  if (mode === 'mock') { draftHost = undefined; sessionBeforeReconnect = undefined; }
+  else if (draftHost && selected && Object.hasOwn(state.sessions, selected)) sessionBeforeReconnect = selected;
   sourceGeneration++; reconnectEnabled = false; clearTimeout(retry);
   socket?.terminate(); socket = undefined; adapter?.stop(); adapter = undefined;
   dsh?.stop(); dsh = undefined; responses.clear();
+  sourceLauncher = undefined; history = undefined;
   source = { mode, connection: 'disconnected', endpoint: null, error: null };
   state = initialProjection(); update({ kind: 'transport.closed' }); publishSource();
 }
-async function connectDSH(value: unknown) {
-  if (typeof value !== 'string' || value.length > 4096) throw new Error('连接链接无效');
-  let endpoint: string;
-  try {
-    const url = new URL(value);
-    if (!['http:', 'https:'].includes(url.protocol) || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) || url.username || url.password) throw new Error();
-    endpoint = url.origin;
-  } catch { throw new Error('请输入 DSH 官方提供的本机连接链接'); }
+async function connectDSH(value: unknown, launcher?: number, instance?: string) {
+  if (typeof value !== 'string' || value.length > 4096) throw new Error('请输入有效的 DSH 本机认证链接。');
+  const link = parseHostLink(value);
+  const endpoint = link.origin;
+  const fingerprint = createHash('sha256').update(JSON.stringify([endpoint, link.searchParams.get('token')])).digest('hex');
+  const plugin = launcher && instance ? JSON.stringify([endpoint, launcher, instance]) : undefined;
+  const previous = draftHost && (draftHost.fingerprint === fingerprint || !!plugin && draftHost.plugin === plugin) ? draftHost : undefined;
   resetSource('dsh'); const generation = sourceGeneration;
+  draftHost = { fingerprint, scope: previous?.scope ?? randomUUID(), plugin: plugin ?? previous?.plugin };
+  if (!previous) sessionBeforeReconnect = undefined;
+  sourceLauncher = launcher;
   source = { ...source, connection: 'connecting', endpoint }; publishSource();
   dsh = createDshAdapter({
-    publish: frame => { if (generation === sourceGeneration) update(frame); },
+    publish: (frame, origin) => { if (generation === sourceGeneration) update(frame, origin); },
+    selectedSession: () => selected,
+    onHistory: pagination => {
+      if (generation !== sourceGeneration || history?.hasOlder === pagination.hasOlder && history.canReturn === pagination.canReturn) return;
+      history = pagination; queueProjection();
+    },
     onConnection: connection => {
       if (generation !== sourceGeneration) return;
       source = { ...source, connection: connection === 'connected' ? 'connected' : connection === 'connecting' ? 'connecting' : 'disconnected', error: connection === 'disconnected' ? '连接已断开，请重新粘贴官方连接链接。' : null };
@@ -119,24 +153,66 @@ async function useMock() {
   adapter = makeAdapter('normal'); adapter.start(); reconnectEnabled = true; connect(); publishSource();
 }
 
-function refreshFacts() {
+function refreshFacts(notifyCompletion = false) {
+  if (state.connection === 'connected' && !state.stale && sessionBeforeReconnect) {
+    if (Object.hasOwn(state.sessions, sessionBeforeReconnect)) selected = sessionBeforeReconnect;
+    sessionBeforeReconnect = undefined;
+  }
   if (!Object.hasOwn(state.sessions, selected)) selected = Object.keys(state.sessions)[0] ?? '';
   const task = deriveTask(state, selected);
+  if (quitting) return;
   ui?.observe({
     pending: [...task.pending.map(a => ['approval', a.runtimeId, a.sourceEpoch, a.sessionId, a.requestId].join('/')),
       ...task.questions.map(q => ['question', q.runtimeId, q.sourceEpoch, q.sessionId, q.requestId].join('/'))],
     completed: task.status === 'completed' ? [state.runtimeId, state.epoch, selected].join('/') : null,
+    holdApproval: submissions.size > 0,
+    notifyCompletion,
   }, state.connection === 'connected' && !state.stale);
 }
-function update(event: Frame | LocalEvent) {
+function update(event: Frame | LocalEvent, origin?: DshPublication) {
+  const previous = state;
   state = reduceProjection(state, event);
+  const cue = origin === 'history' ? undefined : poolEvent(previous, state, event, selected,
+    source.mode === 'dsh' ? origin === 'live-completion' : undefined);
+  const visible = !!win && !win.isDestroyed() && win.isVisible() && !win.isMinimized();
+  if (cue && visible) lastPoolEvent = { id: ++cueSequence, kind: cue, sessionId: selected };
+  else if (!visible || state.stale || event.kind === 'glass.snapshot') lastPoolEvent = undefined;
   if (source.mode === 'mock') {
     const connection = state.connection === 'connected' ? 'connected' : state.connection === 'connecting' || state.connection === 'reconnecting' ? 'connecting' : 'disconnected';
     if (source.connection !== connection) { source = { ...source, connection }; publishSource(); }
   }
-  pendingState = state;
-  stateTimer ??= setTimeout(flushState, 16);
+  refreshFacts(cue === 'completed' && visible);
+  queueProjection();
+}
+function selectSession(id: string) {
+  if (id !== selected) lastPoolEvent = undefined;
+  selected = id;
   refreshFacts();
+  queueProjection();
+}
+
+async function submitResponse(kind: RequestKind, identity: RequestIdentity, send: (active: NonNullable<typeof dsh>) => Promise<void>, decision?: SubmissionResult['decision']) {
+  const active = dsh;
+  const key = JSON.stringify([kind, identity]);
+  if (!active || source.mode !== 'dsh' || responses.has(key)) throw new Error('请求已失效或正在提交');
+  responses.add(key);
+  const id = randomUUID();
+  const result: SubmissionResult = { id, kind, identity, decision, sessionTitle: state.sessions[identity.sessionId]?.title || identity.sessionId, status: 'submitting' };
+  submissions.set(id, result);
+  ui?.publish();
+  try {
+    await send(active);
+    submissions.set(id, { ...result, status: 'confirmed' });
+  } catch {
+    submissions.set(id, { ...result, status: 'unconfirmed' });
+    throw new Error('DSH 未确认，请在 DSH 中核实。');
+  } finally {
+    responses.delete(key);
+    const finished = [...submissions.values()].filter(item => item.status !== 'submitting');
+    for (const old of finished.slice(0, Math.max(0, finished.length - 10))) submissions.delete(old.id);
+    refreshFacts();
+    ui?.publish();
+  }
 }
 function connect() {
   if (!bridge || quitting || source.mode !== 'mock') return;
@@ -204,7 +280,11 @@ function finiteRecord(value: unknown, keys: string[]): value is Record<string, n
 }
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
-  let watchedLauncher = launcherPidFromArgs(process.argv);
+  const owningLauncher = launcherPidFromArgs(process.argv);
+  let watchedLauncher = owningLauncher;
+  let hasStatusBarCommand = !!watchedLauncher && process.argv.includes('--status-bar-command');
+  let loaded = false;
+  let queuedHandoff: string[] | undefined;
   function watchLauncher(pid: number | undefined) {
     watchedLauncher = pid;
     if (!pid) { if (launcherWatch) clearInterval(launcherWatch); launcherWatch = undefined; return; }
@@ -219,13 +299,30 @@ else {
   // Quit with the DSH host that spawned this window; a later focus wake-up can
   // re-target the watched pid through the second-instance hand-off.
   watchLauncher(watchedLauncher);
-  app.on('second-instance', (_event, argv) => {
-    if (win) { win.show(); win.focus(); }
-    const launcher = launcherPidFromArgs(argv);
-    if (launcher) watchLauncher(launcher);
+  function handoff(argv: string[]): boolean {
+    if (!loaded) { queuedHandoff = argv; return false; }
+    if (win.isMinimized()) win.restore();
+    win.show(); win.focus();
     const link = dshLinkFromArgs(argv);
-    if (link) void connectDSH(link).catch(() => { /* connectDSH already published the failure state */ });
-  });
+    if (!link) return false;
+    let origin: string;
+    try { origin = parseHostLink(link).origin; } catch { return false; }
+    const launcher = launcherPidFromArgs(argv);
+    if (launcher) {
+      watchLauncher(launcher);
+      // A second instance cannot make its plugin responsible for cleaning up
+      // a primary process it did not start.
+      hasStatusBarCommand = launcher === owningLauncher && argv.includes('--status-bar-command');
+      ui?.publish();
+    }
+    // The existing authenticated channel remains usable for the same launcher
+    // and origin even when the wake-up includes a fresh one-use token.
+    if (!(launcher && launcher === sourceLauncher && origin === source.endpoint && dsh?.isConnected())) {
+      void connectDSH(link, launcher, dshInstanceFromArgs(argv)).catch(() => { /* connectDSH already published the failure state */ });
+    }
+    return true;
+  }
+  app.on('second-instance', (_event, argv) => handoff(argv));
   app.whenReady().then(async () => {
     app.setAppUserModelId('local.dsh-glass.preview');
     win = new BrowserWindow({ ...position(), minWidth: 180, minHeight: 44, maxWidth: 900, maxHeight: 1000,
@@ -234,67 +331,72 @@ else {
       webPreferences: { preload: join(here, '../preload/index.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true },
     });
     positioner=createWindowPositioner(win,join(here,'../../native/RegionCapture.exe'));
+    let recoveryShortcut: string | undefined;
     ui = createWindowController(win, app.getPath('userData'), smoke, {
       position:(x,y)=>positioner!.move(x,y),
       sourceName,
-      reconnect: () => { if (source.mode === 'mock') mockAction('reconnect'); else ui?.request('settings'); },
+      reconnect: () => ui?.showConnection(),
+      recovery: () => [...(recoveryShortcut ? [recoveryShortcut] : []), ...(hasStatusBarCommand ? ['DSH 的 /status-bar'] : [])],
+      submissions: () => [...submissions.values()].reverse(),
       mock: action => { if (source.mode === 'mock') mockAction(action); else void useMock().then(() => mockAction(action)); }, quit: () => app.quit(),
       canOpenDSH: true, openDSH: createDshLauncher(win, app.getPath('userData')),
       menuChanged: () => {},
       suspendOptics:suspended=>optics?.setSuspended(suspended),
     });
     optics=createDesktopOptics(win,join(here,'../../native/RegionCapture.exe'));
-    optics.setSuspended(ui.state().settings.appearance==='whale-pool'&&ui.state().panel===null&&(ui.state().viewMode==='capsule'||ui.state().viewMode==='peek'));
+    optics.setSuspended(ui.state().settings.appearance==='whale-pool'&&ui.state().panel===null);
     win.webContents.on('did-finish-load',()=>optics?.refresh());
     win.on('show', () => {
+      lastPoolEvent = undefined;
       clearTimeout(stateTimer); stateTimer = undefined; pendingState = undefined;
-      win.webContents.send('glass:update', projectionPublisher.snapshot(state));
+      win.webContents.send('glass:update', projectionPublisher.snapshot(desktopProjection()));
     });
     const opticsBinary = join(here, '../../native/RegionCapture.exe');
+    const opticsOverride = process.argv.includes('--desktop-optics');
+    function syncOptics(force = false) {
+      const settings = ui!.state().settings;
+      const supportedMaterial = settings.material !== 'solid' && settings.material !== 'acrylic';
+      const enabled = supportedMaterial && (settings.desktopOptics ?? (opticsOverride || !smoke && existsSync(opticsBinary)));
+      if (force || optics!.state().enabled !== enabled) return optics!.enable(enabled);
+      return optics!.state();
+    }
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', event => event.preventDefault());
     win.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-    win.on('close', event => { if (!quitting) { event.preventDefault(); win.hide(); } });
+    win.on('close', event => { if (!quitting) { event.preventDefault(); ui?.request('hide'); } });
     win.once('ready-to-show', () => {
       win.show();
-      // Refraction ships on by default; the settings checkbox still turns it off
-      // for the session. Solid acrylic has nothing to refract, so skip the worker.
-      if (process.argv.includes('--desktop-optics')) {
+      if (opticsOverride) {
         ui!.setSettings({material:'transparent'});ui!.request('collapse',true);ui!.request('expand',true);
-        optics!.enable(true);
-      } else if (!smoke && existsSync(opticsBinary) && ui!.state().settings.material !== 'solid') {
-        optics!.enable(true);
       }
+      syncOptics();
     });
-    ipcMain.handle('glass:state', event => { assertSender(event); return projectionPublisher.snapshot(state); });
+    ipcMain.handle('glass:state', event => { assertSender(event); return projectionPublisher.snapshot(desktopProjection()); });
     ipcMain.handle('glass:source-state', event => { assertSender(event); return source; });
     ipcMain.handle('glass:dsh-connect', (event, value: unknown) => { assertSender(event); return connectDSH(value); });
     ipcMain.handle('glass:dsh-disconnect', event => { assertSender(event); resetSource('dsh'); });
     ipcMain.handle('glass:use-mock', event => { assertSender(event); return useMock(); });
     ipcMain.handle('glass:approval-response', async (event, identity: unknown, outcome: unknown) => {
       assertSender(event); const checked = assertApprovalResponse(state, identity, outcome);
-      const key = JSON.stringify(['approval', checked.identity]);
-      if (!dsh || source.mode !== 'dsh' || responses.has(key)) throw new Error('请求已失效或正在提交');
-      responses.add(key); const active = dsh;
-      try { await active.respondApproval(checked.identity, checked.outcome); }
-      catch { throw new Error('审批未确认，请检查 DSH 中的当前请求'); }
-      finally { responses.delete(key); }
+      return submitResponse('approval', checked.identity, active => active.respondApproval(checked.identity, checked.outcome), checked.outcome);
     });
     ipcMain.handle('glass:question-response', async (event, identity: unknown, answers: unknown) => {
       assertSender(event); const checked = assertQuestionResponse(state, identity, answers);
-      const key = JSON.stringify(['question', checked.identity]);
-      if (!dsh || source.mode !== 'dsh' || responses.has(key)) throw new Error('请求已失效或正在提交');
-      responses.add(key); const active = dsh;
-      try { await active.respondQuestion(checked.identity, checked.answers); }
-      catch { throw new Error('回答未确认，请检查 DSH 中的当前问题'); }
-      finally { responses.delete(key); }
+      return submitResponse('question', checked.identity, active => active.respondQuestion(checked.identity, checked.answers));
+    });
+    ipcMain.handle('glass:dismiss-submission', (event, id: unknown) => {
+      assertSender(event);
+      if (typeof id === 'string' && submissions.get(id)?.status !== 'submitting' && submissions.delete(id)) {
+        refreshFacts();
+        ui?.publish();
+      }
     });
     ipcMain.handle('glass:optics-state',event=>{assertSender(event);return optics!.state();});
     ipcMain.handle('glass:optics-refresh',event=>{assertSender(event);optics!.refresh();});
     ipcMain.handle('glass:optics-enable',(event,value:unknown)=>{
       assertSender(event);if(typeof value!=='boolean')throw new Error('Invalid optics setting');
-      if(value && ui!.state().settings.material==='solid')ui!.setSettings({material:'transparent'});
-      return optics!.enable(value);
+      ui!.setSettings(value && ui!.state().settings.material==='solid' ? {desktopOptics: value, material:'transparent'} : {desktopOptics: value});
+      return syncOptics(true);
     });
     ipcMain.handle('glass:window-state', event => { assertSender(event); return ui!.state(); });
     ipcMain.handle('glass:window', (event, action: unknown, reduced: unknown) => {
@@ -303,14 +405,13 @@ else {
       return ui!.request(action as WindowAction, reduced === true);
     });
     ipcMain.handle('glass:settings', (event, value: unknown) => {
-      assertSender(event);const next=ui!.setSettings(value);
+      assertSender(event);
+      const previous = ui!.state().settings;
+      const next = ui!.setSettings(value);
       // Tint/theme changes need a fresh tone evaluation even when every
       // sampled desktop pixel is unchanged. Coalesce into the next capture.
       optics!.refresh();
-      if(optics!.state().enabled && (next.settings.material==='solid' || next.settings.material==='acrylic'))optics!.enable(false);
-      // Frosted glass blurs the sampled desktop; start the worker when it is
-      // picked at runtime instead of waiting for the next launch.
-      if(next.settings.material==='frosted' && !smoke && !optics!.state().enabled && existsSync(join(here,'../../native/RegionCapture.exe')))void optics!.enable(true);
+      if (next.settings.material !== previous.material || next.settings.desktopOptics !== previous.desktopOptics) syncOptics();
       return next;
     });
     ipcMain.handle('glass:resize', (event, value: unknown) => {
@@ -323,9 +424,28 @@ else {
       if (released !== undefined && typeof released !== 'boolean') throw new Error('Invalid drag state');
       return ui!.move(Math.round(value.x!), Math.round(value.y!), released === true);
     });
-    ipcMain.handle('glass:select-session', (event, id: unknown) => {
+    ipcMain.handle('glass:select-session', (event, id: unknown, previous?: unknown) => {
       assertSender(event); if (typeof id !== 'string' || !Object.hasOwn(state.sessions, id)) throw new Error('Unknown Session');
-      selected = id; refreshFacts();
+      if (previous !== undefined && (state.stale || state.connection !== 'connected' || !previous || typeof previous !== 'object' ||
+        !('runtimeId' in previous) || previous.runtimeId !== state.runtimeId || !('epoch' in previous) || previous.epoch !== state.epoch ||
+        !('sessionId' in previous) || previous.sessionId !== selected)) throw new Error('原会话已不可用');
+      selectSession(id);
+    });
+    ipcMain.handle('glass:load-history', (event, direction: unknown) => {
+      assertSender(event);
+      if (!dsh || source.connection !== 'connected' || (direction !== 'older' && direction !== 'recent')) throw new Error('无法读取历史会话');
+      return dsh.loadHistory(direction);
+    });
+    ipcMain.handle('glass:open-request', (event, kind: unknown, value: unknown, reduced: unknown) => {
+      assertSender(event);
+      const identity = identityOf(value);
+      const task = deriveTask(state, identity.sessionId);
+      const queue = kind === 'approval' ? task.pending : kind === 'question' ? task.questions : [];
+      if (task.status === 'disconnected' || !queue.some(request =>
+        request.requestId === identity.requestId && request.runtimeId === identity.runtimeId && request.sourceEpoch === identity.sourceEpoch)) throw new Error('请求已结束');
+      selectSession(identity.sessionId);
+      clearTimeout(stateTimer); flushState();
+      return ui!.request('approval', reduced === true);
     });
     ipcMain.handle('glass:copy-approval', (event, value: unknown) => {
       assertSender(event);
@@ -338,17 +458,25 @@ else {
     if (smoke) await useMock();
     else { update({ kind: 'transport.closed' }); publishSource(); }
     watchdog = setInterval(() => { if (socket && Date.now() - lastReceived > 9000) { update({ kind: 'transport.closed' }); socket.terminate(); } }, 1000);
-    globalShortcut.register('CommandOrControl+Shift+G', () => win.isVisible() ? win.hide() : win.show());
+    const toggleVisibility = () => { if (win.isVisible() && !win.isMinimized()) ui?.request('hide'); else { win.restore(); win.show(); win.focus(); } };
+    for (const [accelerator, label] of [['CommandOrControl+Shift+G', 'Ctrl+Shift+G'], ['CommandOrControl+Shift+F12', 'Ctrl+Shift+F12']] as const) {
+      try {
+        if (globalShortcut.register(accelerator, toggleVisibility)) { recoveryShortcut = label; break; }
+      } catch { /* The platform may reject an accelerator. */ }
+    }
+    ui.publish();
     screen.on('display-removed', () => ui?.displayChanged(screen.getPrimaryDisplay().workArea));
     screen.on('display-metrics-changed', () => ui?.displayChanged());
     if (devURL) await win.loadURL(devURL); else await win.loadFile(rendererFile);
     const startupLink = dshLinkFromArgs(process.argv);
     // The DSH bundle hands over the authenticated host link on launch. Connect once the
     // renderer exists; failures land in the normal source state instead of a dialog.
-    if (startupLink && !smoke) void connectDSH(startupLink).catch(() => { /* connectDSH published the failure state */ });
+    loaded = true;
+    const handled = queuedHandoff && handoff(queuedHandoff);
+    queuedHandoff = undefined;
+    if (!handled && startupLink && !smoke) void connectDSH(startupLink, owningLauncher, dshInstanceFromArgs(process.argv)).catch(() => { /* connectDSH published the failure state */ });
   }).catch(error => { console.error('[glass] Startup failed: ' + (error instanceof Error ? error.message : 'unknown')); app.quit(); });
 }
-let launcherWatch: ReturnType<typeof setInterval> | undefined;
 app.on('before-quit', () => {
   quitting = true; reconnectEnabled = false; clearTimeout(retry); clearInterval(watchdog); clearInterval(launcherWatch); ui?.stop();
   optics?.stop();

@@ -51,13 +51,13 @@ try {
   await preview('empty');
   if (native) await f.capture(resolve(output,'native-empty.png'));
   await menu('settings');
-  await expect(page.locator('.whale-signature')).toBeVisible();
+  await expect(page.getByRole('radio', { name: '鲸鱼水池', exact: true })).toBeVisible();
   await preview('settings');
   await menu('view-capsule');
   await menu('mock-disconnect');
   await expect(page.locator('.whale-companion')).toHaveAttribute('data-whale-state','disconnected');
   await expect(page.locator('.whale-swimmer')).toHaveCSS('animation-name','none');
   assert.deepEqual(errors, []);
-  await writeFile(resolve(output,'acceptance.json'), JSON.stringify({result:'PASS',checks:['capsule status remains accessible','drag preserves window size and does not expand','whale click expands','reduced and system motion preferences','empty session whale','settings signature','disconnected whale stops swimming'],native,rendererErrors:errors},null,2));
+  await writeFile(resolve(output,'acceptance.json'), JSON.stringify({result:'PASS',checks:['capsule status remains accessible','drag preserves window size and does not expand','whale click expands','reduced and system motion preferences','empty session whale','whale pool appearance setting','disconnected whale stops swimming'],native,rendererErrors:errors},null,2));
   console.log('Whale elements acceptance: PASS');
 } finally { await f.app.close(); }

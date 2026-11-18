@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { randomUUID } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import { WebSocketServer, type WebSocket } from 'ws';
 
@@ -27,6 +28,7 @@ export class FakeHost {
   readonly followRequests = new Map<string, Args>();
   readonly pending = new Map<string, { agentId: string; event: string; request: Args }>();
   authAttempts = 0;
+  private readonly issuedTokens = new Set<string>();
   autoPong = true;
   pings = 0;
   origin = '';
@@ -50,6 +52,11 @@ export class FakeHost {
   }
 
   link(token = TOKEN) { return `${this.origin}/?token=${token}`; }
+  issueLink() {
+    const token = randomUUID();
+    this.issuedTokens.add(token);
+    return this.link(token);
+  }
 
   async stop() {
     if (!this.server) return;
@@ -126,7 +133,9 @@ export class FakeHost {
     if (request.method === 'GET' && url.pathname === '/connect') {
       this.authAttempts += 1;
       if (this.auth !== 'ok') { this.failAuth(response); return; }
-      if (url.searchParams.getAll('token').length !== 1 || url.searchParams.get('token') !== TOKEN || url.searchParams.get('interactions') !== 'answer') { response.writeHead(200).end(); return; }
+      const token = url.searchParams.get('token');
+      if (url.searchParams.getAll('token').length !== 1 || url.searchParams.get('interactions') !== 'answer' ||
+          token !== TOKEN && (!token || !this.issuedTokens.delete(token))) { response.writeHead(200).end(); return; }
       response.writeHead(302, { Location: './api/remote.mux', 'Set-Cookie': `${COOKIE}; Path=/; HttpOnly; SameSite=Strict` }).end();
       return;
     }

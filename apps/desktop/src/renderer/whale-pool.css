@@ -1,6 +1,10 @@
 .glass[data-appearance=whale-pool] { border-radius:0; background:transparent;box-shadow:none;--fg:#e8f2ff;--muted:#b7cce1;--accent:#9ebfff; }
 .glass[data-appearance=whale-pool]::before,.glass[data-appearance=whale-pool]::after { display:none; }
 .glass[data-appearance=whale-pool]>.drag-strip { position:absolute;top:8px;right:44px;width:60px;height:30px;z-index:4; }
+/* On curved pools the upper corner is transparent. Keep both controls over the water. */
+.glass:has(.pool-view:not([data-contour=mirror]))>.drag-strip { top:16px;right:26%; }
+.glass:has(.pool-view[data-layout=stream]:not([data-contour=mirror]))>.drag-strip { right:32%; }
+.glass:has(.pool-view[data-layout=letter]:not([data-contour=mirror]))>.drag-strip { top:26px;right:21%; }
 .pool-view {
   --pool-inset:clamp(20px,calc(20vw - 24px),64px);
   --pool-top:43px; --pool-bottom:32px;
@@ -9,26 +13,33 @@
   position:absolute;inset:0;color:#e8f2ff;isolation:isolate;font-family:"Segoe UI Variable Text","Noto Sans SC","Microsoft YaHei UI",sans-serif;font-weight:400;
 }
 .pool-view[data-layout=stream] { --pool-lane-left:calc(100% - var(--pool-inset) - var(--pool-lane-width)); }
-.pool-view[data-layout=letter] { --pool-lane-left:calc((100% - var(--pool-lane-width)) / 2); }
+.pool-view[data-layout=letter] { --pool-lane-left:calc((100% - var(--pool-lane-width)) / 2); --pool-lane-height:86px; --pool-lane-width:88px; --pool-lane-gap:5px; }
 .pool-water { position:absolute;inset:0;width:100%;height:100%;pointer-events:none; }
 .pool-view[data-fallback=true][data-idle=false]::before {
   content:"";position:absolute;inset:9px;border:1px solid #8bc6f780;border-radius:45%;pointer-events:none;
   background:radial-gradient(ellipse at calc(40% + var(--pool-slosh-x,0px)) calc(30% + var(--pool-slosh-y,0px)),#315877,#10263e);
 }
+.pool-view[data-contour=mirror][data-fallback=true]::before { border-radius:82px; }
+.pool-view[data-contour=drop][data-fallback=true]::before { border-radius:48% 48% 40% 40% / 56% 56% 42% 42%; }
 .pool-view[data-fallback=true] .pool-water { visibility:hidden; }
 .pool-whale-layer { position:absolute;inset:0;z-index:2;pointer-events:none; }
 .pool-whale-lane { position:absolute;top:0;left:var(--pool-lane-left);width:var(--pool-lane-width);height:var(--pool-lane-height); }
-/* Once the text is visible, contain both the ornamented whale and its bubbles in the same slot used by the layout. */
-.pool-view[data-readable=true] .pool-whale-layer {
+/* Clip the resting whale after it has finished swimming into its slot. */
+.pool-view[data-readable=true][data-transition=idle] .pool-whale-layer {
   clip-path:inset(0 calc(100% - var(--pool-lane-left) - var(--pool-lane-width)) calc(100% - var(--pool-lane-height)) var(--pool-lane-left));
 }
 .pool-whale-target.task-capsule { position:absolute;top:0;left:0;width:96px;height:96px;padding:0;border:0;border-radius:50%;background:transparent;box-shadow:none!important;overflow:visible;opacity:1;pointer-events:auto; }
-.pool-whale-target.task-capsule:disabled { opacity:1;cursor:default;pointer-events:none; }
+.pool-whale-target.task-capsule[aria-disabled=true] { opacity:1;cursor:default;outline:0;pointer-events:none; }
+.pool-view:focus { outline:0; }
 .pool-whale-art,.pool-whale-effects { position:absolute;left:50%;top:50%;width:150px;height:160px;transform:translate(-50%,-44%);pointer-events:none; }
-.pool-idle-menu { position:absolute;right:9px;top:66px;background:transparent;border:0;padding:2px 6px;color:#a9c7e6;z-index:3;font-size:15px; }
+.pool-idle-menu { position:absolute;right:8px;top:18px;display:grid;place-items:center;width:32px;height:32px;padding:0;background:transparent;border:0;border-radius:50%;color:#b7cce1;z-index:3;font-size:15px; }
+.pool-idle-menu { text-shadow:0 1px 2px #172e51; }
 .pool-attention { position:absolute;left:calc(75% + 18px);top:98px;min-width:24px;height:24px;border:1px solid #adcdf4;border-radius:50%;background:#183c59;color:#e8f2ff;font-size:11px;z-index:3; }
 .pool-sheet { position:absolute;inset:var(--pool-top) var(--pool-inset) var(--pool-bottom);z-index:3;display:flex;flex-direction:column;opacity:0;pointer-events:none;text-shadow:0 1px 3px #07192df0;font-size:13px; }
-.pool-view[data-readable=true] .pool-sheet { opacity:1;pointer-events:auto;transition:opacity 160ms; }
+.pool-view[data-readable=true] .pool-sheet { opacity:1;pointer-events:auto; }
+@media(prefers-reduced-motion:no-preference) {
+  .glass[data-animation=full] .pool-view[data-readable=true] .pool-sheet { transition:opacity 100ms ease-out; }
+}
 .pool-heading { flex:none;min-height:calc(var(--pool-lane-height) + var(--pool-lane-gap) - var(--pool-top));display:flex;align-items:center;padding-left:calc(var(--pool-lane-width) + var(--pool-lane-gap)); }
 .pool-heading > div { min-width:0;max-width:100%; }
 .glass[data-appearance=whale-pool] .pool-heading h1 { margin:0;font-family:"Segoe UI Variable Text","Noto Sans SC","Microsoft YaHei UI",sans-serif;font-size:18px;font-weight:500;letter-spacing:.025em;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere; }
@@ -45,16 +56,18 @@
 .pool-steps [data-todo-status=in_progress] .pool-step-mark { font-size:23px; }
 .pool-empty { margin:25px 0 10px;font-size:12px;line-height:1.8;color:#b7cce1; }
 .pool-actions { flex:none;display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding-top:8px; }
-.pool-actions button { padding:4px 0;background:transparent;border:0;color:#c9dcf3;font-size:11px;text-decoration:underline;text-underline-offset:4px; }
+.pool-actions button { min-height:34px;padding:4px 9px;background:transparent;border:0;color:#c9dcf3;font-size:11px;text-decoration:underline;text-underline-offset:4px; }
 .pool-view[data-layout=stream] .pool-heading { padding-left:0;padding-right:calc(var(--pool-lane-width) + var(--pool-lane-gap)); }
 .pool-view[data-layout=stream] .pool-progress-label>span:last-child { font-size:28px; }
 .pool-view[data-layout=stream] .pool-steps { grid-template-columns:repeat(3,minmax(0,1fr));gap:12px; }
 .pool-view[data-layout=stream] .pool-steps li { display:flex;flex-direction:column;align-items:flex-start;gap:7px; }
-.pool-view[data-layout=stream] .pool-step-mark { height:18px; }
+.pool-step-mark,.pool-steps small { line-height:1.4; }
+.pool-view[data-layout=stream] .pool-steps li>span:nth-child(2) { text-wrap:balance; }
+.pool-view[data-layout=stream] .pool-step-mark { display:grid;place-items:center;width:16px;height:18px;line-height:18px; }
 .pool-view[data-layout=letter] .pool-heading { padding:calc(var(--pool-lane-height) + var(--pool-lane-gap) - var(--pool-top)) 0 0;min-height:0;text-align:center;justify-content:center; }
 .glass[data-appearance=whale-pool] .pool-view[data-layout=letter] .pool-heading h1 { font-family:"Noto Serif SC","Songti SC","SimSun",serif;font-size:22px;-webkit-line-clamp:1; }
 .pool-view[data-layout=letter] .pool-steps .pool-step-mark { font-size:11px; }
-.pool-view[data-layout=letter] .pool-progress-label { margin-top:12px;margin-bottom:8px; }
+.pool-view[data-layout=letter] .pool-progress-label { margin-top:9px;margin-bottom:6px; }
 .pool-view[data-layout=letter] .pool-steps { gap:6px; }
 .pool-intro { display:flex;flex:1;flex-direction:column;min-height:0;overflow:auto;padding:12px 25px 24px; }
 .pool-intro-art { align-self:center;position:relative;width:160px;height:96px;display:grid;place-items:center;border-radius:50%;background:radial-gradient(ellipse,#173650bb,transparent 70%); }
@@ -85,3 +98,67 @@
   .pool-view[data-layout=stream] .pool-steps li { display:grid;gap:9px; }
   .pool-actions { gap:8px; }
 }
+
+/* The full request and transcript share the water and the whale's upper-left berth. */
+.pool-view[data-panel-mode=true] {
+  --pool-lane-left:clamp(38px,15vw,88px);
+  --pool-lane-width:clamp(62px,16vw,80px);
+  --pool-lane-height:clamp(76px,25vh,100px);
+}
+.glass:has(>.pool-view[data-panel-mode=true])>.drag-strip {
+  top:clamp(22px,8vh,42px);right:24%;
+}
+.pool-panel-content {
+  --whale-title-inset:clamp(62px,20vw,104px);
+  --panel-heading-height:53px;
+  --ink-2:#d7e5f6;--ink-3:#b8cde5;
+  position:absolute;z-index:1;inset:calc(clamp(57px,16vh,80px) + var(--panel-heading-height)) clamp(26px,15.5vw,83px) clamp(36px,14.5vh,67px);
+  display:flex;flex-direction:column;min-width:0;min-height:0;
+}
+.pool-panel-content :is(.whale-tail,.whale-empty-art) { display:none; }
+.pool-panel-content :is(.task-expanded,.approval-view) {
+  padding:0;min-width:0;min-height:0;height:auto;flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#6283a0 transparent;
+  text-shadow:0 1px 2px #0a203b;
+}
+/* Keep the title in the whale's berth while the entire form scrolls below both. */
+.pool-panel-content .task-heading,.pool-panel-content .approval-header {
+  position:absolute;top:calc(0px - var(--panel-heading-height));left:var(--whale-title-inset);right:0;
+  min-height:0;padding:0;
+}
+@media (prefers-reduced-motion:no-preference) {
+  .glass[data-animation=full]>.pool-panel-content :is(.task-heading,.approval-header) {
+    animation:none;transition:opacity 140ms ease-out;
+  }
+  .glass[data-animation=full]:has(>.pool-view[data-panel-mode=true]:not([data-transition=idle]))>.pool-panel-content :is(.task-heading,.approval-header),
+  .glass[data-animation=full][data-morph=expanding]>.pool-panel-content :is(.task-heading,.approval-header) {
+    opacity:0;transition:none;
+  }
+}
+.pool-panel-content .approval-headline { padding:0;gap:6px; }
+.pool-panel-content .approval-mark { display:none; }
+.pool-panel-content .approval-header .request-session { margin:2px 0 3px; }
+.pool-panel-content .task-meta { margin-top:4px; }
+.pool-panel-content .request-kind { margin:3px 0;padding:0; }
+.pool-panel-content .approval-view { display:block;padding:0 3px 9px;overscroll-behavior:contain; }
+.pool-panel-content .request-content:not([hidden]),.pool-panel-content .question-form { display:block; }
+.pool-panel-content :is(.approval-body,.submission-results,.command-full) { height:auto;min-height:0;max-height:none;overflow:visible; }
+.pool-panel-content .submission-result { padding:4px 2px 6px;background:transparent;border:0;border-bottom:1px solid #92b2d840;border-radius:0; }
+.pool-panel-content .approval-footer { margin-top:6px; }
+.pool-panel-content .question-custom textarea { max-height:18vh; }
+.pool-session-return {
+  min-width:0;max-width:100%;min-height:22px;padding:1px 4px;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;background:transparent;border:0;color:#c5daef;text-align:left;font-size:11px;text-decoration:underline;text-underline-offset:3px;
+}
+.pool-panel-content>.pool-session-return { align-self:flex-start;margin:0 0 4px;flex:none; }
+.glass[data-mode=peek]:has(>.window-notices) .pool-view { --pool-bottom:57px; }
+.glass[data-mode=expanded]:has(>.window-notices) .pool-panel-content { bottom:57px; }
+.glass[data-appearance=whale-pool]:is([data-mode=peek],[data-mode=expanded])>.window-notices {
+  right:15%;left:15%;bottom:18px;justify-content:center;
+}
+.glass[data-appearance=whale-pool]>.window-notices button { min-width:0;overflow:hidden;text-overflow:ellipsis; }
+.glass[data-mode=capsule][data-appearance=whale-pool]>.window-notices {
+  left:6px;right:auto;bottom:6px;max-width:calc(75% - 49px);align-items:flex-start;flex-direction:column;
+}
+.glass[data-mode=capsule][data-appearance=whale-pool]>.window-notices button { max-width:100%; }
+.glass[data-appearance=whale-pool][data-mode=capsule] .pool-whale-target.task-capsule { overflow:visible; }
+.glass[data-appearance=whale-pool] .pool-whale-target.task-capsule::after { content:none; }

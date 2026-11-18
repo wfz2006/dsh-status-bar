@@ -183,14 +183,20 @@ function MotionSettings({ value, update }: SettingsProps) {
   </>;
 }
 
-export function GlassSettingsPanel({ value, update, projection, mock, back, showPoolIntro }: SettingsProps & {
+export function GlassSettingsPanel({ value, update, projection, mock, back, showPoolIntro, reconnectFocus = 0, recoveryHint }: SettingsProps & {
   projection: Projection; mock: (action: MockAction) => void; back: () => void; showPoolIntro: () => void;
+  reconnectFocus?: number; recoveryHint?: string;
 }) {
-  const [page, setPage] = useState<SettingsPage>('appearance');
+  const [page, setPage] = useState<SettingsPage>(reconnectFocus ? 'connection' : 'appearance');
   const scroll = useRef<HTMLDivElement>(null);
   const tabPrefix = useId();
   const tabId = (id: SettingsPage) => tabPrefix + '-tab-' + id;
   const panelId = (id: SettingsPage) => tabPrefix + '-panel-' + id;
+  useEffect(() => {
+    if (!reconnectFocus) return;
+    setPage('connection');
+    if (scroll.current) scroll.current.scrollTop = 0;
+  }, [reconnectFocus]);
   function openPage(id: SettingsPage) {
     setPage(id);
     if (scroll.current) scroll.current.scrollTop = 0;
@@ -250,11 +256,11 @@ export function GlassSettingsPanel({ value, update, projection, mock, back, show
           </div>
         </fieldset>
         <fieldset className="settings-group"><legend>快捷操作</legend>
-          <p className="settings-shortcut-note muted">隐藏后按 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>G</kbd> 恢复。<br />退出后在 DSH 输入 <code>/status-bar</code> 重新打开。</p>
+          <p className="settings-shortcut-note muted">{recoveryHint}</p>
         </fieldset>
       </section>
       <section role="tabpanel" id={panelId('connection')} aria-labelledby={tabId('connection')} hidden={page !== 'connection'}>
-        <DSHConnection projection={projection} />
+        <DSHConnection projection={projection} focusAddress={page === 'connection' ? reconnectFocus : 0} />
         <details className="debug-settings"><summary><span>演示与诊断</span><Icon name="chevron" /></summary>
           <p className="muted">连接状态 {projection.connection}{projection.stale ? ' · 旧数据' : ''}</p>
           <div className="debug-actions">

@@ -59,6 +59,11 @@ public static class RegionCapture {
     }
     return 0;
   }
+  static void SkipFrame(BinaryWriter output) {
+    output.Write(new byte[]{68,83,72,83});
+    output.Write(new byte[36]);
+    output.Flush();
+  }
   public static int Main(string[] args) {
     try {
       SetProcessDpiAwarenessContext(new IntPtr(-4));
@@ -82,8 +87,11 @@ public static class RegionCapture {
           int ww=r.Right-r.Left,wh=r.Bottom-r.Top;
           int margin=Math.Min(48,(int)Math.Ceiling(24.0*GetDpiForWindow(window)/96.0));
           int sx=GetSystemMetrics(76),sy=GetSystemMetrics(77),sw=GetSystemMetrics(78),sh=GetSystemMetrics(79);
-          // Reject partially off-screen windows instead of inventing pixels.
-          if(ww<=0 || wh<=0 || r.Left<sx || r.Top<sy || r.Right>sx+sw || r.Bottom>sy+sh)return 4;
+          // DPI rounding or a move can put the window briefly outside the
+          // desktop. Do not sample that region, and wait for valid geometry.
+          if(ww<=0 || wh<=0 || r.Left<sx || r.Top<sy || r.Right>sx+sw || r.Bottom>sy+sh) {
+            SkipFrame(output);continue;
+          }
           int left=Math.Max(sx,r.Left-margin),top=Math.Max(sy,r.Top-margin);
           int width=Math.Min(sx+sw,r.Right+margin)-left,height=Math.Min(sy+sh,r.Bottom+margin)-top;
           if(width>4096 || height>4096 || (long)width*height*4>24*1024*1024)return 5;
@@ -104,12 +112,12 @@ public static class RegionCapture {
             if(after.Left<left || after.Top<top || after.Right>left+width || after.Bottom>top+height) {
               // A moved window may reuse captured world pixels only if fully
               // covered. Main reprojects and crops to its current allowed ROI.
-              Array.Clear(rgba,0,rgba.Length);output.Write(new byte[]{68,83,72,83});output.Write(new byte[36]);output.Flush();continue;
+              Array.Clear(rgba,0,rgba.Length);SkipFrame(output);continue;
             }
             if(line!="frame-force" && capture.Unchanged(left,top,r)) {
               // Still sample and validate the current HWND at the same cadence;
               // only identical IPC payloads and redundant GPU uploads are skipped.
-              output.Write(new byte[]{68,83,72,83});output.Write(new byte[36]);output.Flush();continue;
+              SkipFrame(output);continue;
             }
             output.Write(new byte[]{68,83,72,71});output.Write(rgba.Length);output.Write(width);output.Write(height);
             output.Write(left);output.Write(top);output.Write(r.Left);output.Write(r.Top);output.Write(ww);output.Write(wh);

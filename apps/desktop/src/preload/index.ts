@@ -1,14 +1,13 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { GlassAPI, WindowState, SourceState } from '../shared/api';
-import type { Projection } from '@glass/protocol';
+import type { DesktopProjection, GlassAPI, WindowState, SourceState } from '../shared/api';
 import type { DesktopOpticsFrame,DesktopOpticsState,DesktopOpticsBounds } from '../shared/desktop-optics';
 import { ProjectionReceiver, type ProjectionMessage } from '../shared/projection-channel';
 const receiver = new ProjectionReceiver();
-const subscribers = new Set<(projection: Projection) => void>();
-let syncing: Promise<Projection> | undefined;
+const subscribers = new Set<(projection: DesktopProjection) => void>();
+let syncing: Promise<DesktopProjection> | undefined;
 let missingRevision = 0;
-function notify(projection: Projection) { for (const callback of subscribers) callback(projection); }
-function requestState(): Promise<Projection> {
+function notify(projection: DesktopProjection) { for (const callback of subscribers) callback(projection); }
+function requestState(): Promise<DesktopProjection> {
   if (syncing) return syncing;
   syncing = ipcRenderer.invoke('glass:state').then((message: ProjectionMessage) => {
     const result = receiver.accept(message); if (result.state) notify(result.state);
@@ -21,7 +20,7 @@ function requestState(): Promise<Projection> {
   });
   return syncing;
 }
-ipcRenderer.on('glass:update', (_event, value: ProjectionMessage | Projection) => {
+ipcRenderer.on('glass:update', (_event, value: ProjectionMessage | DesktopProjection) => {
   // Full projections remain accepted for the isolated fixture/older producers.
   if ('connection' in value) { notify(value); return; }
   const result = receiver.accept(value);
@@ -80,7 +79,10 @@ const api: GlassAPI = {
   resizeWindow: bounds => ipcRenderer.invoke('glass:resize', bounds),
   moveWindow: (position, released) => ipcRenderer.invoke('glass:move', position, released),
   setSettings: settings => ipcRenderer.invoke('glass:settings', settings),
-  selectSession: id => ipcRenderer.invoke('glass:select-session', id),
+  selectSession: (id, previous) => ipcRenderer.invoke('glass:select-session', id, previous),
+  loadHistory: direction => ipcRenderer.invoke('glass:load-history', direction),
+  openRequest: (kind, identity, reduceMotion) => ipcRenderer.invoke('glass:open-request', kind, identity, reduceMotion),
+  dismissSubmission: id => ipcRenderer.invoke('glass:dismiss-submission', id),
   copyApproval: identity => ipcRenderer.invoke('glass:copy-approval', identity),
   mockAction: action => ipcRenderer.invoke('glass:mock', action),
 };

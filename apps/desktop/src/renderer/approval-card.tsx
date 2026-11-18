@@ -9,8 +9,8 @@ function DecisionPreview({label,tone,explain}:{label:string;tone:'allow'|'reject
     <button className={'decision-'+tone} aria-describedby="approval-status" disabled><Icon name={tone === 'allow' ? 'check' : 'x'}/><span className="control-label">{label}</span></button>
   </span>;
 }
-export function ApprovalCard({ task, openDSH }: { task: Task; openDSH: () => void }) {
-  const [selected, setSelected] = useState<string | null>(null);
+export function ApprovalCard({ task, openDSH, initialKey, onInspect }: { task: Task; openDSH: () => void; initialKey?: string; onInspect?: (key: string) => void }) {
+  const [selected, setSelected] = useState(initialKey);
   const [copyResult, setCopyResult] = useState({ identity: '', text: '' });
   useEffect(()=>{
     if(!copyResult.text)return;
@@ -22,14 +22,15 @@ export function ApprovalCard({ task, openDSH }: { task: Task; openDSH: () => voi
   const inFlight=useRef(new Set<string>());
   const request = task.pending.find(a => requestKey(a) === selected) ?? task.pending[0];
   const key = request ? requestKey(request) : '';
+  useEffect(() => { if (key) onInspect?.(key); }, [key, onInspect]);
   const submission=submissions[key];
   const busy=!!request && (request.status==='submitting' || !!submission && ['busy','sent'].includes(submission.stage));
   const actionable=!!request?.actionable && task.status!=='disconnected';
   async function respond(outcome:'allowed-once'|'rejected') {
     if(!request || !actionable || busy || inFlight.current.has(key))return;
     inFlight.current.add(key);setSubmissions(current=>({...current,[key]:{stage:'busy',text:'正在提交，请稍候…'}}));
-    try {await window.glass.respondApproval(requestIdentity(request),outcome);setSubmissions(current=>({...current,[key]:{stage:'sent',text:'已提交，等待 DSH 确认结果…'}}));}
-    catch {setSubmissions(current=>({...current,[key]:{stage:'error',text:'提交未确认，请在 DSH 中核实或重试。'}}));}
+    try {await window.glass.respondApproval(requestIdentity(request),outcome);}
+    catch {setSubmissions(current=>({...current,[key]:{stage:'error',text:'DSH 未确认，请在 DSH 中核实。'}}));}
     finally {inFlight.current.delete(key);}
   }
   async function copy(sessionId: string, requestId: string) {

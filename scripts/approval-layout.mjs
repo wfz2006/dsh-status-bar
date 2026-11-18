@@ -28,6 +28,12 @@ try{
     await page.getByRole('button',{name:'查看请求 1',exact:true}).click();
   }
   await menu('mock-disconnect');await menu('reconnect');
+  await expect(page.getByRole('tab', { name: '连接', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByLabel('官方认证地址')).toBeFocused();
+  await page.locator('.debug-settings summary').click();
+  await page.locator('.debug-settings').getByRole('button', { name: '重新连接', exact: true }).click();
+  await expect.poll(async () => (await page.evaluate(() => window.glass.getState())).connection).toBe('connected');
+  await page.getByRole('button', { name: '返回', exact: true }).click();
   await expect(page.locator('.request-selector [data-request-id]')).toHaveCount(2);
   assert.equal(await page.locator('.approval-footer').getAttribute('data-request-id'),'mock-approval-1');
   const prefs=await app.evaluate(({BrowserWindow},id)=>BrowserWindow.fromId(id).webContents.getLastWebPreferences(),mainId);

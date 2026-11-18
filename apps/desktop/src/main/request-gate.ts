@@ -21,7 +21,7 @@ function record(value: unknown, keys: readonly string[]): Record<string, unknown
   return result;
 }
 
-function identityOf(value: unknown): RequestIdentity {
+export function identityOf(value: unknown): RequestIdentity {
   const input = record(value, ['runtimeId', 'sourceEpoch', 'sessionId', 'requestId']);
   for (const field of Object.values(input)) {
     if (typeof field !== 'string' || field.length < 1 || field.length > 200 || field.trim() !== field ||

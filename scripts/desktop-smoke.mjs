@@ -26,10 +26,12 @@ export async function runAcceptance({ native = false } = {}) {
       await expect.poll(async () => (await ui()).morphing).toBe(null);
     }
     async function screenshot(name) { await page.screenshot({ path: output + '/' + name + '.png' }); }
+    async function settingTab(name) { await page.getByRole('tab', { name, exact: true }).click(); }
     async function steps() { await page.getByRole('tab', { name: /^步骤/ }).click(); }
     async function chooseSession(title) {
       await page.getByRole('button', { name: /选择会话/ }).click();
       await page.getByRole('option', { name: new RegExp(title) }).click();
+      await expect(page.locator('.task-heading h1')).toHaveText(new RegExp(title));
     }
     async function assertNoOverflow() {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
@@ -81,33 +83,47 @@ export async function runAcceptance({ native = false } = {}) {
     await expect(page.locator('.source-notice')).toContainText('Mock 演示');
     await page.getByLabel('显示主题').selectOption('light');
     await page.getByLabel('玻璃强度').selectOption('readable');
+    await settingTab('窗口');
     await page.getByLabel('默认形态').selectOption('peek');
-    await page.getByLabel('动画', { exact: true }).selectOption('off');
     await page.getByLabel('置顶行为').selectOption('always');
     await expect.poll(()=>app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isAlwaysOnTop())).toBe(true);
     await expect.poll(async()=>(await ui()).settings.defaultView).toBe('peek');
     await screenshot('settings');
     await page.getByLabel('默认形态').selectOption('capsule');
     await page.getByLabel('置顶行为').selectOption('normal');
+    await settingTab('动效');
+    await page.getByLabel('动画', { exact: true }).selectOption('off');
+    await settingTab('外观');
     await page.getByLabel('玻璃强度').selectOption('balanced');
     await page.getByRole('button', { name: '返回', exact: true }).click();
     await expect.poll(async () => (await ui()).panel).toBe(null);
     await menu('view-expanded');
     await chooseSession('视觉探索'); await steps();
-    assert.equal(await page.locator('.todo').count(), 1);
+    await expect(page.locator('.todo')).toHaveCount(1);
     await chooseSession('构建 DSH Glass');
     await menu('mock-disconnect');
-    await expect(page.getByRole('button', { name: '检查连接并重试', exact: true })).toBeVisible();
+    const reconnect = page.getByRole('button', { name: '重新连接', exact: true });
+    await expect(reconnect).toBeVisible();
     await page.evaluate(() => window.glass.setSettings({ pin: 'on-notification' }));
     assert.equal(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isAlwaysOnTop()), false, 'Stale pending requests must not trigger notification pin');
     await page.evaluate(() => window.glass.setSettings({ pin: 'normal' }));
     await screenshot('disconnected');
-    await menu('reconnect');
-    await expect.poll(async () => (await page.evaluate(() => window.glass.getState())).connection).toBe('connected');
-    assert.equal(await page.locator('.todo').count(), 2);
-    report.results.push('Menu migration/settings/pin/session switch/disconnect/reconnect preserve original behavior: PASS');
+    async function reconnectMock() {
+      await menu('reconnect');
+      await expect(page.getByRole('tab', { name: '连接', exact: true })).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByLabel('官方认证地址')).toBeFocused();
+      await page.locator('.debug-settings summary').click();
+      await page.locator('.debug-settings').getByRole('button', { name: '重新连接', exact: true }).click();
+      await expect.poll(async () => (await page.evaluate(() => window.glass.getState())).connection).toBe('connected');
+      await page.getByRole('button', { name: '返回', exact: true }).click();
+    }
+    await reconnectMock();
+    await steps();
+    await expect(page.locator('.todo')).toHaveCount(2);
+    report.results.push('Settings tabs, session selection, and connection-tab recovery: PASS');
     // Auto expansion is opt-in. Verify manual size suppresses subsequent attention.
     await menu('settings');
+    await settingTab('窗口');
     await page.getByLabel('审批时自动展开').check();
     await page.getByRole('button', { name: '返回', exact: true }).click();
     await menu('view-capsule');
@@ -115,7 +131,7 @@ export async function runAcceptance({ native = false } = {}) {
     await page.locator('[data-mode=approval][data-morph=idle]').waitFor({ timeout: 15000 });
     await expect(page.locator('.request-selector button')).toHaveCount(2, { timeout: 12000 });
     await screenshot('approval-queue');
-    await menu('mock-disconnect'); await menu('reconnect');
+    await menu('mock-disconnect'); await reconnectMock();
     await expect(page.locator('.request-selector button')).toHaveCount(2);
     for (const b of await page.getByRole('button', { name: '允许一次', exact: true }).all()) await expect(b).toBeDisabled();
     await menu('view-expanded');
@@ -137,7 +153,9 @@ export async function runAcceptance({ native = false } = {}) {
     await page.evaluate(() => window.glass.setSettings({ autoCollapse: false }));
     report.results.push('Explicit finished phase triggers opt-in collapse; disconnect cancels pending completion collapse: PASS');
     await menu('settings');
+    await settingTab('窗口');
     await page.getByLabel('审批时自动展开').uncheck();
+    await settingTab('动效');
     await page.getByLabel('动画', { exact: true }).selectOption('full');
     await page.getByRole('button', { name: '返回', exact: true }).click();
     await page.emulateMedia({ reducedMotion: 'reduce' });

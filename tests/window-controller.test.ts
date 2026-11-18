@@ -85,11 +85,37 @@ describe('capsule edge motion', () => {
       expect(ui.request('restore-capsule', true)).toMatchObject({ dockEdge: undefined, edgeMotion: undefined });
       await ui.move(0, 180, true);
       expect(ui.state().edgeMotion?.direction).toBe('gather');
+      ui.request('restore-capsule');
       ui.request('settings');
       const settingsBounds = win.getBounds();
       vi.runAllTimers();
       expect(ui.state()).toMatchObject({ panel: 'settings', dockEdge: undefined, edgeMotion: undefined });
       expect(win.getBounds()).toEqual(settingsBounds);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('accepts one restore during gather and spreads without resizing to the intermediate orb', async () => {
+    vi.useFakeTimers();
+    try {
+      const { ui, win } = setup();
+      await ui.move(0, 180, true);
+      const gather = ui.state().edgeMotion!;
+      expect(gather.direction).toBe('gather');
+      const host = win.getBounds();
+
+      vi.advanceTimersByTime(100);
+      ui.request('restore-capsule');
+      ui.request('restore-capsule');
+      win.setBounds.mockClear();
+      vi.advanceTimersByTime(gather.duration - 100);
+
+      const spread = ui.state().edgeMotion!;
+      expect(spread).toMatchObject({ direction: 'spread', capsule: gather.capsule, orb: gather.orb });
+      expect(win.getBounds()).toEqual(host);
+      expect(win.setBounds.mock.calls.every(([bounds]) => bounds.width === host.width)).toBe(true);
+      vi.advanceTimersByTime(spread.duration);
+      expect(ui.state()).toMatchObject({ viewMode: 'capsule', dockEdge: undefined, edgeMotion: undefined });
+      expect(win.getBounds().width).toBe(288);
     } finally { vi.useRealTimers(); }
   });
 
@@ -127,6 +153,38 @@ describe('capsule edge motion', () => {
     expect(ui.state()).toMatchObject({ dockEdge: undefined, settings: { appearance: 'whale-pool', whaleSkin: 'sakura' } });
     expect(win.getBounds()).toMatchObject({ x: 1920 - normal.width, width: normal.width, height: normal.height });
   });
+
+  it.each([
+    ['default', 220, 140], ['manually resized', 267, 158],
+  ] as const)('retains %s capsule dimensions when fractional desktop scaling rounds reported bounds outward', async (kind, width, height) => {
+    const { ui, win } = setup();
+    ui.setSettings({ appearance: 'whale-pool', animation: 'reduced' });
+    if (kind === 'manually resized') ui.resize({ x: 160, y: 180, width, height });
+    const actual = win.getBounds;
+    vi.spyOn(win, 'getBounds').mockImplementation(() => {
+      const b = actual();
+      return { ...b, width: b.width + 1, height: b.height + 1 };
+    });
+    for (const restore of ['click', 'drop', 'click']) {
+      await ui.move(1920, 250, true);
+      expect(ui.state().dockEdge).toBe('right');
+      if (restore === 'click') ui.request('restore-capsule', true);
+      else await ui.move(680, 410, true);
+      expect(ui.state().dockEdge).toBeUndefined();
+      expect(actual()).toMatchObject({ width, height });
+    }
+  });
+
+  it('uses an externally resized capsule as the next restore size', async () => {
+    const { ui, win } = setup();
+    ui.setSettings({ appearance: 'whale-pool', animation: 'reduced' });
+    win.setBounds({ x: 240, y: 180, width: 260, height: 155 });
+    await ui.move(1920, 250, true);
+    expect(ui.state().dockEdge).toBe('right');
+    ui.request('restore-capsule', true);
+    expect(ui.state().dockEdge).toBeUndefined();
+    expect(win.getBounds()).toMatchObject({ width: 260, height: 155 });
+  });
 });
 describe('window controller request policy', () => {
   it('keeps the original menu forms independent of the whale pool choice', () => {
@@ -138,17 +196,19 @@ describe('window controller request policy', () => {
     pool?.click?.(pool,win as never,{} as never);
     expect(ui.state()).toMatchObject({viewMode:'capsule',settings:{appearance:'whale-pool'}});
   });
-  it('restores the configured material during automatic approval and preserves pool resize modes', () => {
+  it('keeps pool water for approval and details and restores the configured material on settings', () => {
     const {ui,win}=setup();ui.setSettings({appearance:'whale-pool',material:'solid',autoApproval:true});
     expect(ui.state().material).toBe('clear');
     ui.observe({pending:['approval:a'],completed:null},true);
-    expect(ui.state()).toMatchObject({viewMode:'approval',material:'solid'});
+    expect(ui.state()).toMatchObject({viewMode:'approval',material:'clear'});
     ui.observe({pending:[],completed:null},true);
     expect(ui.state()).toMatchObject({viewMode:'capsule',material:'clear'});
     ui.resize({...win.getBounds(),width:221});expect(ui.state().viewMode).toBe('capsule');
     ui.request('expand',true);ui.resize({...win.getBounds(),width:441});
     expect(ui.state()).toMatchObject({viewMode:'peek',material:'clear'});
-    ui.resize({...win.getBounds(),width:500,height:440});expect(ui.state()).toMatchObject({viewMode:'expanded',material:'solid'});
+    ui.resize({...win.getBounds(),width:500,height:440});expect(ui.state()).toMatchObject({viewMode:'expanded',material:'clear'});
+    ui.request('settings',true); expect(ui.state().material).toBe('solid');
+    ui.request('back',true); expect(ui.state().material).toBe('clear');
     ui.resize({...win.getBounds(),width:180,height:44});
     expect(win.getBounds().height).toBeGreaterThanOrEqual(140);
   });

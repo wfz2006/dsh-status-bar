@@ -1,5 +1,6 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { Projection, Session } from '@glass/protocol';
+import type { DesktopProjection } from '../shared/api';
 import { formatTokens, taskUsage, deriveTask, deriveSessionSummary, type CapsuleMotion } from '../shared/view-model';
 import { Icon, type IconName } from './icon';
 import { WhaleArt, WhaleCompanion, WhaleEmpty } from './whale-companion';
@@ -180,7 +181,7 @@ export function TaskCapsule({ task, motion, feedback, activate }: {
     {finishing && motion === 'classic' && <span className="completion-reflection" aria-hidden="true" />}
     {motion === 'silver' && (working || finishing) && <span className="capsule-motion-rim" aria-hidden="true" />}
     {finishing && motion === 'type' && <span className="capsule-finish-title" aria-hidden="true">任务已完成</span>}
-    <WhaleCompanion state={task.status}>{!completed && <StatusOrb task={task} />}</WhaleCompanion><CapsuleTitle title={title} working={working} />
+    <WhaleCompanion state={task.status}>{!completed && <StatusOrb task={task} />}</WhaleCompanion><CapsuleTitle key={title} title={title} working={working} />
     {task.attentionCount > 0 && <span className="pending-count" aria-label={task.attentionCount + ' 项待处理请求'}>{task.attentionCount} 待处理</span>}
     {metrics && <span className="capsule-metrics" title={metricsTitle} aria-label={metrics.turns + ' 轮，Agent 执行 ' + metrics.steps + ' 步'}><b>{metrics.turns}</b>轮 · <b>{metrics.steps}</b>步</span>}
     {task.total > 0 && <span className="step-count" aria-label={task.completed + '/' + task.total + ' Todo 步骤完成'}><span className="progress-caption">任务 </span>{task.completed}/{task.total}</span>}
@@ -200,8 +201,8 @@ export function CapsuleEdgeOrb({ task, restore, pool = false }: { task: Task; re
     {count > 0 && <span className="capsule-edge-count" aria-hidden="true">{count > 9 ? '9+' : count}</span>}
   </Element>;
 }
-export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; expand: () => void; approval: () => void; reconnect: () => void }) {
-  const failure = task.status === 'disconnected' || task.status === 'error';
+export function TaskPeek({ task, expand, approval, reconnect, openDSH }: { task: Task; expand: () => void; approval: () => void; reconnect: () => void; openDSH: () => void }) {
+  const offline = task.status === 'disconnected';
   const metrics = taskUsage(task);
   const recent = useMemo(() => {
     const notes = task.session?.notes ?? [];
@@ -219,7 +220,7 @@ export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; ex
         {recent.length > 0 && <div className="peek-process">
           {recent.map(row => <div className="peek-entry" key={row.key}><Icon name={row.icon} /><span className="peek-entry-title">{row.label}</span><span className="peek-entry-text">{row.text}</span></div>)}
         </div>}
-        <div className="current-step"><StatusOrb task={task} /><span>{failure ? task.label + '，当前内容可能已过时' : task.current.map(t => t.content).join('、') || task.label}</span>{task.status === 'running' && task.current.length === 0 && <WhaleArt className="whale-tail" />}</div>
+        <div className="current-step"><StatusOrb task={task} /><span>{offline ? task.label + '，当前内容可能已过时' : task.status === 'error' ? task.label : task.current.map(t => t.content).join('、') || task.label}</span>{task.status === 'running' && task.current.length === 0 && <WhaleArt className="whale-tail" />}</div>
       </button>
       {metrics && <div className="peek-usage">
         <div className="peek-stats">
@@ -229,7 +230,7 @@ export function TaskPeek({ task, expand, approval, reconnect }: { task: Task; ex
         {metrics.contextPercent !== undefined && <ContextRing percent={metrics.contextPercent} context={metrics.context} stale={metrics.stale} />}
       </div>}
     </div>
-    {failure ? <button className="attention-link" onClick={reconnect}><span className="control-label">重新连接</span> <span aria-hidden="true">↗</span></button> : task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}
+    {offline || task.status === 'error' ? <button className="attention-link" onClick={offline ? reconnect : openDSH}><span className="control-label">{offline ? '重新连接' : '打开 DSH'}</span> <span aria-hidden="true">↗</span></button> : task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}
   </section>;
 }
 const noteLabels = { reasoning: '思考', message: 'DSH', user: '你' } as const;
@@ -320,14 +321,26 @@ const TodoList = memo(function TodoList({ todos }: { todos: Task['todos'] }) {
   if (!todos.length) return <WhaleEmpty>此会话尚无 Todo，不显示百分比。</WhaleEmpty>;
   return <ol className="todo-list" tabIndex={0} aria-label="Todo 列表">{todos.map((todo, i) => <li className={'todo ' + todo.status} key={i + todo.content} aria-current={todo.status === 'in_progress' ? 'step' : undefined}><span className="todo-symbol" aria-label={todo.status === 'completed' ? '已完成' : todo.status === 'in_progress' ? '进行中' : '待开始'}>{todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '◉' : '○'}</span><span className="todo-text">{todo.content}</span>{todo.status === 'completed' && <span className="todo-note">已完成</span>}</li>)}</ol>;
 });
-export function TaskExpanded({ task, projection, selected, select, approval, reconnect }: { task: Task; projection: Projection; selected: string; select: (id: string) => void; approval: () => void; reconnect: () => void }) {
+export function TaskExpanded({ task, projection, selected, select, approval, reconnect, openDSH, loadHistory }: {
+  task: Task; projection: DesktopProjection; selected: string; select: (id: string) => void;
+  approval: () => void; reconnect: () => void; openDSH: () => void; loadHistory: (direction: 'older' | 'recent') => Promise<void>;
+}) {
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  async function historyPage(direction: 'older' | 'recent') {
+    setLoadingHistory(true);
+    try { await loadHistory(direction); } finally { setLoadingHistory(false); }
+  }
   const [tab, setTab] = useState<'process' | 'steps'>('process');
   const tabsId = useId(), panelId = tabsId + '-panel';
   const metrics = taskUsage(task);
   const todos = task.todos;
   return <section className="task-expanded">
     <div className="task-heading"><h1 title={task.title}>{task.title}</h1></div>
-    {Object.keys(projection.sessions).length > 1 && <div className="task-picker-row"><SessionPicker projection={projection} selected={selected} select={select} /></div>}
+    {(Object.keys(projection.sessions).length > 1 || projection.history?.canReturn) && <div className="task-picker-row">
+      <SessionPicker projection={projection} selected={selected} select={select} />
+      {!projection.stale && projection.history?.hasOlder && <button className="text-button" disabled={loadingHistory} onClick={() => void historyPage('older')}>加载较早会话</button>}
+      {!projection.stale && projection.history?.canReturn && <button className="text-button" disabled={loadingHistory} onClick={() => void historyPage('recent')}>返回最近会话</button>}
+    </div>}
     <div className="task-meta"><StatusOrb task={task} /><span>{task.label}{projection.stale ? ' · 状态可能过时' : ''}</span>{task.status === 'running' && <WhaleArt className="whale-tail" />}{task.total > 0 && <span className="step-count">任务 {task.completed}/{task.total}</span>}</div>
     {metrics && <div className="task-metrics">
       <div className="metrics-primary"><span><b>{metrics.turns}</b> 轮 · 执行 <b>{metrics.steps}</b> 次</span>
@@ -355,6 +368,6 @@ export function TaskExpanded({ task, projection, selected, select, approval, rec
       {tab === 'process' ? <ProcessList task={task} /> : <TodoList todos={todos} />}
     </div>
     {task.attentionCount > 0 && <button className="attention-link" onClick={approval}><span className="control-label">{task.attentionCount} 项{task.questions.length ? '请求待处理' : '操作需要确认'}</span> <span aria-hidden="true">↗</span></button>}
-    {(task.status === 'disconnected' || task.status === 'error') && <button className="attention-link" onClick={reconnect}><span className="control-label">检查连接并重试</span> <span aria-hidden="true">↗</span></button>}
+    {(task.status === 'disconnected' || task.status === 'error') && <button className="attention-link" onClick={task.status === 'disconnected' ? reconnect : openDSH}><span className="control-label">{task.status === 'disconnected' ? '重新连接' : '打开 DSH'}</span> <span aria-hidden="true">↗</span></button>}
   </section>;
 }

@@ -26,6 +26,7 @@
   rx:calc(var(--edge-radius) - .8px); ry:calc(var(--edge-radius) - .8px);
 }
 .edge-motion-content { position:absolute; z-index:1; pointer-events:none; }
+.edge-motion-content > button.capsule-edge-orb { pointer-events:auto; cursor:pointer; }
 .edge-motion-caption { border-radius:15px; }
 .edge-motion-caption .whale-companion { visibility:hidden; }
 .capsule-edge-orb { justify-content:center; padding:0; }

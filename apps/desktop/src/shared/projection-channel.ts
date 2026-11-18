@@ -1,13 +1,14 @@
 import type { Activity, Projection, Session, SessionNote } from '@glass/protocol';
+import type { DesktopProjection } from './api';
 
-type Fields = Omit<Projection, 'sessions' | 'seen'>;
+type Fields = Omit<DesktopProjection, 'sessions' | 'seen'>;
 type RowDelta<T> = { length: number; items: [number, T][] };
 type SessionDelta = { fields: Partial<Session>; deleted: (keyof Session)[];
   activities?: RowDelta<Activity>; notes?: RowDelta<SessionNote> };
 export type ProjectionMessage =
-  | { kind: 'snapshot'; revision: number; projection: Projection }
+  | { kind: 'snapshot'; revision: number; projection: DesktopProjection }
   | { kind: 'delta'; revision: number; baseRevision: number; fields: Partial<Fields>; sessions: Record<string, Session>; sessionChanges?: Record<string, SessionDelta>; removed: string[]; seen: { append: string[] } | { replace: string[] } };
-const fields: (keyof Fields)[] = ['connection', 'stale', 'source', 'runtimeId', 'epoch', 'capabilities', 'approvals', 'questions', 'removedSessions'];
+const fields: (keyof Fields)[] = ['connection', 'stale', 'source', 'runtimeId', 'epoch', 'capabilities', 'approvals', 'questions', 'removedSessions', 'selectedSession', 'history', 'draftScope', 'poolEvent'];
 function shallowEqual(a: object, b: object): boolean {
   const keys = Object.keys(a);
   return keys.length === Object.keys(b).length && keys.every(key => Object.hasOwn(b, key) && Reflect.get(a, key) === Reflect.get(b, key));
@@ -69,15 +70,15 @@ function applySession(before: Session, delta: SessionDelta): Session {
 /** Main owns the accepted business projection. This channel only changes how
  * that projection crosses IPC; it cannot grant capabilities or accept a request. */
 export class ProjectionPublisher {
-  private previous?: Projection;
+  private previous?: DesktopProjection;
   private revision = 0;
   private sinceSnapshot = 0;
   constructor(private readonly fullEvery = 300) {}
-  snapshot(projection: Projection): ProjectionMessage {
+  snapshot(projection: DesktopProjection): ProjectionMessage {
     this.previous = projection; this.sinceSnapshot = 0;
     return { kind: 'snapshot', revision: ++this.revision, projection };
   }
-  next(projection: Projection): ProjectionMessage | undefined {
+  next(projection: DesktopProjection): ProjectionMessage | undefined {
     const before = this.previous;
     if (projection === before) return;
     if (!before || before.runtimeId !== projection.runtimeId || before.epoch !== projection.epoch || ++this.sinceSnapshot >= this.fullEvery) return this.snapshot(projection);
@@ -106,10 +107,10 @@ export class ProjectionPublisher {
 
 export class ProjectionReceiver {
   private revision = -1;
-  private projection?: Projection;
+  private projection?: DesktopProjection;
   get current() { return this.projection; }
   get version() { return this.revision; }
-  accept(message: ProjectionMessage): { state?: Projection; needsSync: boolean } {
+  accept(message: ProjectionMessage): { state?: DesktopProjection; needsSync: boolean } {
     if (message.revision <= this.revision) return { needsSync: false };
     if (message.kind === 'snapshot') {
       this.revision = message.revision; this.projection = message.projection;

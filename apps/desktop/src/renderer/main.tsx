@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { GlassAPI, WindowAction, WindowState } from '../shared/api';
-import { DEFAULT_SETTINGS, deriveTask, viewForSize, type GlassViewMode } from '../shared/view-model';
+import type { GlassAPI, RequestKind, WindowAction, WindowState } from '../shared/api';
+import { DEFAULT_SETTINGS, deriveTask, otherPendingRequests, viewForSize, type GlassViewMode } from '../shared/view-model';
 import { chimeFor, type ChimeSnapshot } from '../shared/sound';
 import { playChime, stopChime } from './sound';
 import { useGlass } from './store';
@@ -9,11 +9,14 @@ import { ResizeHandles,useWindowDrag } from './gestures';
 import { CapsuleEdgeOrb, TaskCapsule, TaskPeek, TaskExpanded } from './task-views';
 import { CapsuleEdgeMotion } from './capsule-edge-motion';
 import { RequestPanel } from './question-card';
+import { requestIdentity, requestKey } from './request-model';
 import { GlassSettingsPanel } from './settings';
 import { GlassMaterial } from './glass-material';
 import { Icon } from './icon';
 import { WhaleEmpty, WhaleSkinContext } from './whale-companion';
 import {WhalePool} from './whale-pool';
+import { activePoolRequest, poolRequestReaction, type ViewedRequest } from './pool-request-reaction';
+import type { PoolSceneFacts } from './pool-scene';
 import {WhalePoolIntro} from './whale-pool-intro';
 import './style.css';
 import './refined-theme.css';
@@ -30,12 +33,20 @@ import './whale-pool.css';
 declare global { interface Window { glass: GlassAPI } }
 const initialWindow: WindowState = { pinned: false, material: 'acrylic', morphing: null, viewMode: 'capsule', manualSize: false, panel: null, settings: { ...DEFAULT_SETTINGS }, completionFeedback: false };
 function App() {
-  const { projection, selected, replace, select } = useGlass();
+  const projection = useGlass(state => state.projection);
+  const selected = useGlass(state => state.selected);
+  const replace = useGlass(state => state.replace);
   const root = useRef<HTMLElement>(null);
   const settledMode = useRef<GlassViewMode>('capsule');
   const [windowState, setWindowState] = useState<WindowState>(initialWindow);
   const [layoutMode, setLayoutMode] = useState<GlassViewMode>('capsule');
   const [error, setError] = useState('');
+  const [focusedRequest, setFocusedRequest] = useState<{ sessionId: string; kind: RequestKind; key: string }>();
+  const [viewedRequest, setViewedRequest] = useState<ViewedRequest>();
+  const inspectApproval = useCallback((key: string) => setViewedRequest({ kind: 'approval', key }), []);
+  const inspectQuestion = useCallback((key: string) => setViewedRequest({ kind: 'question', key }), []);
+  const [returnTrip, setReturnTrip] = useState<{ from: string; to: string; scope: string; mode: GlassViewMode }>();
+  const scope = JSON.stringify([projection.runtimeId, projection.epoch]);
   useEffect(() => {
     const unsubscribe = window.glass.subscribe(replace);
     const unsubscribeWindow = window.glass.subscribeWindow(setWindowState);
@@ -52,9 +63,36 @@ function App() {
     catch { setError('操作未完成，请稍后重试'); }
   }
   async function chooseSession(id: string) {
-    try { await window.glass.selectSession(id); select(id); } catch { setError('会话已不可用'); }
+    try { await window.glass.selectSession(id); setReturnTrip(undefined); } catch { setError('会话已不可用'); }
   }
   const task = useMemo(() => deriveTask(projection, selected), [projection, selected]);
+  const otherRequests = useMemo(() => otherPendingRequests(projection, selected), [projection, selected]);
+  const otherLabel = `其他会话有 ${otherRequests.length} 项待处理`;
+  async function openRequest(target: typeof otherRequests[number]) {
+    try {
+      const next = await window.glass.openRequest(target.kind, requestIdentity(target.request), matchMedia('(prefers-reduced-motion: reduce)').matches);
+      if (windowState.settings.appearance === 'whale-pool' && task.session && target.request.sessionId !== selected) {
+        setReturnTrip({ from: selected, to: target.request.sessionId, scope, mode: windowState.viewMode });
+      }
+      setFocusedRequest({ sessionId: target.request.sessionId, kind: target.kind, key: requestKey(target.request) });
+      setWindowState(next);
+    } catch { setError('请求已结束或暂不可用'); }
+  }
+  function openOtherRequests() {
+    if (otherRequests.length === 1) void openRequest(otherRequests[0]!);
+    else if (otherRequests.length) void action('other-requests');
+  }
+  const returnSession = returnTrip && returnTrip.scope === scope && selected === returnTrip.to && !projection.stale &&
+    Object.hasOwn(projection.sessions, returnTrip.from) ? projection.sessions[returnTrip.from] : undefined;
+  async function returnToSession() {
+    if (!returnTrip || !returnSession) return;
+    try {
+      await window.glass.selectSession(returnTrip.from, { runtimeId: projection.runtimeId, epoch: projection.epoch, sessionId: returnTrip.to });
+      setReturnTrip(undefined); setFocusedRequest(undefined);
+      const actionByView = { capsule: 'collapse', peek: 'overview', expanded: 'details', approval: 'approval' } as const;
+      await action(actionByView[returnTrip.mode]);
+    } catch { setError('原会话已不可用'); }
+  }
   const chime = useRef<ChimeSnapshot | null>(null);
   const { sound, soundPreset } = windowState.settings;
   useEffect(() => {
@@ -62,20 +100,72 @@ function App() {
     const kind = chimeFor(chime.current, next, sound);
     chime.current = next;
     if (!sound) stopChime();
-    if (kind) playChime(kind, soundPreset);
-  }, [selected, task.status, task.attentionCount, sound, soundPreset]);
+    if (kind && windowState.visible !== false && (kind !== 'complete' ||
+      projection.poolEvent?.kind === 'completed' && projection.poolEvent.sessionId === selected)) playChime(kind, soundPreset);
+  }, [selected, task.status, task.attentionCount, sound, soundPreset, projection.poolEvent, windowState.visible]);
   const { dockEdge, edgeMotion } = windowState;
   const mode = dockEdge ? 'capsule' : windowState.settings.appearance==='whale-pool'?windowState.viewMode:windowState.morphing === 'collapsing' && windowState.viewMode === 'capsule' ? settledMode.current : windowState.morphing || windowState.panel ? windowState.viewMode : layoutMode === 'expanded' && windowState.viewMode === 'approval' ? 'approval' : layoutMode;
-  const pool=windowState.settings.appearance==='whale-pool'&&!windowState.panel&&(mode==='capsule'||mode==='peek');
+  const pool=windowState.settings.appearance==='whale-pool'&&!windowState.panel;
+  const poolPanel=pool && (mode==='approval'||mode==='expanded');
   const {whenSettled, ...drag} = useWindowDrag(root, `${mode}:${windowState.panel}:${windowState.morphing}:${dockEdge}:${edgeMotion?.direction}`, windowState.settings.animation, windowState.settings.edgeDock);
   if (!windowState.morphing) settledMode.current = mode;
   const invoke = (value: WindowAction) => () => void action(value);
+  const submissions = windowState.submissions ?? [];
+  const receipt = submissions.find(result => result.status === 'unconfirmed') ?? submissions[0];
+  const focused = focusedRequest?.sessionId === selected ? focusedRequest : undefined;
+  const activeRequest = pool ? activePoolRequest(task, mode === 'approval' ? viewedRequest ?? focused : undefined) : undefined;
+  const reaction = pool ? poolRequestReaction(task, projection, selected, submissions, activeRequest, mode === 'approval') : undefined;
+  const canAnimate = pool && !dockEdge && !edgeMotion && windowState.visible !== false && windowState.settings.animation === 'full';
+  const counter = useRef(0), lastTyped = useRef(-Infinity);
+  const eventCursor = useRef<{ scope: string; selected: string; live: boolean; id?: number }>(undefined);
+  const [cue, setCue] = useState<PoolSceneFacts['cue']>();
+  useEffect(() => {
+    const event = projection.poolEvent;
+    const live = canAnimate && !document.hidden && !projection.stale && projection.connection === 'connected';
+    const previous = eventCursor.current;
+    eventCursor.current = { scope, selected, live, id: event?.id };
+    // The first snapshot can include the last event already seen by another renderer.
+    if (!event || !live || !previous?.live || previous.scope !== scope || previous.selected !== selected ||
+        event.sessionId !== selected || event.id <= (previous.id ?? -1)) { setCue(undefined); return; }
+    setCue({ id: ++counter.current, kind: event.kind });
+  }, [projection.poolEvent, scope, selected, projection.stale, projection.connection, canAnimate]);
+  function typeInQuestion(target: EventTarget | null) {
+    if (!canAnimate || reaction !== 'answering' || mode !== 'approval' || !(target instanceof HTMLTextAreaElement) ||
+        target.disabled || !target.closest('.question-form') || performance.now() - lastTyped.current < 600) return;
+    lastTyped.current = performance.now();
+    setCue({ id: ++counter.current, kind: 'typing' });
+  }
+  const scene: PoolSceneFacts = {
+    scope,
+    connection: projection.stale && projection.connection === 'connected' ? 'reconnecting' : projection.connection,
+    viewedRequest: mode === 'approval' && activeRequest ? { kind: 'questions' in activeRequest ? 'question' : 'approval', key: requestKey(activeRequest) } : undefined,
+    reaction, otherPending: otherRequests.length > 0, cue,
+  };
+  const backToTask = pool && returnSession ? <button type="button" className="pool-session-return" onClick={() => void returnToSession()}
+    title={'返回' + returnSession.title}>返回「{returnSession.title}」</button> : null;
+  const panels = mode === 'expanded' ? <TaskExpanded task={task} projection={projection} selected={selected} select={id => void chooseSession(id)}
+    approval={invoke('approval')} reconnect={invoke('reconnect')} openDSH={invoke('open-dsh')}
+    loadHistory={direction => window.glass.loadHistory(direction).catch(() => setError('历史会话暂不可用'))} />
+    : mode === 'approval' ? <RequestPanel key={JSON.stringify([projection.runtimeId,projection.epoch,selected,focused?.key])} task={task}
+      openDSH={invoke('open-dsh')} focused={focused} inspectApproval={inspectApproval} inspectQuestion={inspectQuestion} inPool={poolPanel}
+      submissions={submissions} dismiss={id => void window.glass.dismissSubmission(id).catch(() => setError('提交状态暂不可用'))} /> : null;
+  const notices = !windowState.panel && !dockEdge && !edgeMotion && mode !== 'approval' &&
+    (receipt || otherRequests.length > 0 || backToTask && !poolPanel)
+    ? <div className="window-notices">
+      {!poolPanel && backToTask}
+      {receipt && <button type="button" className="window-notice" data-status={receipt.status} onClick={invoke('approval')} title={receipt.sessionTitle}>
+        {receipt.status === 'unconfirmed' ? 'DSH 未确认' : '提交结果'}
+      </button>}
+      {otherRequests.length > 0 && <button type="button" className="window-notice" onClick={openOtherRequests}>{otherLabel}</button>}
+    </div> : null;
   return <WhaleSkinContext.Provider value={windowState.settings.whaleSkin}><main ref={root} {...drag} className="glass" data-mode={mode} data-panel={windowState.panel ?? 'none'}
     data-appearance={pool?'whale-pool':'classic'}
     data-dock-edge={dockEdge} data-edge-motion={edgeMotion?.direction} data-pool-dock={pool && dockEdge ? true : undefined}
     data-state={task.status} data-material={windowState.material} data-strength={windowState.settings.strength}
     data-theme={pool||windowState.material === 'frosted' ? 'dark' : windowState.settings.theme} data-morph={edgeMotion ? 'edge' : windowState.morphing ?? 'idle'}
     data-animation={windowState.settings.animation} data-completion={windowState.completionFeedback}
+    onInput={event => { if (!(event.nativeEvent as InputEvent).isComposing) typeInQuestion(event.target); }}
+    onCompositionEnd={event => typeInQuestion(event.target)}
     onKeyDown={e => {
       if (e.key === 'Escape') { e.preventDefault(); void action(windowState.panel ? 'back' : dockEdge ? 'restore-capsule' : 'collapse'); }
       if (e.key === 'ContextMenu' || e.key === 'F10' && e.shiftKey) { e.preventDefault(); void action('menu'); }
@@ -90,9 +180,14 @@ function App() {
       </div>
     </div>}
     {error && mode !== 'capsule' && <p className="inline-error" role="alert">{error}</p>}
-    {edgeMotion ? <CapsuleEdgeMotion surface={root} motion={edgeMotion} task={task} style={windowState.settings.capsuleMotion} feedback={windowState.completionFeedback} pool={pool} />
-    : dockEdge ? <CapsuleEdgeOrb task={task} restore={invoke('restore-capsule')} pool={pool} />
+    {windowState.hideBlocked && <p className="hide-blocked" role="alert">{windowState.recoveryHint}</p>}
+    {pool && !dockEdge && !edgeMotion && <WhalePool task={task} scene={scene} mode={mode} morphing={windowState.morphing} settings={windowState.settings}
+      visible={windowState.visible!==false} settleDrag={whenSettled} expand={() => action('expand', true)} details={invoke('details')}
+      approval={invoke('approval')} menu={invoke('menu')} reconnect={invoke('reconnect')} openDSH={invoke('open-dsh')}/>}
+    {edgeMotion ? <CapsuleEdgeMotion surface={root} motion={edgeMotion} task={task} style={windowState.settings.capsuleMotion} feedback={windowState.completionFeedback} pool={pool} restore={invoke('restore-capsule')} />
+    : dockEdge ? <CapsuleEdgeOrb task={{ ...task, attentionCount: task.attentionCount + otherRequests.length }} restore={invoke('restore-capsule')} pool={pool} />
     : windowState.panel==='whale-pool-intro'?<WhalePoolIntro tryNow={invoke('try-whale-pool')} later={invoke('dismiss-whale-pool')}/>:windowState.panel === 'settings' ? <GlassSettingsPanel value={windowState.settings} projection={projection} back={invoke('back')} showPoolIntro={invoke('introduce-whale-pool')}
+      reconnectFocus={windowState.reconnectFocus} recoveryHint={windowState.recoveryHint}
       update={patch => {
         setWindowState(current => ({ ...current, settings: { ...current.settings, ...patch } }));
         void window.glass.setSettings(patch).then(setWindowState).catch(() => {
@@ -100,13 +195,20 @@ function App() {
         });
       }}
       mock={value => { void window.glass.mockAction(value).catch(() => setError('调试操作未完成')); }} />
+    : windowState.panel === 'other-requests' ? <section className="activity-panel" aria-label="其他会话待处理请求">
+      <div className="panel-heading"><button className="back-button" aria-label="返回" onClick={invoke('back')}><Icon name="back"/></button><h1>其他会话待处理请求</h1></div>
+      <div className="activity-list">{otherRequests.length ? otherRequests.map(target => <button type="button" className="other-request"
+        key={target.kind + requestKey(target.request)} onClick={() => void openRequest(target)}>
+        <strong>{target.title}</strong><span>{target.kind === 'approval' ? '确认' : '回答'} · {target.label}</span>
+      </button>) : <WhaleEmpty>其他会话暂无待处理请求</WhaleEmpty>}</div>
+    </section>
     : windowState.panel === 'activity' ? <section className="activity-panel"><div className="panel-heading"><button className="back-button" aria-label="返回" title="返回" onClick={invoke('back')}><Icon name="back"/></button><h1>最近活动</h1></div>
       <div className="activity-list">{task.session?.activities.length ? task.session.activities.map(a => <article key={a.callId} data-tool-status={a.status??'running'}><div className="activity-heading"><strong>{a.toolName}</strong><span className="activity-status">{{pending:'等待执行',running:'执行中',success:'已完成',error:'执行失败',cancelled:'已取消'}[a.status??'running']}</span></div><p>{a.summary}</p>{a.resultSummary && <p className="activity-result">{a.resultSummary}</p>}</article>) : <WhaleEmpty>此会话暂无工具活动</WhaleEmpty>}</div></section>
-    : pool ? <WhalePool task={task} mode={mode} morphing={windowState.morphing} settings={windowState.settings} visible={windowState.visible!==false} settleDrag={whenSettled} expand={() => action('expand', true)} details={invoke('expand')} approval={invoke('approval')} menu={invoke('menu')} reconnect={invoke('reconnect')}/>
+    : pool ? (poolPanel && <div className="pool-panel-content">{backToTask}{panels}</div>)
     : mode === 'capsule' ? <TaskCapsule task={task} motion={windowState.settings.capsuleMotion} feedback={windowState.completionFeedback} activate={invoke(task.attentionCount ? 'approval' : 'expand')} />
-    : mode === 'peek' ? <TaskPeek task={task} expand={invoke('expand')} approval={invoke('approval')} reconnect={invoke('reconnect')} />
-    : mode === 'expanded' ? <TaskExpanded task={task} projection={projection} selected={selected} select={id => void chooseSession(id)} approval={invoke('approval')} reconnect={invoke('reconnect')} />
-    : <RequestPanel key={JSON.stringify([projection.runtimeId,projection.epoch,selected])} task={task} openDSH={invoke('open-dsh')} />}
+    : mode === 'peek' ? <TaskPeek task={task} expand={invoke('details')} approval={invoke('approval')} reconnect={invoke('reconnect')} openDSH={invoke('open-dsh')} />
+    : panels}
+    {notices}
     {!dockEdge && <ResizeHandles />}
   </main></WhaleSkinContext.Provider>;
 }

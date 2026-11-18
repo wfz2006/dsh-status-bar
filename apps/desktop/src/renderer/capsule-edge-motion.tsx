@@ -11,16 +11,18 @@ const contour = ({ x, y, width, height }: Bounds, radius: number) => ({
   '--edge-radius': `${radius}px`,
 });
 
-export function CapsuleEdgeMotion({ surface, motion, task, style, feedback, pool }: {
+export function CapsuleEdgeMotion({ surface, motion, task, style, feedback, pool, restore }: {
   surface: RefObject<HTMLElement | null>;
   motion: EdgeMotion;
   task: ReturnType<typeof deriveTask>;
   style: CapsuleMotion;
   feedback: boolean;
   pool: boolean;
+  restore: () => void;
 }) {
   const capsule = useRef<HTMLDivElement>(null);
   const orb = useRef<HTMLDivElement>(null);
+  const canRestore = motion.direction === 'gather';
 
   useLayoutEffect(() => {
     const host = surface.current, caption = capsule.current, drop = orb.current;
@@ -61,8 +63,8 @@ export function CapsuleEdgeMotion({ surface, motion, task, style, feedback, pool
     {!pool && <div ref={capsule} className="edge-motion-content edge-motion-caption" style={place(motion.capsule)} inert aria-hidden="true">
       <TaskCapsule task={task} motion={style} feedback={feedback} />
     </div>}
-    <div ref={orb} className="edge-motion-content" style={place(motion.orb)} inert aria-hidden="true">
-      <CapsuleEdgeOrb task={task} pool={pool} />
+    <div ref={orb} className="edge-motion-content" style={place(motion.orb)} inert={!canRestore} aria-hidden={!canRestore}>
+      <CapsuleEdgeOrb task={task} pool={pool} restore={canRestore ? restore : undefined} />
     </div>
   </>;
 }

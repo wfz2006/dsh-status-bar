@@ -7,7 +7,7 @@ import { FakeHost, TOKEN, object, type Seed, type AuthMode } from './helpers/dsh
 const cleanups: (() => Promise<void> | void)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
 
-async function setup(options: { seeds?: Seed[]; auth?: AuthMode } = {}) {
+async function setup(options: { seeds?: Seed[]; auth?: AuthMode; selectedSession?: () => string } = {}) {
   const host = new FakeHost();
   if (options.seeds) host.sessions = options.seeds;
   if (options.auth) host.auth = options.auth;
@@ -17,6 +17,7 @@ async function setup(options: { seeds?: Seed[]; auth?: AuthMode } = {}) {
   const connections: string[] = [];
   let projection: Projection = initialProjection();
   const adapter = createDshAdapter({
+    selectedSession: options.selectedSession,
     publish: frame => { frames.push(frame); projection = reduceProjection(projection, frame); },
     onConnection: connection => {
       connections.push(connection);
@@ -131,6 +132,25 @@ describe('dsh host contract', () => {
     h.host.gateway({ type: 'emit', event: 'api-session/added', args: [{ sessionId: 's1', agentAvailable: true, running: true }] });
     await expect.poll(() => h.host.followRequests.get('s1')?.assistantStream, { timeout: 500, interval: 5 }).toBe(true);
     expect(h.host.requests.filter(r => r.method === 'session/list')).toHaveLength(1);
+  });
+
+  it('keeps the selected history and admits a new active session and its question at capacity', async () => {
+    const seeds = Array.from({ length: 100 }, (_, index) => ({ sessionId: 'history-' + index }));
+    const h = await setup({ seeds, selectedSession: () => 'history-99' });
+    await h.adapter.connect(h.host.link());
+    const fresh = { sessionId: 'new', title: 'New task', running: true, agentAvailable: true };
+    h.host.sessions = [fresh, ...seeds];
+    h.host.gateway({ type: 'emit', event: 'api-session/added', args: [{ ...fresh, projections: { values: { title: fresh.title } } }] });
+    h.host.waterfall({ eventId: 'q101', agentId: 'new', event: 'user-questions/request',
+      request: { wait: { callId: 'q101' }, questions: [{ id: 'q', question: 'New task question?' }] } });
+    await expect.poll(() => h.state().questions[0]?.sessionId).toBe('new');
+    expect(Object.keys(h.state().sessions)).toHaveLength(100);
+    expect(h.state().sessions['history-99']).toBeDefined();
+    await h.adapter.loadHistory('older');
+    expect(h.state().sessions.new?.title).toBe('New task');
+    expect(h.state().sessions['history-99']).toBeDefined();
+    expect(h.state().sessions['history-98']).toBeDefined();
+    expect(h.state().questions[0]?.sessionId).toBe('new');
   });
   it('follows an existing cold session as soon as its native running event arrives', async () => {
     const h = await setup({ seeds: [{ sessionId: 's1', agentAvailable: false }] });
@@ -270,7 +290,7 @@ describe('dsh host contract', () => {
     expect(approval).toMatchObject({ displayDetails: 'partial', actionable: false });
     const identity = { runtimeId: approval.runtimeId, sourceEpoch: approval.sourceEpoch, sessionId: 's1', requestId: approval.requestId };
     expect(() => assertApprovalResponse(h.state(), identity, 'allowed-once')).toThrow();
-    await expect(h.adapter.respondApproval(identity, 'allowed-once')).rejects.toThrow(/参数尚未完整/);
+    await expect(h.adapter.respondApproval(identity, 'allowed-once')).rejects.toThrow(/请求已失效/);
     expect(h.host.requests.some(request => request.method === '$events/result')).toBe(false);
     h.host.audit('s1', { type: 'tool/call', data: { callId: 'c2', name: 'bash', arguments: JSON.stringify({ apiKey: 'sk-live-secret' }) } });
     h.host.waterfall({ eventId: 'ev2', agentId: 's1', event: 'approval/request', request: { toolName: 'bash', callId: 'c2' } });
@@ -319,6 +339,19 @@ describe('dsh host contract', () => {
     const submitted = h.host.requests.find(request => request.method === '$events/result')!;
     expect(submitted.args).toMatchObject({ eventId: 'q1-ev', outcome: { kind: 'result', value: { answers: [{ id: 'q1', selected: ['乙'] }] } } });
     await expect.poll(() => h.state().questions[0]?.status, { timeout: 3000 }).toBe('answered');
+  });
+
+  it('keeps receipt routing separate when two session and call IDs share the old delimiter encoding', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's', running: true }, { sessionId: 's:question:inner', running: true }] });
+    await h.adapter.connect(h.host.link());
+    for (const [agentId, callId, eventId] of [['s', 'inner:question:tail', 'a'], ['s:question:inner', 'tail', 'b']] as const) {
+      h.host.waterfall({ eventId, agentId, event: 'user-questions/request',
+        request: { wait: { callId }, questions: [{ id: 'q', question: 'Shared question' }] } });
+    }
+    await expect.poll(() => h.state().questions.length).toBe(2);
+    for (const request of [...h.state().questions]) await h.adapter.respondQuestion(request, [{ questionId: 'q', values: [request.sessionId] }]);
+    expect(h.host.requests.filter(r => r.method === '$events/result').map(r => r.args.eventId)).toEqual(['a', 'b']);
+    expect(h.state().questions.every(q => q.status === 'answered')).toBe(true);
   });
 
   it('keeps a delivered question open when projections do not list it', async () => {
@@ -440,6 +473,19 @@ describe('dsh host contract', () => {
     expect(h.host.requests.find(r => r.method === '$events/result')?.args.eventId).toBe('remote-id');
   });
 
+  it('shows an audit-only approval read-only and upgrades the same card after matching delivery', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
+    await h.adapter.connect(h.host.link());
+    const details = { toolName: 'bash', callId: 'audit-call' };
+    h.host.audit('s1', { type: 'tool/call', data: { callId: details.callId, name: 'bash', arguments: '{"command":"echo fixture"}' } });
+    h.host.audit('s1', { type: 'approval/asked', data: { id: 'audit-only', ...details } });
+    await expect.poll(() => h.state().approvals[0]).toMatchObject({ status: 'pending', actionable: false });
+    const id = h.state().approvals[0]?.requestId;
+    h.host.waterfall({ eventId: 'live-audit', agentId: 's1', event: 'approval/request', request: details });
+    await expect.poll(() => h.state().approvals[0]?.actionable).toBe(true);
+    expect(h.state().approvals.map(a => a.requestId)).toEqual([id]);
+  });
+
   it('accepts independent projection keys sharing a native sequence and rejects stale snapshots', async () => {
     const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
     await h.adapter.connect(h.host.link());
@@ -507,6 +553,28 @@ describe('dsh host contract', () => {
     expect(JSON.stringify(h.frames)).not.toContain('private diagnostic');
   });
 
+  it('waits for the matching live official ask_user_question result when its projection is delayed', async () => {
+    const h = await setup({ seeds:[{sessionId:'s1',running:true},{sessionId:'s2',running:true}] });
+    h.host.suppressDecision = true; await h.adapter.connect(h.host.link());
+    const questions = [{ id:'field', question:'哪一项？' }];
+    const call = { type:'tool/call', data:{callId:'shared',name:'ask_user_question',arguments:JSON.stringify({questions})} };
+    h.host.audit('s1',call); h.host.audit('s2',call);
+    h.host.waterfall({eventId:'delayed',agentId:'s1',event:'user-questions/request',request:{wait:{callId:'shared'},questions}});
+    await expect.poll(() => h.state().questions[0]?.actionable).toBe(true);
+    const respond = h.adapter.respondQuestion(h.state().questions[0]!,[{questionId:'field',values:['原答案']}]);
+    const result = (answer:string, isError = false) => ({type:'tool/result',data:{message:{
+      role:'tool',source:{kind:'tool',callId:'shared'},toolCallId:'shared',isError,
+      content:[{ type:'text',text:JSON.stringify({answers:[{id:'field',selected:[],custom:answer}]}) }],
+    }}});
+    h.host.audit('s2',result('原答案')); h.host.audit('s1',result('另一个答案')); h.host.audit('s1',result('原答案',true));
+    await expect.poll(() => h.state().sessions.s1?.activities[0]?.status).toBe('error');
+    expect(h.state().questions[0]?.status).toBe('submitting');
+    h.host.audit('s1',result('原答案'));
+    await respond;
+    expect(h.state().questions[0]?.status).toBe('answered');
+    expect(JSON.stringify(h.frames)).not.toContain('原答案');
+  },15000);
+
   it('leaves an unconfirmed void submission unavailable after the receipt deadline', async () => {
     const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
     h.host.suppressDecision = true;
@@ -542,7 +610,7 @@ describe('dsh host contract', () => {
       return true;
     };
     await h.adapter.connect(h.host.link());
-    expect(Object.fromEntries(Object.entries(h.state().sessions).map(([id, s]) => [id, s.phase]))).toEqual({ done: 'finished', failed: 'error', stopped: 'cancelled', limited: 'limit-reached', unknown: 'unknown' });
+    await expect.poll(() => Object.fromEntries(Object.entries(h.state().sessions).map(([id, s]) => [id, s.phase]))).toEqual({ done: 'finished', failed: 'error', stopped: 'cancelled', limited: 'limit-reached', unknown: 'unknown' });
     expect(h.host.requests.filter(r => r.method === 'session/page')).toHaveLength(5);
     expect(h.host.openStreams.some(s => s.startsWith('audit:'))).toBe(false);
     expect(h.host.requests.filter(r => r.method === 'session/page').every(r => object(r.args.request).throughSeq === 42 && object(r.args.request).maxMessages === 1)).toBe(true);

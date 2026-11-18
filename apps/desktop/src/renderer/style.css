@@ -455,6 +455,26 @@ h1 { font-size:17px; line-height:1.4; font-weight:600; letter-spacing:-.2px; }
 /* Peek: settle both content groups a little lower so the glass below is not empty. */
 .task-peek .peek-process{margin-top:16px;}
 
+/* Preserve the footer and active step when the native window is shortened. */
+.task-peek .peek-content { container:peek-body / size; }
+@container peek-body (max-height:150px) {
+  .peek-process .peek-entry:nth-child(n+2) { display:none; }
+}
+@container peek-body (max-height:128px) {
+  .task-peek .peek-process { display:none; }
+  .task-peek .task-progress { margin:6px 0 0; }
+}
+@container peek-body (max-height:100px) {
+  .task-peek .peek-usage { display:none; }
+}
+@container peek-body (max-height:72px) {
+  .task-peek .current-step { margin-top:3px; }
+}
+@container peek-body (max-height:45px) {
+  .task-peek :is(.task-heading,.task-progress) { display:none; }
+  .task-peek .current-step { min-height:26px; margin:0; padding-right:78px; }
+}
+
 /* DSH whale: a small blue fluke that rides beside the running status. */
 .whale-tail{width:14px;height:14px;color:var(--accent);transform-origin:50% 85%;filter:drop-shadow(0 2px 6px color-mix(in srgb,var(--accent) 42%,transparent));animation:whale-bob 3.4s ease-in-out infinite;}
 @keyframes whale-bob{0%,100%{transform:translateY(0) rotate(-3deg)}45%{transform:translateY(-1px) rotate(4deg)}70%{transform:translateY(0) rotate(1deg)}}

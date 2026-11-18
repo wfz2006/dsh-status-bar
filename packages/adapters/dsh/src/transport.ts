@@ -27,6 +27,8 @@ export class HostTransport {
   private heartbeat?: ReturnType<typeof setInterval>;
   constructor(private readonly onItem: (stream: string, value: unknown) => void, private readonly onClose: () => void) {}
 
+  isOpen(): boolean { return this.socket?.readyState === WebSocket.OPEN; }
+
   async authenticate(link: string): Promise<void> {
     const url = parseHostLink(link);
     this.origin = url.origin;

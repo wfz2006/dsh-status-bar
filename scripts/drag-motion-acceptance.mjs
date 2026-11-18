@@ -7,8 +7,10 @@ import { fixture } from './native-fixture.mjs';
 const output = resolve('reports/drag-motion');
 await mkdir(output, { recursive: true });
 const f = await fixture();
+const mouse = await f.page.context().newCDPSession(f.page);
 const errors = [], results = [];
 const bounds = () => f.app.evaluate(({ BrowserWindow }, id) => BrowserWindow.fromId(id).getBounds(), f.mainId);
+const pointer = (type, x, y, buttons) => mouse.send('Input.dispatchMouseEvent', { type, x, y, buttons, button: 'left', clickCount: 1 });
 async function reset(animation = 'full') {
   await f.page.evaluate(() => window.glass.mockAction('restart'));
   await expect.poll(async () => (await f.page.evaluate(() => window.glass.getState())).approvals.length).toBe(0);
@@ -19,14 +21,15 @@ async function reset(animation = 'full') {
 }
 async function drag({ pause = 0 } = {}) {
   const start = await bounds();
-  await f.page.mouse.move(72, 22); await f.page.mouse.down();
+  await pointer('mouseMoved', 72, 22, 0);
+  await pointer('mousePressed', 72, 22, 1);
   await expect(f.page.locator('main')).toHaveAttribute('data-drag', 'pressed');
   let feedback;
   for (let i = 1; i <= 10; i++) {
     const current = await bounds();
     // Playwright uses viewport coordinates, while a real cursor stays in
     // desktop coordinates when the window moves underneath it.
-    await f.page.mouse.move(72 + i * 12 - (current.x - start.x), 22);
+    await pointer('mouseMoved', 72 + i * 12 - (current.x - start.x), 22 - (current.y - start.y), 1);
     await f.page.waitForTimeout(16);
     const next = await bounds();
     assert.equal(next.width, start.width); assert.equal(next.height, start.height);
@@ -42,7 +45,9 @@ async function drag({ pause = 0 } = {}) {
   }
   const drop = await bounds();
   if (pause) await f.page.waitForTimeout(pause);
-  await f.page.mouse.up();
+  // Release at the same desktop point without adding a fictitious move
+  // sample after the last HWND move. That sample would reduce drag velocity.
+  await pointer('mouseReleased', 72 + 120 - (drop.x - start.x), 22 - (drop.y - start.y), 0);
   return { start, drop, feedback };
 }
 try {
@@ -130,12 +135,24 @@ try {
   results.push({ name: 'expansion and hide cancel release motion', result: 'PASS' });
 
   for (const animation of ['reduced', 'off', 'system']) {
-    await reset(animation === 'system' ? 'full' : animation);
+    const setting = animation === 'system' ? 'full' : animation;
+    await reset(setting);
     if (animation === 'system') await f.page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(f.page.locator('main')).toHaveAttribute('data-animation', setting);
     const start = await bounds();
-    await f.page.mouse.move(72, 22); await f.page.mouse.down(); await f.page.mouse.move(108, 22);
-    await f.page.waitForTimeout(50); const drop = await bounds(); await f.page.mouse.up(); await f.page.waitForTimeout(100);
-    assert.equal(drop.x - start.x, 36); assert.deepEqual(await bounds(), drop);
+    await pointer('mouseMoved', 72, 22, 0);
+    await pointer('mousePressed', 72, 22, 1);
+    let drop = start;
+    for (const distance of [9, 21, 36]) {
+      await pointer('mouseMoved', 72 + distance - (drop.x - start.x), 22, 1);
+      await expect.poll(async () => (await bounds()).x, { message: `${animation} follows the held pointer` }).toBe(start.x + distance);
+      drop = await bounds();
+    }
+    await pointer('mouseReleased', 72, 22, 0);
+    for (let i = 0; i < 7; i++) {
+      await f.page.waitForTimeout(16);
+      assert.deepEqual(await bounds(), drop, `${animation} releases without a spring`);
+    }
     await expect(f.page.locator('main')).not.toHaveAttribute('data-drag');
     if (animation === 'system') await f.page.emulateMedia({ reducedMotion: 'no-preference' });
     results.push({ name: animation + ' respects reduced motion without affecting dragging', result: 'PASS' });

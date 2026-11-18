@@ -20,9 +20,34 @@
     wait:{label:'等你回应',duration:3.8,loop:true},
     happy:{label:'开心一下',duration:2.8,loop:false},
     roll:{label:'打个滚',duration:2.5,loop:false},
-    sleep:{label:'打个盹',duration:6.2,loop:true}
+    sleep:{label:'打个盹',duration:6.2,loop:true},
+    shallows:{label:'浅湾静浮',duration:8.5,loop:true},
+    sound:{label:'侧身听水',duration:6.7,loop:true},
+    launch:{label:'压尾蹬水',duration:2.4,loop:true},
+    brake:{label:'展鳍减速',duration:5.2,loop:true},
+    work:{label:'潜游巡航',duration:5.8,loop:true},
+    listen:{label:'探头倾听',duration:4.6,loop:true},
+    steady:{label:'悬停等重试',duration:5.5,loop:true},
+    breathe:{label:'浮出换气',duration:4.2,loop:true},
+    moor:{label:'收鳍停泊',duration:7.2,loop:true},
+    settled:{label:'平静浮游',duration:6.5,loop:true},
+    sink:{label:'潜入深水',duration:7.8,loop:true},
+    locate:{label:'探向水面',duration:4.6,loop:true},
+    search:{label:'绕游探路',duration:4.4,loop:true},
+    guard:{label:'侧身静候',duration:7.4,loop:true},
+    hold:{label:'停住等回执',duration:4.5,loop:true},
+    received:{label:'收鳍回望',duration:6.0,loop:true},
+    uncertain:{label:'侧身等核实',duration:5.0,loop:true},
+    observeQuestion:{label:'静静听题',duration:6.2,loop:true},
+    observeApproval:{label:'在岸边守候',duration:6.8,loop:true},
+    nod:{label:'低头回应输入',duration:.60,loop:false},
+    glance:{label:'看向另一侧',duration:1.45,loop:false},
+    recoil:{label:'急刹收鳍',duration:1.30,loop:false},
+    slowStop:{label:'慢慢收势',duration:1.55,loop:false},
+    farewell:{label:'挥鳍告别',duration:1.90,loop:false},
+    restart:{label:'摆尾再出发',duration:1.30,loop:false}
   };
-  const neutral=()=>({x:0,y:0,roll:0,yaw:0,sx:1,sy:1,fin:0,tail:1,rate:3.4,eye:1});
+  const neutral=()=>({x:0,y:0,roll:0,yaw:0,sx:1,sy:1,fin:0,tail:1,rate:3.4,eye:1,bob:1});
   function sample(name,q,travel=100){
     const p=neutral(),s=Math.sin(q*TAU),envelope=Math.sin(Math.PI*clamp(q));
     if(name==='idle'){p.fin=.065*Math.sin(q*TAU*2-.8);p.x=1.3*s;}
@@ -53,7 +78,7 @@
     }
     if(name==='wait'){
       const asking=Math.pow(Math.max(0,Math.sin(q*TAU)),3);
-      p.y=-5*asking;p.roll=.085*asking;p.fin=.18*Math.sin(q*TAU*3)*asking;p.tail=.9+asking*.35;p.rate=3.3;
+      p.x=5;p.y=-1-5*asking;p.roll=.12+.085*asking;p.fin=.30*Math.sin(q*TAU*3)*asking;p.tail=.5+asking*.35;p.rate=3.3;p.bob=.52;
     }
     if(name==='happy'){
       p.y=keys(q,[[0,0],[.13,9],[.34,-35],[.55,-18],[.76,4],[.9,-3],[1,0]]);
@@ -68,25 +93,187 @@
     }
     if(name==='sleep'){
       p.y=6+2.4*s;p.roll=.12+.018*Math.sin(q*TAU);p.sy=.985;p.sx=1.01;
-      p.eye=.09+.035*(1+Math.sin(q*TAU));p.tail=.22;p.rate=1.5;p.fin=-.07;
+      p.eye=.09+.035*(1+Math.sin(q*TAU));p.tail=.22;p.rate=1.5;p.fin=-.07;p.bob=.25;
+    }
+    // Native-window berths have room for one silhouette and a short stroke in either direction.
+    // These poses use the same head, fin and tail joints as the opening swim and idle gestures.
+    const lift=(1+s)/2,stroke=Math.max(0,s)**2;
+    switch(name){
+      case 'shallows':
+        Object.assign(p,{x:-7,y:7+s,roll:.09,fin:-.16,tail:.12,rate:1.10,bob:.26});break;
+      case 'sound':
+        Object.assign(p,{x:2,y:2+s,roll:-.36+.04*s,yaw:.34,fin:.28,tail:.16,rate:1.35,bob:.25});break;
+      case 'launch':
+        Object.assign(p,{x:3-8*lift,y:2+5*lift,roll:-.21-.12*lift,sy:1-.035*lift,
+          fin:.28+.26*lift,tail:.82+.75*lift,rate:4.8,bob:.44});break;
+      case 'brake':
+        Object.assign(p,{x:5+1.5*s,y:-2,roll:.30+.025*s,sx:1.04,sy:.975,fin:-.57,tail:.2,rate:1.65,bob:.27});break;
+      case 'work':
+        Object.assign(p,{x:-9*s,y:2+3.5*Math.sin(q*TAU*2),roll:-.13*Math.cos(q*TAU*2),
+          fin:.15*Math.sin(q*TAU*3),tail:.88+.64*stroke,rate:4.3+stroke,bob:.55});break;
+      case 'listen':
+        Object.assign(p,{x:-4,y:3+s,roll:-.23+.02*s,fin:-.19,tail:.32,rate:1.9,bob:.38});break;
+      case 'steady':
+        Object.assign(p,{x:6,y:.9*s,roll:.024,fin:-.29,tail:.14,rate:1.15,bob:.18});break;
+      case 'breathe':
+        Object.assign(p,{y:-8-3.2*lift,roll:.23+.09*lift,sy:1+.023*lift,fin:.13*lift,tail:.27,rate:1.9,bob:.38});break;
+      case 'moor':
+        Object.assign(p,{x:-5,y:8+1.1*s,roll:.17,fin:-.28,tail:.15,rate:1.35,eye:.78,bob:.25});break;
+      case 'settled':
+        Object.assign(p,{x:2,y:-2+1.4*s,roll:-.035,fin:.095,tail:.43,rate:2.2,bob:.5});break;
+      case 'sink':
+        Object.assign(p,{x:3,y:14+s,roll:-.18,yaw:.20,fin:-.34,tail:.09,rate:1.05,eye:.65,bob:.2});break;
+      case 'locate':
+        Object.assign(p,{x:-3+1.6*s,y:-3-3*lift,roll:.19+.065*s,yaw:.17,fin:.25,tail:.46,rate:2.6,bob:.5});break;
+      case 'search':
+        Object.assign(p,{x:11*s,y:1-4*Math.sin(q*TAU*2),roll:.22*Math.cos(q*TAU*2),
+          yaw:.34*s,fin:.20*Math.sin(q*TAU*3),tail:.95,rate:3.8,bob:.45});break;
+      case 'guard':
+        Object.assign(p,{x:7,y:5,roll:.20,yaw:.45,fin:-.48,tail:.11,rate:1.12,bob:.16});break;
+      case 'observeQuestion':
+        Object.assign(p,{x:2,y:5,roll:-.21,yaw:.26,fin:-.31,tail:.17,rate:1.5,bob:.21});break;
+      case 'observeApproval':
+        Object.assign(p,{x:7,y:2,roll:.12,yaw:.24,fin:-.26,tail:.19,rate:1.6,bob:.24});break;
+      case 'hold':
+        Object.assign(p,{x:-1,y:-.5,roll:.055,yaw:.10,fin:.29,tail:.23,rate:2.1,bob:.18});break;
+      case 'received':
+        Object.assign(p,{x:4,y:3,roll:-.04,yaw:.26,fin:-.12,tail:.32,rate:1.9,bob:.33});break;
+      case 'uncertain':
+        Object.assign(p,{x:5,y:2+1.3*s,roll:-.27,yaw:.30,fin:-.20,tail:.2,rate:1.62,bob:.23});break;
+      case 'nod':
+        Object.assign(p,{x:-4,y:3+5*envelope,roll:-.23-.21*envelope,fin:-.18+.21*envelope,
+          tail:.34,rate:2.25,bob:.25});break;
+      case 'glance':
+        Object.assign(p,{x:4*envelope,y:-2*envelope,roll:.12*envelope,yaw:.62*envelope,
+          fin:.30*envelope,tail:.55,rate:2.85,bob:.4});break;
+      case 'recoil':
+        Object.assign(p,{x:keys(q,[[0,0],[.16,-2],[.44,10],[1,6]]),y:-4*envelope,
+          roll:keys(q,[[0,0],[.29,.26],[.57,-.10],[1,.024]]),sx:1+.055*envelope,
+          fin:-.42*envelope,tail:.15+.72*(1-q)**3,rate:3.0,bob:.2});break;
+      case 'slowStop':
+        Object.assign(p,{x:-5*(1-(1-q)**3),y:8*q,roll:.17*q,fin:-.28*q,
+          tail:.15+.65*(1-q)**2,rate:1.35+2.2*(1-q),bob:.25});break;
+      case 'farewell':
+        Object.assign(p,{x:4*envelope,y:-6*envelope,roll:.16*envelope,fin:.6*Math.sin(q*TAU*3)*envelope,
+          tail:.38,rate:2.6,bob:.4});break;
+      case 'restart':
+        Object.assign(p,{x:keys(q,[[0,0],[.25,5],[.72,-9],[1,-3]]),y:4*envelope,
+          roll:-.18*s,fin:.34*Math.sin(q*TAU*2)*envelope,tail:.45+1.15*envelope,rate:4.9,bob:.42});break;
     }
     return p;
+  }
+  const eyeParts = MARK.slice(MARK.indexOf('M12.2826'));
+  function blinkOpenness(age) {
+    if (age < 0 || age >= .24) return 1;
+    if (age < .078) return 1 - smooth(age / .078);
+    return smooth((age - .105) / .135);
+  }
+  function eyeTile(bounds, width, height) {
+    const [left, top, spanX, spanY] = bounds, sx = width/spanX, sy = height/spanY;
+    const x = Math.floor((11.5-left)*sx), y = Math.floor((9.5-top)*sy);
+    return { x, y, w: Math.ceil((16.5-left)*sx)-x, h: Math.ceil((14.5-top)*sy)-y, sx, sy };
+  }
+  function createEyePatch(texture, bounds, coat, solidColor) {
+    const {x,y,w,h,sx,sy} = eyeTile(bounds,texture.width,texture.height);
+    const makeTile = () => {
+      const tile = document.createElement('canvas');
+      tile.width = w; tile.height = h;
+      return tile;
+    };
+    const open = makeTile(), material = makeTile(), frame = makeTile();
+    const painter = frame.getContext('2d'), skin = material.getContext('2d');
+    open.getContext('2d').drawImage(texture,x,y,w,h,0,0,w,h);
+    if (coat) {
+      skin.drawImage(coat,0,0,w,h);
+    } else if (solidColor) {
+      skin.fillStyle = solidColor; skin.fillRect(0,0,w,h);
+    } else {
+      // The raster looks have a smooth coat here. Continue its gradient from both sides.
+      skin.drawImage(open,w-1,0,1,h,0,0,w,h);
+      painter.drawImage(open,0,0,1,h,0,0,w,h);
+      const fade = painter.createLinearGradient(0,0,w,0);
+      fade.addColorStop(0,'#000'); fade.addColorStop(1,'transparent');
+      painter.globalCompositeOperation = 'destination-in';
+      painter.fillStyle = fade; painter.fillRect(0,0,w,h);
+      skin.drawImage(frame,0,0);
+      painter.globalCompositeOperation = 'source-over';
+    }
+    const offsetX = -bounds[0]*sx-x, offsetY = -bounds[1]*sy-y;
+    const mask = makeTile(), maskCtx = mask.getContext('2d');
+    maskCtx.setTransform(sx,0,0,sy,offsetX,offsetY);
+    const contours = new Path2D(eyeParts);
+    maskCtx.fill(contours); maskCtx.lineWidth = .84; maskCtx.lineJoin = 'round'; maskCtx.stroke(contours);
+    skin.globalCompositeOperation = 'destination-in';
+    skin.drawImage(mask,0,0);
+    const base = texture.getContext('2d');
+    let previous = 128;
+    return { x, y, frame, paint(openness) {
+      const level = Math.round(clamp(openness)*128);
+      if (level === previous) return false;
+      previous = level;
+      painter.clearRect(0,0,w,h); painter.drawImage(open,0,0);
+      if (level < 128) {
+        const gap = level/128, span = 1.92+1.09*gap;
+        const inner = .32-.18*gap, archLeft = -.63+.27*gap, archRight = -.55+.25*gap;
+        const upper = 2.8*gap**1.65, lower = 2.8*gap**1.05;
+        painter.save();
+        painter.setTransform(sx,0,0,sy,offsetX,offsetY);
+        painter.translate(13.82,11.84); painter.rotate(.58);
+        // A single opening follows the slant of the whole eye, including the round detail.
+        painter.beginPath(); painter.rect(-8,-8,16,16);
+        painter.moveTo(-span,inner);
+        painter.bezierCurveTo(-.52*span,archLeft-upper,.38*span,archRight-upper,span,.34);
+        painter.bezierCurveTo(.38*span,archRight+lower,-.52*span,archLeft+lower,-span,inner);
+        painter.closePath();
+        painter.save(); painter.clip('evenodd');
+        painter.setTransform(1,0,0,1,0,0); painter.drawImage(material,0,0);
+        painter.restore();
+        // At contact the two corners are joined by one tapered crease in the logo's negative space.
+        const contact = smooth((.53-gap)/.49);
+        if (contact>0) {
+          painter.globalCompositeOperation = 'destination-out';
+          painter.fillStyle = '#000';
+          painter.globalAlpha = contact;
+          painter.beginPath(); painter.moveTo(-1.92,.32);
+          painter.bezierCurveTo(-1,-.77,.73,-.69,1.92,.34);
+          painter.bezierCurveTo(.73,-.40,-1,-.48,-1.92,.32);
+          painter.closePath(); painter.fill();
+        }
+        painter.restore();
+      }
+      base.clearRect(x,y,w,h); base.drawImage(frame,x,y);
+      return true;
+    }};
   }
   class Animator {
     constructor(canvas,effects,options={}){
       this.canvas=canvas;this.effects=effects;this.fx=effects?.getContext('2d');
       this.options={energy:1,pace:1,showNative:true,travel:true,mainSize:160,heading:0,color:'#86acff',...options};
       this.pose=neutral();this.velocity=Object.fromEntries(Object.keys(this.pose).map(k=>[k,0]));
-      this.clock=0;this.elapsed=0;this.phase=.5;this.action='idle';this.autonomous=true;this.nextAuto=6.0;this.nextBlink=2.2;
+      this.clock=0;this.elapsed=0;this.phase=.5;this.action='idle';this.base='idle';this.autonomous=true;this.nextAuto=6.0;this.nextBlink=2.2;
       this.blinkStart=-10;this.seed=4271;this.frame=0;this.last=0;this.visible=true;this.frozen=false;this.pointer={x:0,y:0,active:false};
       this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-      this.width=0;this.height=0;this.renderer='canvas';this.setup();
+      this.width=0;this.height=0;this.renderer='canvas';this.initRenderer();
+      this.onContextLost=event=>{
+        event.preventDefault();this.renderer='canvas';this.render();
+      };
+      this.onContextRestored=()=>{
+        const image=this.skinImage,bounds=this.artBox,coat=this.skinCoat;
+        this.initRenderer();if(image)this.setSkin(image,bounds,coat);this.render();this.wake();
+      };
+      canvas.addEventListener('webglcontextlost',this.onContextLost);
+      canvas.addEventListener('webglcontextrestored',this.onContextRestored);
     }
     random(){this.seed=(this.seed*1664525+1013904223)>>>0;return this.seed/4294967296;}
+    initRenderer(){
+      try{this.setup();}catch{this.gl=null;this.renderer='canvas';}
+    }
     setup(){
       const texture=document.createElement('canvas');texture.width=texture.height=384;
       const ctx=texture.getContext('2d');ctx.scale(16,16);ctx.fillStyle=this.options.color;ctx.fill(new Path2D(MARK));this.textureCanvas=texture;
-      this.skinImage=null;this.artBox=[0,0,24,24];
+      this.skinImage=null;this.skinCoat=null;this.artBox=[0,0,24,24];
+      ctx.setTransform(1,0,0,1,0,0);
+      this.eyePatch=createEyePatch(texture,this.artBox,null,this.options.color);
       const gl=this.canvas.getContext('webgl',{alpha:true,premultipliedAlpha:true,antialias:true,preserveDrawingBuffer:true,powerPreference:'low-power'});
       if(!gl){this.context=this.canvas.getContext('2d');return;}
       const vertex=`
@@ -110,17 +297,8 @@
         }`;
       const fragment=`
         precision mediump float;varying vec2 v_uv;uniform sampler2D u_mark;
-        uniform float u_eye;uniform vec3 u_blue;
-        uniform mediump vec4 u_artBox;
         void main(){
-          vec4 color=texture2D(u_mark,v_uv);vec2 p=u_artBox.xy+v_uv*u_artBox.zw;
-          if(u_eye<.999 && p.x>11.7 && p.x<15.9 && p.y>9.9 && p.y<13.8){
-            float dy=p.y-11.88,opening=max(.045,u_eye);
-            if(abs(dy)<1.85*opening)color=texture2D(u_mark,vec2(v_uv.x,(11.88+dy/opening-u_artBox.y)/u_artBox.w));
-            else if(u_artBox.z>24.)color=texture2D(u_mark,vec2(v_uv.x,(9.8-u_artBox.y)/u_artBox.w));
-            else color=vec4(u_blue,1.);
-          }
-          gl_FragColor=color;
+          gl_FragColor=texture2D(u_mark,v_uv);
         }`;
       const shader=(kind,code)=>{const s=gl.createShader(kind);gl.shaderSource(s,code);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;};
       const vs=shader(gl.VERTEX_SHADER,vertex),fs=shader(gl.FRAGMENT_SHADER,fragment),program=gl.createProgram();
@@ -138,13 +316,12 @@
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,texture);
-      const uniforms={};for(const key of ['resolution','origin','size','pose','joints','eye','blue','artBox'])uniforms[key]=gl.getUniformLocation(program,'u_'+key);
-      const hex=this.options.color.replace('#','');gl.uniform3f(uniforms.blue,parseInt(hex.slice(0,2),16)/255,parseInt(hex.slice(2,4),16)/255,parseInt(hex.slice(4,6),16)/255);
+      const uniforms={};for(const key of ['resolution','origin','size','pose','joints','artBox'])uniforms[key]=gl.getUniformLocation(program,'u_'+key);
       gl.enable(gl.BLEND);gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
       this.meshBuffer=buffer;this.markTexture=tex;this.gl=gl;this.program=program;this.uniforms=uniforms;this.count=data.length/2;this.renderer='articulated-whale';
     }
-    setSkin(image,bounds){
-      if(this.skinImage===image)return;
+    setSkin(image,bounds,coat=null){
+      if(this.skinImage===image&&this.skinCoat===coat)return;
       const texture=this.textureCanvas,ctx=texture.getContext('2d');
       ctx.setTransform(1,0,0,1,0,0);
       ctx.clearRect(0,0,texture.width,texture.height);
@@ -154,8 +331,10 @@
         ctx.fillStyle=this.options.color;
         ctx.fill(new Path2D(MARK));
       }
-      this.skinImage=image;
+      this.skinImage=image;this.skinCoat=coat;
       this.artBox=image?bounds:[0,0,24,24];
+      ctx.setTransform(1,0,0,1,0,0);
+      this.eyePatch=createEyePatch(texture,this.artBox,coat,image?null:this.options.color);
       if(this.gl){
         const gl=this.gl;gl.bindTexture(gl.TEXTURE_2D,this.markTexture);
         gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,texture);
@@ -169,18 +348,36 @@
       this.maxTravel=Math.max(20,Math.min(112,(width-this.options.mainSize)/2-22));
       this.render();this.wake();
     }
-    play(name,reason='manual'){
+    play(name,reason='manual',snap=false){
       if(!clips[name])return false;
       for(const key of ['roll','yaw'])this.pose[key]-=Math.round(this.pose[key]/TAU)*TAU;
       this.action=name;this.elapsed=0;this.frozen=false;this.nextAuto=this.clock+clips[name].duration+5.0+this.random()*3;
-      if(this.reduced){this.elapsed=clips[name].loop?0:clips[name].duration*.38;this.pose=sample(name,this.elapsed/clips[name].duration,this.options.travel?this.maxTravel:0);}
-      this.options.onChange?.(name,reason);this.render();this.wake();return true;
+      if(this.reduced||snap)this.still();
+      this.options.onChange?.(name,reason);if(this.visible)this.render();this.wake();return true;
     }
-    setStatus(status){return this.play(({idle:'idle',working:'think',waiting:'wait',completed:'happy',starting:'swim',resting:'sleep'})[status]||status);}
+    setBase(name,snap=false){
+      if(!clips[name]?.loop)return false;
+      this.base=name;return this.play(name,'scene',snap);
+    }
     setAutonomous(value){this.autonomous=!!value;this.nextAuto=this.clock+4.5;this.wake();}
     setPointer(x,y,active){this.pointer={x,y,active};this.wake();}
-    setReduced(value){this.reduced=!!value;this.last=0;if(this.reduced){this.pose=sample(this.action,.38,this.options.travel?this.maxTravel:0);this.render();}this.wake();}
-    setVisible(value){this.visible=!!value;if(!this.visible){cancelAnimationFrame(this.frame);this.frame=0;this.last=0;}else this.wake();}
+    still(){
+      this.blinkStart=-10;
+      this.elapsed=clips[this.action].duration*.38;
+      this.pose=sample(this.action,.38,this.options.travel?this.maxTravel:0);this.phase=.5;
+      for(const key of Object.keys(this.velocity))this.velocity[key]=0;
+    }
+    setReduced(value){
+      if(this.reduced===value)return;
+      this.reduced=value;this.last=0;
+      if(value){cancelAnimationFrame(this.frame);this.frame=0;this.still();if(this.visible)this.render();}
+      else this.wake();
+    }
+    setVisible(value){
+      if(this.visible===value)return;
+      this.visible=value;this.last=0;
+      if(!value){cancelAnimationFrame(this.frame);this.frame=0;}else{this.render();this.wake();}
+    }
     seek(name,q){
       if(!clips[name])return;this.action=name;this.elapsed=clamp(q)*clips[name].duration;this.pose=sample(name,q,this.options.travel?this.maxTravel:0);
       for(const k of Object.keys(this.velocity))this.velocity[k]=0;
@@ -194,17 +391,14 @@
       let clip=clips[this.action];
       if(!clip.loop&&this.elapsed>=clip.duration){
         for(const k of ['roll','yaw'])this.pose[k]-=Math.round(this.pose[k]/TAU)*TAU;
-        this.action='idle';this.elapsed=0;clip=clips.idle;this.nextAuto=this.clock+5+this.random()*3;
-        this.options.onChange?.('idle','complete');
+        this.action=this.base;this.elapsed=0;clip=clips[this.base];this.nextAuto=this.clock+5+this.random()*3;
+        this.options.onChange?.(this.base,'complete');
       }
       if(this.action==='idle'&&this.autonomous&&this.clock>=this.nextAuto){
         const choices=['curious','bubbles','greet'];this.play(choices[Math.floor(this.random()*choices.length)],'natural');clip=clips[this.action];
       }
       const q=clip.loop?(this.elapsed%clip.duration)/clip.duration:clamp(this.elapsed/clip.duration),target=sample(this.action,q,this.options.travel?this.maxTravel:0);
       if(this.action==='idle'&&this.pointer.active){target.x+=clamp(this.pointer.x,-1,1)*7;target.y+=clamp(this.pointer.y,-1,1)*3;target.roll+=clamp(this.pointer.y,-1,1)*.04;}
-      if(this.clock>=this.nextBlink){this.blinkStart=this.clock;this.nextBlink=this.clock+3.1+this.random()*3.2;}
-      const blink=(this.clock-this.blinkStart)/.24;
-      if(blink>=0&&blink<=1)target.eye=Math.min(target.eye,1-.955*Math.pow(Math.sin(blink*Math.PI),1.5));
       for(const key of Object.keys(target)){
         const w=key==='eye'?42:key==='rate'?8:19,e=this.pose[key]-target[key],c=this.velocity[key]+w*e,decay=Math.exp(-w*dt);
         this.pose[key]=target[key]+(e+c*dt)*decay;this.velocity[key]=(this.velocity[key]-w*c*dt)*decay;
@@ -212,25 +406,36 @@
       this.phase+=dt*this.pose.rate*this.options.pace;this.render();this.wake();
     }
     actors(){
-      const p=this.pose,energy=this.options.energy,bob=this.reduced?0:(Math.sin(this.clock*.95)*2.9+Math.sin(this.clock*1.61+.7)*1.0);
+      const p=this.pose,energy=this.options.energy,bob=this.reduced?0:(Math.sin(this.clock*.95)*2.9+Math.sin(this.clock*1.61+.7))*p.bob;
       const x=this.width*.5,y=this.height*.44;
       const hero={x:x+p.x,y:y+(p.y+bob)*energy,size:this.options.mainSize,native:false};
       const actors=[hero];if(this.options.showNative)actors.push({x:this.width*.44,y:this.height-47+(p.y+bob)*.32*energy,size:52,native:true});
       return actors;
     }
+    updateEye(gl){
+      const animated=this.visible&&!this.reduced&&!this.frozen;
+      if(animated&&this.clock>=this.nextBlink){this.blinkStart=this.clock;this.nextBlink=this.clock+3.1+this.random()*3.2;}
+      const openness=Math.min(this.pose.eye,animated?blinkOpenness(this.clock-this.blinkStart):1);
+      if(this.eyePatch.paint(openness)&&gl){
+        gl.bindTexture(gl.TEXTURE_2D,this.markTexture);
+        gl.texSubImage2D(gl.TEXTURE_2D,0,this.eyePatch.x,this.eyePatch.y,gl.RGBA,gl.UNSIGNED_BYTE,this.eyePatch.frame);
+      }
+    }
     render(){
       if(!this.width||!this.height)return;
       const p=this.pose,actors=this.actors(),energy=this.options.energy,breathe=this.reduced?1:1+Math.sin(this.clock*1.8)*.009;
       const yaw=p.yaw+this.options.heading;
-      if(this.gl){
-        const gl=this.gl,u=this.uniforms;gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.useProgram(this.program);
+      const gl=this.renderer==='articulated-whale'?this.gl:null,fallback=gl?null:this.context||this.fx;
+      this.updateEye(gl);
+      if(gl){
+        const u=this.uniforms;gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.useProgram(this.program);
         gl.uniform2f(u.resolution,this.width,this.height);
         gl.uniform4fv(u.artBox,this.artBox);
         gl.uniform4f(u.pose,p.roll+(this.reduced?0:Math.sin(this.clock*.82)*.014),p.sx*breathe,p.sy*breathe,yaw);
-        gl.uniform4f(u.joints,this.phase,(this.reduced?0:p.tail*energy),this.reduced?0:p.fin,0);gl.uniform1f(u.eye,p.eye);
+        gl.uniform4f(u.joints,this.phase,(this.reduced?0:p.tail*energy),this.reduced?0:p.fin,0);
         for(const actor of actors){gl.uniform2f(u.origin,actor.x,actor.y);gl.uniform1f(u.size,actor.size);gl.drawArrays(gl.TRIANGLES,0,this.count);}
-      }else{
-        const ctx=this.context;ctx.setTransform(this.ratio,0,0,this.ratio,0,0);ctx.clearRect(0,0,this.width,this.height);
+      }else if(fallback){
+        const ctx=fallback;ctx.setTransform(this.ratio,0,0,this.ratio,0,0);ctx.clearRect(0,0,this.width,this.height);
         const [left,top,width,height]=this.artBox;
         for(const a of actors){
           const scale=a.size/24;
@@ -239,10 +444,10 @@
           ctx.restore();
         }
       }
-      this.drawEffects(actors);this.options.onFrame?.(actors[0]);
+      this.drawEffects(actors,fallback!==this.fx);this.options.onFrame?.(actors[0]);
     }
-    drawEffects(actors){
-      if(!this.fx)return;const ctx=this.fx;ctx.setTransform(this.ratio,0,0,this.ratio,0,0);ctx.clearRect(0,0,this.width,this.height);
+    drawEffects(actors,clear){
+      if(!this.fx)return;const ctx=this.fx;ctx.setTransform(this.ratio,0,0,this.ratio,0,0);if(clear)ctx.clearRect(0,0,this.width,this.height);
       const events=this.action==='bubbles'?[.64,.93,1.19]:this.action==='happy'?[.55,.68,.81,.94]:[];
       for(const a of actors)for(let i=0;i<events.length;i++){
         const t=this.elapsed-events[i],life=1.48;if(t<0||t>life)continue;
@@ -254,7 +459,12 @@
       }
     }
     snapshot(){return {action:this.action,elapsed:this.elapsed,phase:this.phase,pose:{...this.pose},renderer:this.renderer,reduced:this.reduced,visible:this.visible};}
-    destroy(){cancelAnimationFrame(this.frame);this.frame=0;this.visible=false;if(this.gl){this.gl.deleteBuffer(this.meshBuffer);this.gl.deleteTexture(this.markTexture);this.gl.deleteProgram(this.program);}}
+    destroy(){
+      cancelAnimationFrame(this.frame);this.frame=0;this.visible=false;
+      this.canvas.removeEventListener('webglcontextlost',this.onContextLost);
+      this.canvas.removeEventListener('webglcontextrestored',this.onContextRestored);
+      if(this.gl){this.gl.deleteBuffer(this.meshBuffer);this.gl.deleteTexture(this.markTexture);this.gl.deleteProgram(this.program);}
+    }
   }
-  globalThis.WhaleMotion={Animator,clips,mark:MARK,sample};
+  globalThis.WhaleMotion={Animator,clips,mark:MARK,sample,eyeTile};
 })();

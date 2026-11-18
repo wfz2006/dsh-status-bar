@@ -21,6 +21,14 @@ try {
   await expect(page.locator('.capsule-metrics')).toHaveText('3轮 · 42步');
   await expect(page.locator('.task-capsule .step-count')).toContainText('任务');
   await preview('capsule');
+  await menu('view-peek');
+  await expect(page.locator('.current-step')).toBeVisible();
+  await expect(page.locator('.peek-entry:visible')).toHaveCount(3);
+  assert.ok(await page.locator('.task-peek').evaluate(el=>{
+    const rect=s=>el.querySelector(s).getBoundingClientRect();
+    return rect('.peek-process').bottom<=rect('.current-step').top &&
+      rect('.current-step').bottom<=rect('.peek-usage').top+1;
+  }),'The original history, status and usage rows fit without overlap in the classic peek');
   await menu('view-expanded');
   const picker = page.getByRole('button', {name:/选择会话/});
   await expect(picker).toContainText('构建 DSH Glass 悬浮伴侣');
@@ -55,7 +63,11 @@ try {
   await expect(page.locator('.task-metrics')).toContainText('离线快照');
   await preview('offline');
   await menu('reconnect');
+  await expect(page.getByRole('tab',{name:'连接',exact:true})).toHaveAttribute('aria-selected','true');
+  await page.locator('.debug-settings summary').click();
+  await page.locator('.debug-settings').getByRole('button',{name:'重新连接',exact:true}).click();
   await expect.poll(async () => (await page.evaluate(() => window.glass.getState())).connection).toBe('connected');
+  await page.getByRole('button',{name:'返回',exact:true}).click();
   await picker.focus(); await picker.press('ArrowDown'); await page.keyboard.press('Home'); await page.keyboard.press('Enter');
   await expect(page.locator('.task-heading h1')).toHaveText('构建 DSH Glass 悬浮伴侣');
   await menu('view-approval');

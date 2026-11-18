@@ -1,6 +1,23 @@
 # 本地接入支持矩阵
 
-检查日期：2026-10-18。当前交付版本：Glass 0.1.0，**真实源连接入口 + 显式 Mock 演示**。当前认证合同已更正为 0.2.1-rc.2 独立 operator，旧根路径 303 联调记录不能替代本次回归。
+## 2026-11-18 小蓝鲸水池
+
+本机安装包的 `app.asar/package.json` 版本为 `0.2.2-rc.3`。验收使用其官方 Web 宿主、Agent 循环、提问工具和审批服务，另启独立 DSH 配置与 Glass 窗口。测试插件提供两个会话、本地固定模型回复和一项只返回审批结果的无副作用操作。已安装 Desktop 的日常用户配置、云模型和安装包升级路径仍待单独验收。
+
+| 环境 | 操作与证据 |
+|---|---|
+| 官方 DSH Web + Glass Electron | 新连接进入空水池。从 A 收到 B 的提问，输入后返回 A，再次进入 B，仍可提交原草稿。同一 Agent 接收答案后依次请求两次审批，Glass 显示各自的拒绝和允许一次回执。收到正式任务完成事件时鲸鱼庆祝一次，重新加载显示完成姿态。运行 `node scripts/pool-session-acceptance.mjs`。 |
+| 可控制断线的宿主 + Glass Electron | 在同一份提问重连时恢复草稿，改题、换请求或离线已结束时丢弃旧草稿。另一会话同名请求的回执不能提前结束当前等待。运行 `node scripts/pool-reconnect-acceptance.mjs`。 |
+| Windows 桌面，150% 缩放 | 胶囊贴边、点开和拖出后大小稳定。隐藏窗口后更新任务，通过已注册的 `Ctrl+Shift+G` 唤回同一窗口，直接显示最新状态。运行 `node scripts/pool-window-acceptance.mjs`。 |
+| 小鲸鱼眨眼，WebGL 与 Canvas 2D | `node scripts/whale-blink-acceptance.mjs` 分别测量小圆点和弯形眼区的遮合比例，检查 16 款皮肤闭眼时只有一道连续弧线、睁眼后恢复原图，同时检查眼区外花纹、动作节奏和减少动态效果。矢量皮肤改动后运行 `node scripts/build-whale-eyelids.mjs` 同步眼睑材质。 |
+
+`node scripts/whale-pool-acceptance.mjs` 还检查键盘展开、减少动态效果、显卡上下文恢复与实际展开路线。在本机高刷新率 Electron 窗口中，对同一段游动按显示回调采样，鲸鱼位置更新的中位间隔由 30.8 毫秒降至 3.8 毫秒。此数值衡量位置更新，不等同于显示器实拍帧率。
+
+在项目根目录先运行 `pnpm build`，再逐个运行上述脚本。会话和重连验收的结果与截图写入本地 `reports/pool-companion-prototype/`。[查看整眼眨眼对比动图](images/homepage/whale-blink.webp)
+
+## 2026-10-18 接入记录
+
+当日交付版本为 Glass 0.1.0，含真实源连接入口与显式 Mock 演示。当时认证合同已更正为 0.2.1-rc.2 独立 operator，旧根路径 303 联调记录不能替代当日回归。
 
 | 目标 | 插件加载 | Session/Todo | Glass UI 真实连接 | 审批 / 问题回答 |
 |---|---|---|---|---|
