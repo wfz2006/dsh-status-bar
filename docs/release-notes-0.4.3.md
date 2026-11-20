@@ -1,5 +1,7 @@
 # DSH Status Bar v0.4.3
 
+2026-11-20 已撤回此版本。安装请使用 [v0.4.2](https://github.com/wfz2006/dsh-status-bar/releases/tag/v0.4.2)。
+
 这版改善了同时跟进多个 DSH 会话的操作，也缩小了复用 Electron 时需要下载的更新。
 
 ## 提醒、切换和连接
@@ -13,9 +15,3 @@
 
 - `dsh-status-bar-lite.tgz` 是轻量入口。已缓存相同的 Electron 时，启动只需下载约 0.43 MiB 的应用包 `dsh-status-bar-app.tgz`。首次安装或引擎变化时会自动下载完整运行时。
 - `dsh-status-bar.tgz` 是可离线使用的完整包，约 155 MiB。`dsh-glass-plugin.tgz` 保留旧文件名兼容。
-
-通过 DSH 的 Desktop 配置安装轻量入口。
-
-```powershell
-dsh plugin --profile desktop add https://github.com/wfz2006/dsh-status-bar/releases/download/v0.4.3/dsh-status-bar-lite.tgz
-```
