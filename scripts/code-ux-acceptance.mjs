@@ -621,7 +621,54 @@ async function main() {
   if (scenario === 'all' || scenario === 'connection') await connectionScenarios();
   if (scenario === 'all' || scenario === 'placement') await opticsAndPositionScenarios();
   if (scenario === 'all' || scenario === 'recovery') await recoveryAndPluginScenarios();
+  if (scenario === 'all' || scenario === 'follow-up') await followUpScenarios();
   assert.ok(screenResults.length, 'unknown acceptance scenario');
+}
+
+async function followUpScenarios() {
+  const host = new FakeHost();
+  host.sessions = [{ ...sessions[0], cwd: 'C:/demo/alpha' }, { ...sessions[1], cwd: 'C:/demo/beta' }];
+  await host.start();
+  let f;
+  try {
+    f = await launch(await profile({ pin: 'on-notification', autoApproval: true }));
+    await connect(f, { link: () => host.issueLink() });
+    await select(f, '会话甲');
+    await f.page.getByRole('button', { name: /^选择会话/ }).click();
+    const search = f.page.getByRole('searchbox', { name: '搜索会话' });
+    await expect(search).toBeFocused();
+    await search.fill('beta');
+    await expect(f.page.getByRole('option')).toHaveCount(1);
+    await expect(f.page.getByRole('option')).toContainText('会话乙');
+    await take(f, 'follow-up-session-search');
+    await search.press('Escape');
+    await f.menu('view-capsule');
+    question(host, 'b', 'attention-b', 'attention-b', '需要乙的回答');
+    const badge = button(f, '其他会话有 1 项待处理');
+    await expect(badge).toBeVisible();
+    await expect.poll(async () => (await readWindow(f)).pinned).toBe(true);
+    assert.equal((await readState(f)).selectedSession, 'a');
+    assert.equal((await readWindow(f)).viewMode, 'capsule');
+    await f.menu('view-expanded');
+    await f.page.getByRole('button', { name: /^选择会话/ }).click();
+    await expect(f.page.getByRole('option').first()).toContainText('会话乙');
+    await f.page.keyboard.press('Escape');
+    await f.menu('view-capsule');
+    await badge.click();
+    await expect(f.page.getByText('需要乙的回答', { exact: true })).toBeVisible();
+    const back = button(f, '返回「会话甲」');
+    await expect(back).toBeVisible();
+    await take(f, 'follow-up-return');
+    await back.click();
+    await expect.poll(async () => (await readState(f)).selectedSession).toBe('a');
+    await expect.poll(async () => (await readWindow(f)).viewMode).toBe('capsule');
+    host.end('gateway');
+    await expect.poll(async () => (await readState(f)).stale).toBe(true);
+    await f.menu('reconnect');
+    await expect(f.page.getByLabel('官方认证地址')).toBeFocused();
+    summary('follow-up', { classicReturn: true, backgroundPinWithoutSwitch: true, directorySearch: true,
+      standaloneReconnectOpensConnectionSettings: true });
+  } finally { await f?.app.close(); await host.stop(); }
 }
 
 await mkdir(output, { recursive: true });

@@ -19,6 +19,8 @@
 .submission-results summary { width:fit-content;cursor:pointer;color:var(--muted);font-size:12px;padding:3px 0; }
 .window-notices { display:flex; gap:4px; flex:0 0 auto; align-items:center; justify-content:flex-end; padding:0 12px 6px; position:relative; z-index:4; }
 .window-notice { color:var(--fg); background:var(--reading); border:1px solid var(--line); border-radius:12px; font-size:11px; white-space:nowrap; padding:4px 7px; cursor:pointer; }
+.request-return { margin-top:6px; }
+.request-return button,.glass[data-appearance=classic] > .window-notices button { min-width:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
 .glass[data-mode=capsule][data-appearance=classic]:has(> .window-notices) { flex-direction:row; align-items:center; }
 .glass[data-mode=capsule] > .window-notices { padding:0 8px 0 0; }
 .glass[data-mode=capsule][data-appearance=classic]:has(> .window-notices) > .task-capsule { flex:1 1 auto; min-width:0; width:auto; }

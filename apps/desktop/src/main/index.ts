@@ -10,7 +10,7 @@ import { createDshAdapter, parseHostLink, type DshPublication } from '@glass/dsh
 import { frameSchema, initialProjection, reduceProjection, type Frame, type LocalEvent } from '@glass/protocol';
 import { clampBounds, type Bounds } from '../shared/window';
 import { dshInstanceFromArgs, dshLinkFromArgs, launcherPidFromArgs } from '../shared/launch';
-import { deriveTask } from '../shared/view-model';
+import { deriveTask, otherPendingRequests } from '../shared/view-model';
 import { poolEvent } from '../shared/pool-events';
 import type { DesktopProjection, HistoryPagination, MockAction, RequestKind, SubmissionResult, WindowAction, SourceState } from '../shared/api';
 import { assertApprovalResponse, assertQuestionResponse, identityOf, type RequestIdentity } from './request-gate';
@@ -18,6 +18,7 @@ import { createWindowController } from './window-controller';
 import { createDesktopOptics } from './desktop-optics';
 import {createWindowPositioner} from './window-positioner';
 import { createDshLauncher } from './dsh-launcher';
+import { requestHostLink } from './host-link';
 import { ProjectionPublisher } from '../shared/projection-channel';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -126,7 +127,7 @@ async function connectDSH(value: unknown, launcher?: number, instance?: string) 
     },
     onConnection: connection => {
       if (generation !== sourceGeneration) return;
-      source = { ...source, connection: connection === 'connected' ? 'connected' : connection === 'connecting' ? 'connecting' : 'disconnected', error: connection === 'disconnected' ? '连接已断开，请重新粘贴官方连接链接。' : null };
+      source = { ...source, connection, error: connection === 'disconnected' ? '与 DSH 的连接已断开。' : null };
       if (connection !== 'connected') update({ kind: connection === 'connecting' ? 'transport.connecting' : 'transport.closed' });
       publishSource();
     },
@@ -139,6 +140,32 @@ async function connectDSH(value: unknown, launcher?: number, instance?: string) 
     }
     throw new Error('DSH 连接失败，请检查官方连接链接和本机服务');
   }
+}
+async function reconnectDSH(offersCommand: boolean, parent?: { pid: number; instance?: string }) {
+  if (source.connection === 'connecting') return;
+  if (source.connection === 'disconnected' && parent && process.connected) {
+    const generation = sourceGeneration;
+    source = { ...source, connection: 'connecting', error: null };
+    update({ kind: 'transport.connecting' }); publishSource();
+    const fresh = await requestHostLink();
+    if (generation !== sourceGeneration || quitting) return;
+    if (fresh) {
+      const attempt = connectDSH(fresh, parent.pid, parent.instance);
+      const launchedGeneration = sourceGeneration;
+      try { await attempt; return; }
+      catch { if (sourceGeneration !== launchedGeneration || quitting) return; }
+    } else {
+      source = { ...source, connection: 'disconnected' };
+      update({ kind: 'transport.closed' });
+    }
+  }
+  if (source.mode === 'dsh' && source.connection === 'disconnected') {
+    source = { ...source, error: offersCommand
+      ? '请在 DSH 会话中输入 /status-bar 恢复连接，或粘贴新的官方认证地址。'
+      : '请粘贴新的官方认证地址。' };
+    publishSource();
+  }
+  ui?.showConnection();
 }
 async function useMock() {
   resetSource('mock'); const generation = sourceGeneration;
@@ -164,6 +191,7 @@ function refreshFacts(notifyCompletion = false) {
   ui?.observe({
     pending: [...task.pending.map(a => ['approval', a.runtimeId, a.sourceEpoch, a.sessionId, a.requestId].join('/')),
       ...task.questions.map(q => ['question', q.runtimeId, q.sourceEpoch, q.sessionId, q.requestId].join('/'))],
+    otherPending: otherPendingRequests(state, selected).length > 0,
     completed: task.status === 'completed' ? [state.runtimeId, state.epoch, selected].join('/') : null,
     holdApproval: submissions.size > 0,
     notifyCompletion,
@@ -281,6 +309,7 @@ function finiteRecord(value: unknown, keys: string[]): value is Record<string, n
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   const owningLauncher = launcherPidFromArgs(process.argv);
+  const owningInstance = dshInstanceFromArgs(process.argv);
   let watchedLauncher = owningLauncher;
   let hasStatusBarCommand = !!watchedLauncher && process.argv.includes('--status-bar-command');
   let loaded = false;
@@ -335,7 +364,8 @@ else {
     ui = createWindowController(win, app.getPath('userData'), smoke, {
       position:(x,y)=>positioner!.move(x,y),
       sourceName,
-      reconnect: () => ui?.showConnection(),
+      reconnect: () => void reconnectDSH(hasStatusBarCommand, source.mode === 'dsh' && owningLauncher && watchedLauncher === owningLauncher
+        && (sourceLauncher === owningLauncher || !source.endpoint) ? { pid: owningLauncher, instance: owningInstance } : undefined),
       recovery: () => [...(recoveryShortcut ? [recoveryShortcut] : []), ...(hasStatusBarCommand ? ['DSH 的 /status-bar'] : [])],
       submissions: () => [...submissions.values()].reverse(),
       mock: action => { if (source.mode === 'mock') mockAction(action); else void useMock().then(() => mockAction(action)); }, quit: () => app.quit(),

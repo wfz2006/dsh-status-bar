@@ -8,7 +8,7 @@
 // pack-plugin-release.mjs) stays self-contained; this script only produces the
 // registry copy so `dsh plugin add dsh-status-bar` is a ~1.6 MB download.
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,6 +19,8 @@ const args = process.argv.slice(2);
 const outIndex = args.indexOf('--out');
 const outDir = resolve(outIndex >= 0 && args[outIndex + 1] ? args[outIndex + 1] : join(repoRoot, 'dist', 'npm'));
 const runPack = !args.includes('--no-pack');
+const splitIndex = args.indexOf('--split-manifest');
+const github = args.includes('--github');
 
 // The runtime lives on the npm registry because it is the one host that serves
 // 155 MB at registry speed; the release asset stays as the plugin's fallback.
@@ -27,7 +29,12 @@ const COPIED = ['lib', 'cordis.patch.yml', 'README.md', 'LICENSE', 'assets', 'sc
 
 const manifest = JSON.parse(readFileSync(join(pluginRoot, 'package.json'), 'utf8'));
 manifest.files = [...COPIED];
-manifest.dsh = { ...manifest.dsh, statusBar: { runtime: RUNTIME_URL } };
+manifest.dsh = { ...manifest.dsh, statusBar: github ? {} : { runtime: RUNTIME_URL } };
+if (splitIndex !== -1) {
+  const { version, ...splitRuntime } = JSON.parse(readFileSync(resolve(args[splitIndex + 1]), 'utf8'));
+  if (version !== manifest.version) throw new Error('Application update and plugin versions must match');
+  manifest.dsh.statusBar.splitRuntime = splitRuntime;
+}
 
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
@@ -43,5 +50,11 @@ if (!runPack) {
 
 execFileSync('npm', ['pack', '--pack-destination', outDir], { cwd: outDir, stdio: 'inherit', shell: true });
 const tarball = join(outDir, `${manifest.name}-${manifest.version}.tgz`);
-console.log(`[npm-pack] ${manifest.name}@${manifest.version} -> ${tarball}`);
-console.log('[npm-pack] publish with: npm publish "' + outDir + '" --registry https://registry.npmjs.org/');
+if (github) {
+  const lite = join(outDir, 'dsh-status-bar-lite.tgz');
+  renameSync(tarball, lite);
+  console.log(`[github-pack] ${lite}`);
+} else {
+  console.log(`[npm-pack] ${manifest.name}@${manifest.version} -> ${tarball}`);
+  console.log('[npm-pack] publish with: npm publish "' + outDir + '" --registry https://registry.npmjs.org/');
+}

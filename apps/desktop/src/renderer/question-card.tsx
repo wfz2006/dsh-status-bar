@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Question } from '@glass/protocol';
 import type { Task } from './task-views';
 import { draftValue, EMPTY_QUESTION_DRAFT, questionAnswers, requestIdentity, requestKey, type QuestionDraft } from './request-model';
@@ -57,10 +57,11 @@ function QuestionCard({task,initialKey,onInspect}:{task:Task;initialKey?:string;
     {request && <QuestionForm key={key} request={request} disconnected={task.status==='disconnected'} draft={draft} update={update=>updateDraft(key,update)}/>}
   </>;
 }
-export function RequestPanel({ task, openDSH, focused, submissions, dismiss, inspectApproval, inspectQuestion, inPool = false }: {
+export function RequestPanel({ task, openDSH, focused, submissions, dismiss, inspectApproval, inspectQuestion, returnControl, inPool = false }: {
   task: Task; openDSH: () => void; focused?: { kind: RequestKind; key: string };
   submissions: SubmissionResult[]; dismiss: (id: string) => void;
   inspectApproval?: (key: string) => void; inspectQuestion?: (key: string) => void; inPool?: boolean;
+  returnControl?: ReactNode;
 }) {
   const [kind,setKind]=useState<RequestKind>(focused?.kind ?? 'approval');
   const approvalCount=task.pending.length;
@@ -88,6 +89,7 @@ export function RequestPanel({ task, openDSH, focused, submissions, dismiss, ins
         {displayed==='approval' && approvalCount>1 && <span className="step-count">{approvalCount} 项</span>}
       </div>
       <p className="request-session" title={task.title}>{task.title}</p>
+      {returnControl && <div className="request-return">{returnControl}</div>}
     </header>
     {hasApproval && hasQuestion && <nav className="request-kind" aria-label="请求类型">
       <button className="text-button" aria-pressed={displayed==='approval'} onClick={()=>setKind('approval')}><span className="control-label">确认 {approvalCount}</span></button>

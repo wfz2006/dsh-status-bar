@@ -76,6 +76,35 @@ describe('dsh host contract', () => {
     expect(JSON.stringify(state)).not.toContain(TOKEN);
   });
 
+  it('clears explicitly removed usage statistics and keeps other fields from partial updates', async () => {
+    const h = await setup({ seeds: [{ sessionId: 's1', running: true, stats: { sessionStats: { turns: 5, steps: 9 } } }] });
+    await h.adapter.connect(h.host.link());
+    expect(h.state().sessions.s1?.stats).toMatchObject({ turns: 5, steps: 9 });
+    h.host.control({ type: 'projection', sessionId: 's1', key: 'title', value: 'Renamed' });
+    await expect.poll(() => h.state().sessions.s1?.title).toBe('Renamed');
+    expect(h.state().sessions.s1?.stats?.turns).toBe(5);
+    h.host.control({ type: 'projection', sessionId: 's1', key: 'sessionStats', value: null });
+    await expect.poll(() => h.state().sessions.s1?.stats, { timeout: 700 }).toBeUndefined();
+  });
+
+  it('retries a failed cold page during the next history list refresh', async () => {
+    const h = await setup();
+    let pageCalls = 0;
+    h.host.rpc = method => {
+      if (method === 'session/list') return { items: [{ sessionId: 'cold', projections: { kind: 'cached', asOfSeq: 42, values: { title: 'History' } } }] };
+      if (method === 'session/page') {
+        if (++pageCalls === 1) throw new Error('Transient page failure');
+        return { records: [{ type: 'event', event: { type: 'turn/end', data: { reason: { kind: 'completed' } } } }] };
+      }
+      return true;
+    };
+    await h.adapter.connect(h.host.link());
+    await expect.poll(() => pageCalls).toBe(1);
+    await h.adapter.loadHistory('recent');
+    await expect.poll(() => h.state().sessions.cold?.phase, { timeout: 700 }).toBe('finished');
+    expect(pageCalls).toBe(2);
+  });
+
   it('applies audit todo and turn events to the followed session', async () => {
     const h = await setup({ seeds: [{ sessionId: 's1', running: true }] });
     await h.adapter.connect(h.host.link());

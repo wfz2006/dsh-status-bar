@@ -24,6 +24,16 @@ describe('chimeFor', () => {
   it('prefers the approval chime when a completion and a request land together', () => {
     expect(chimeFor(base, { ...base, status: 'completed', attention: 1 }, true)).toBe('approval');
   });
+
+  it('chimes for new cross-session requests only within the same connection and notification scope', () => {
+    const all = { ...base, scope: 'current-epoch', otherRequests: ['b/first'] };
+    expect(chimeFor(all, { ...all, otherRequests: ['b/second'] }, true)).toBe('approval');
+    expect(chimeFor(all, { ...all, otherRequests: ['b/first'] }, true)).toBeNull();
+    expect(chimeFor(all, { ...all, scope: 'new-epoch', otherRequests: ['b/third'] }, true)).toBeNull();
+    expect(chimeFor(base, all, true)).toBeNull();
+    expect(normalizeSettings({ notificationScope: 'all-sessions' }).notificationScope).toBe('all-sessions');
+    expect(normalizeSettings({}).notificationScope).toBe('all-sessions');
+  });
 });
 
 describe('chime settings', () => {

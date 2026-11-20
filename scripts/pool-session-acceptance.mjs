@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
-import { _electron as electron, expect } from '@playwright/test';
+import { pathToFileURL } from 'node:url';
+import { chromium, expect } from '@playwright/test';
 
 const profile = await mkdtemp(join(tmpdir(), 'pool-official-'));
 const userData = await mkdtemp(join(tmpdir(), 'pool-electron-'));
@@ -13,25 +14,50 @@ const exe = process.env.DSH_EXE ?? 'D:/DSH/DeepSeek Harness.exe';
 const cli = process.env.DSH_CLI ?? 'D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-desktop-host/lib/cli.js';
 const patch = join(profile, 'pool.patch.yml');
 const plugin = resolve('scripts/fixtures/pool-session-host.mjs').replaceAll('\\', '/');
-await writeFile(patch, JSON.stringify([{ insert: [{ id: 'pool-acceptance', name: plugin }] }]));
+const companion = resolve('packages/dsh-status-bar/lib/index.js').replaceAll('\\', '/');
+const executablePath = createRequire(resolve('apps/desktop/package.json'))('electron');
+const testApp = join(profile, 'companion');
+const cutFile = join(profile, 'cut-realtime');
+await mkdir(join(testApp, 'out', 'main'), { recursive: true });
+await writeFile(join(testApp, 'package.json'), JSON.stringify({ type: 'module', main: 'out/main/index.js' }));
+await writeFile(join(testApp, 'out/main/index.js'), `
+  import { app } from 'electron';
+  import { existsSync } from 'node:fs';
+  app.commandLine.appendSwitch('remote-debugging-port', '0');
+  app.commandLine.appendSwitch('remote-debugging-address', '127.0.0.1');
+  const link = process.argv.find(arg => arg.startsWith('--dsh-link='))?.slice('--dsh-link='.length);
+  const port = Number(new URL(link).port);
+  const timer = setInterval(() => {
+    if (!existsSync(${JSON.stringify(cutFile)})) return;
+    const connections = process._getActiveHandles().filter(handle => handle.remotePort === port && typeof handle.destroy === 'function');
+    for (const connection of connections) connection.destroy();
+    if (connections.length) clearInterval(timer);
+  }, 150);
+  timer.unref();
+  await import(${JSON.stringify(pathToFileURL(resolve('apps/desktop/out/main/index.js')).href)});
+`);
+await writeFile(patch, JSON.stringify([{ insert: [
+  { id: 'pool-acceptance', name: plugin },
+  { id: 'dsh-status-bar-plugin', name: companion, config: { appDir: testApp, electronBinary: executablePath, autoReload: false } },
+] }]));
 await writeFile(join(userData, 'glass-ui.json'), JSON.stringify({ version: 2, announcements: ['whale-pool-v1'],
   settings: { appearance: 'whale-pool', animation: 'full', desktopOptics: false, sound: false, edgeDock: false, autoApproval: false } }));
 await mkdir(reportDir, { recursive: true });
 const host = spawn(exe, ['--expose-internals', cli, '--profile', 'web', '--patch', patch, '--no-open', '--port', '0'],
-  { env: { ...process.env, DSH_HOME: profile, GLASS_POOL_TEST_HOME: profile, ELECTRON_RUN_AS_NODE: '1' }, windowsHide: true });
+  { env: { ...process.env, DSH_HOME: profile, GLASS_POOL_TEST_HOME: profile, ELECTRON_RUN_AS_NODE: '1', GLASS_USER_DATA_DIR: userData, GLASS_SMOKE: '0' }, windowsHide: true });
 let output = '', app;
 host.stdout.on('data', b => { output += b.toString(); });
 host.stderr.on('data', b => { output += b.toString(); });
-const launcher = /dsh web: (http:\/\/127\.0\.0\.1:\d+\/\?token=[A-Za-z0-9_-]+)/;
 const checks = [];
 try {
-  await expect.poll(() => launcher.test(output), { timeout: 30000 }).toBe(true);
-  const link = output.match(launcher)[1];
-  const env = { ...process.env, GLASS_USER_DATA_DIR: userData, GLASS_SMOKE: '0' };
-  delete env.ELECTRON_RUN_AS_NODE;
-  const executablePath = createRequire(resolve('apps/desktop/package.json'))('electron');
-  app = await electron.launch({ executablePath, args: [resolve('apps/desktop')], env });
-  const page = await app.firstWindow();
+  let port;
+  await expect.poll(async () => {
+    port = await readFile(join(userData, 'DevToolsActivePort'), 'utf8').then(value => Number(value.split(/\r?\n/)[0]), () => 0);
+    return port;
+  }, { timeout: 30000 }).toBeGreaterThan(0);
+  app = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
+  const context = app.contexts()[0];
+  const page = context.pages()[0] ?? await context.waitForEvent('page');
   function observeCues() {
     window.poolCues = [];
     const observer = new MutationObserver(changes => {
@@ -74,11 +100,7 @@ try {
     await page.screenshot({ path: join(reportDir, 'live-' + name + '.png') });
   }
   const read = () => page.evaluate(() => window.glass.getState());
-  await page.evaluate(() => window.glass.windowAction('reconnect', true));
-  await page.getByLabel('官方认证地址').fill(link);
-  await page.getByRole('button', {name:'连接 DSH', exact:true}).click();
-  await expect(page.locator('.source-notice')).toContainText('DSH 已连接');
-  await page.getByRole('button', {name:'返回', exact:true}).click();
+  await expect.poll(async () => (await read()).connection).toBe('connected');
   await taskIs('empty'); await sceneIs('empty'); mark('实际宿主连接，无会话');
   await writeFile(join(profile, 'start-fixture'), '');
   await expect.poll(() => output.includes('[pool-test] sessions ready'), {timeout:20000}).toBe(true);
@@ -128,6 +150,14 @@ try {
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   assert.equal(await page.evaluate(() => window.poolCues.includes('completed')), false);
   mark('窗口重新加载后直接显示完成姿态，未重播庆祝');
+  const epoch = (await read()).epoch;
+  await writeFile(cutFile, '');
+  await expect.poll(async () => (await read()).stale).toBe(true);
+  await page.evaluate(() => window.glass.windowAction('reconnect', true));
+  await expect.poll(async () => (await read()).connection).toBe('connected');
+  assert.notEqual((await read()).epoch, epoch);
+  assert.equal((await read()).selectedSession, 'pool-b');
+  mark('中断窗口到官方宿主的实时连接，点击恢复并重新同步原会话');
   await writeFile(join(reportDir,'official-session.json'),JSON.stringify({host:'official isolated DSH web Profile',provider:'deterministic in-process fixture',checks},null,2));
 } catch (error) {
   // Do not print the authenticated URL, cookies or app environment.

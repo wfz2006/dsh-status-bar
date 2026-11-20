@@ -45,6 +45,7 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
   let geometryRevision = 0;
   let completionFeedback = false;
   let completionTimer: ReturnType<typeof setTimeout> | undefined;
+  let otherPending = false;
   let approvalReturn: GlassViewMode | undefined;
   let approvalSawRequest = false;
   let persistenceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -211,23 +212,29 @@ export function createWindowController(win: BrowserWindow, directory: string, sm
     }
     nativeTheme.themeSource = settings.theme === 'auto' ? 'system' : settings.theme;
     applyMaterial();
-    win.setAlwaysOnTop(settings.pin === 'always' || settings.pin === 'on-notification' && sourceConnected && view.pending.length > 0);
+    syncPin();
     // Settings changes must be saved even while the settings panel is open.
     writePreferences();
     publish(); return state();
   }
+  function syncPin() {
+    const attention = view.pending.length > 0 || settings.notificationScope === 'all-sessions' && otherPending;
+    const pinned = settings.pin === 'always' || settings.pin === 'on-notification' && sourceConnected && attention;
+    if (win.isAlwaysOnTop() !== pinned) win.setAlwaysOnTop(pinned);
+  }
   function observe(facts: AttentionFacts, connected: boolean) {
     sourceConnected = connected;
+    otherPending = connected && facts.otherPending === true;
     if (!connected) {
       clearTimeout(completionTimer); completionFeedback = false;
-      if (settings.pin === 'on-notification') win.setAlwaysOnTop(false);
+      syncPin();
       publish(); return;
     }
     const old = view;
     view = observeFacts(view, facts, panel ? { ...settings, autoApproval: false } : settings);
     // observeFacts owns automatic transitions and respects both user settings
     // and manual sizing. Notification pinning must also run on return paths.
-    if (settings.pin === 'on-notification' && win.isAlwaysOnTop() !== (facts.pending.length > 0)) win.setAlwaysOnTop(facts.pending.length > 0);
+    syncPin();
     // Once the request that pulled us into the approval sheet is resolved, go
     // back to the view the user came from instead of parking on an empty sheet.
     if (view.mode === 'approval') {

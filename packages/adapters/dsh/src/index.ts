@@ -47,7 +47,7 @@ function sessionStats(stats: RecordValue, tokens: RecordValue, pressure: RecordV
   const context = projected !== undefined && Number.isSafeInteger(projected)
     && contextWindow !== undefined && contextWindow > 0 && Number.isSafeInteger(contextWindow)
     ? { projectedTokens: projected, windowTokens: contextWindow } : undefined;
-  if (turns === undefined && steps === undefined && input === undefined && cacheRead === undefined && contextPercent === undefined) return undefined;
+  if ([turns, steps, input, cacheRead, cacheWrite, output, contextPercent].every(value => value === undefined)) return undefined;
   const tokenTotal = (input ?? 0) + (cacheRead ?? 0) + (cacheWrite ?? 0) + (output ?? 0);
   const cacheHit = cacheRead !== undefined && input !== undefined && cacheRead + input > 0 ? round(cacheRead / (cacheRead + input) * 100, 1) : undefined;
   return {
@@ -217,6 +217,7 @@ export function createDshAdapter(options: Options) {
     if ('title' in incoming) session.title = bounded(p.title, '未命名会话');
     const stats = sessionStats(record(p.sessionStats), record(p.tokenUsage), record(p.contextPressure));
     if (stats) session.stats = stats;
+    else delete session.stats;
     if ('todos' in incoming) session.todos = Array.isArray(p.todos) ? p.todos.slice(0, 1000).map(record).filter(t => typeof t.content === 'string' && ['pending', 'in_progress', 'completed'].includes(String(t.status))).map(t => ({ content: bounded(t.content), status: t.status as 'pending' | 'in_progress' | 'completed' })) : [];
     if (connected && !emittedSessions.has(id)) emitSession(id);
     const userQuestions = record(p.userQuestions);
@@ -539,7 +540,9 @@ export function createDshAdapter(options: Options) {
           terminal.set(id, kind === 'completed' ? 'finished' : kind === 'max-tokens' ? 'limit-reached' : kind === 'aborted' ? 'cancelled' : kind === 'error' || kind === 'blocked' ? 'error' : 'unknown');
           emitSession(id, 'history');
         }
-      }).catch(() => { /* History can be unavailable on an otherwise healthy connection. */ }).finally(() => {
+      }).catch(() => {
+        if (current === transport && sessions.get(id) === job.session) coldRead.delete(id);
+      }).finally(() => {
         if (current === transport) { historyReads--; readHistory(); }
       });
     }

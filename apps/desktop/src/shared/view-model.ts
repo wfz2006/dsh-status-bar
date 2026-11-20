@@ -11,11 +11,12 @@ export type GlassSettings = GlassAppearance & {
   theme: 'auto' | 'light' | 'dark'; strength: 'clear' | 'balanced' | 'readable';
   defaultView: 'capsule' | 'peek' | 'remember-last'; autoApproval: boolean; autoCollapse: boolean;
   edgeDock: boolean;
+  notificationScope: 'current-session' | 'all-sessions';
   animation: 'full' | 'reduced' | 'off'; capsuleMotion: CapsuleMotion; pin: 'always' | 'on-notification' | 'normal';
   material: 'system' | 'transparent' | 'acrylic' | 'frosted' | 'solid'; desktopOptics: boolean | null;
   sound: boolean; soundPreset: ChimePreset;
 };
-export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, appearance:'classic',whaleSkin:'classic',poolLayout:'clear',poolContour:'pearl', theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, edgeDock: true, animation: 'full', capsuleMotion: 'classic', pin: 'always', material: 'frosted', desktopOptics: null, sound: true, soundPreset: DEFAULT_CHIME_PRESET };
+export const DEFAULT_SETTINGS: GlassSettings = { ...DEFAULT_GLASS_APPEARANCE, appearance:'classic',whaleSkin:'classic',poolLayout:'clear',poolContour:'pearl', theme: 'auto', strength: 'balanced', defaultView: 'capsule', autoApproval: false, autoCollapse: false, edgeDock: true, notificationScope: 'all-sessions', animation: 'full', capsuleMotion: 'classic', pin: 'always', material: 'frosted', desktopOptics: null, sound: true, soundPreset: DEFAULT_CHIME_PRESET };
 export function normalizeSettings(value: unknown): GlassSettings {
   if (!value || typeof value !== 'object') return { ...DEFAULT_SETTINGS };
   const v = value as Record<string, unknown>;
@@ -25,6 +26,7 @@ export function normalizeSettings(value: unknown): GlassSettings {
     animation: choice('animation', ['full', 'reduced', 'off'], 'full'),
     capsuleMotion: choice('capsuleMotion', CAPSULE_MOTIONS, DEFAULT_SETTINGS.capsuleMotion),
     edgeDock: v.edgeDock !== false,
+    notificationScope: choice('notificationScope', ['current-session', 'all-sessions'], DEFAULT_SETTINGS.notificationScope),
     whaleSkin: normalizeWhaleSkin(v.whaleSkin),
     pin: choice('pin', ['always', 'on-notification', 'normal'], 'always'), material: v.material==='acrylic' ? 'transparent' : choice('material', ['system', 'transparent', 'frosted', 'solid'], DEFAULT_SETTINGS.material),
     desktopOptics: typeof v.desktopOptics === 'boolean' ? v.desktopOptics : null,
@@ -50,7 +52,7 @@ export function viewForAppearanceSize(width:number,height:number,current:GlassVi
 export type ViewState = { mode: GlassViewMode; manual: boolean; returnMode: GlassViewMode | null; pending: string[]; completed: string | null };
 export function initialView(mode: GlassViewMode = 'capsule'): ViewState { return { mode, manual: false, returnMode: null, pending: [], completed: null }; }
 export function manualView(state: ViewState, mode: GlassViewMode): ViewState { return { ...state, mode, manual: true, returnMode: null }; }
-export type AttentionFacts = { pending: string[]; completed: string | null; holdApproval?: boolean; notifyCompletion?: boolean };
+export type AttentionFacts = { pending: string[]; completed: string | null; otherPending?: boolean; holdApproval?: boolean; notifyCompletion?: boolean };
 export function observeFacts(state: ViewState, facts: AttentionFacts, settings: GlassSettings): ViewState {
   let next = { ...state, pending: facts.pending, completed: facts.completed };
   const newRequest = facts.pending.some(id => !state.pending.includes(id));

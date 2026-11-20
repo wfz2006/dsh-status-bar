@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve, basename } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { abortError, checkAbort, delay, downloadArchive } from './download.js';
+import { findCompatibleEngine, linkEngine, sha256File, splitRuntime } from './split-runtime.js';
 
 const DEFAULT_RUNTIME_URL = 'https://github.com/wfz2006/dsh-status-bar/releases/latest/download/dsh-status-bar.tgz';
 const json = path => { try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return {}; } };
@@ -20,17 +21,20 @@ export function cacheBase(config) {
     (process.platform === 'win32' ? join(process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local'), 'dsh-status-bar') : join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'dsh-status-bar')));
 }
 export function runtimeUrl(config, root) {
-  const explicit = config.downloadUrl ?? process.env.DSH_STATUS_BAR_RUNTIME_URL ?? process.env.DSH_GLASS_RUNTIME_URL;
+  const explicit = explicitRuntimeUrl(config);
   const advertised = json(join(root, 'package.json')).dsh?.statusBar?.runtime;
   const url = explicit ?? advertised ?? DEFAULT_RUNTIME_URL;
   return !explicit && url === DEFAULT_RUNTIME_URL ? `https://github.com/wfz2006/dsh-status-bar/releases/download/v${packageVersion(root)}/dsh-status-bar.tgz` : url;
+}
+function explicitRuntimeUrl(config) {
+  return config.downloadUrl ?? process.env.DSH_STATUS_BAR_RUNTIME_URL ?? process.env.DSH_GLASS_RUNTIME_URL;
 }
 /** The npm-hosted runtime is the primary source; the release asset stays as a
  * fallback for networks where one of the two is unreachable. An explicitly
  * configured address is used alone, so operators keep full control. */
 export function runtimeUrls(config, root) {
   const primary = runtimeUrl(config, root);
-  if (config.downloadUrl ?? process.env.DSH_STATUS_BAR_RUNTIME_URL ?? process.env.DSH_GLASS_RUNTIME_URL) return [primary];
+  if (explicitRuntimeUrl(config)) return [primary];
   const fallback = `https://github.com/wfz2006/dsh-status-bar/releases/download/v${packageVersion(root)}/dsh-status-bar.tgz`;
   return primary === fallback ? [primary] : [primary, fallback];
 }
@@ -115,43 +119,83 @@ async function downloadWithFallback(config, pluginRoot, part, { signal, onProgre
   }
   throw lastError ?? new Error('运行时下载失败。');
 }
+function clearDownload(part) {
+  rmSync(part, { force: true });
+  rmSync(`${part}.json`, { force: true });
+}
+async function extractArchive(part, staging, signal, appOnly = false) {
+  const entries = await run('tar', ['-tvzf', part], signal, true);
+  // Inspect the archive before extraction. Links and paths outside the package are unsupported.
+  for (const line of entries.split(/\r?\n/).filter(Boolean)) {
+    const entry = line.match(/\b(package\/.*)$/)?.[1];
+    if (!['-', 'd'].includes(line[0]) || !entry || entry.includes('\\') || entry.split('/').some(part => part === '..' || part.includes(':')) ||
+      appOnly && entry !== 'package/' && !entry.startsWith('package/app/')) {
+      throw new Error('运行时压缩包包含不支持的条目。');
+    }
+  }
+  mkdirSync(staging);
+  await run('tar', ['-xzf', part, '-C', staging, '--no-same-owner', '--no-same-permissions'], signal);
+}
+
+async function prepareAppUpdate(split, engine, part, staging, options) {
+  const { signal, onProgress } = options;
+  const appProgress = progress => onProgress({ ...progress, message: '正在下载应用更新，复用现有 Electron 运行时。' });
+  await downloadArchive(split.app.url, part, { signal, onProgress: appProgress });
+  if (await sha256File(part, signal) !== split.app.sha256) throw new Error('应用更新校验失败。');
+  onProgress({ phase: 'unpacking', message: '正在安装应用更新并复用 Electron。' });
+  await extractArchive(part, staging, signal, true);
+  linkEngine(engine, join(staging, 'package', 'electron', 'dist'), split.files);
+}
+
 export async function ensureRuntime(config, pluginRoot, { signal, onProgress = () => {} } = {}) {
   const version = packageVersion(pluginRoot); const base = cacheBase(config); const root = join(base, `runtime-${version}`);
   const cached = cachedRuntime(root, version); if (cached) return cached;
   mkdirSync(base, { recursive: true });
   const release = await lock(`${root}.lock`, signal, onProgress);
   const part = `${root}.tgz.part`; const staging = `${root}.staging-${randomUUID()}`; const previous = `${root}.previous-${randomUUID()}`;
+  const appPart = `${root}.app.tgz.part`;
+  const unpacked = join(staging, 'package');
   try {
     const installedByPeer = cachedRuntime(root, version); if (installedByPeer) return installedByPeer;
     // The exclusive lock proves that no other preparer owns these generated
     // staging folders. An abrupt Host exit must not leave one unpack per retry.
     for (const name of readdirSync(base)) if (name.startsWith(`${basename(root)}.staging-`) && /^[0-9a-f-]{36}$/.test(name.slice(`${basename(root)}.staging-`.length))) removeOwned(join(base, name), root);
-    await downloadWithFallback(config, pluginRoot, part, { signal, onProgress }); checkAbort(signal);
-    onProgress({ phase: 'unpacking', message: '下载完成，正在校验并解压运行时。' });
-    let entries;
-    try { entries = await run('tar', ['-tvzf', part], signal, true); }
-    catch (error) { if (error.name !== 'AbortError') { rmSync(part, { force: true }); rmSync(`${part}.json`, { force: true }); } throw error; }
-    // Reject links and traversal before extraction; only this package subtree is expected.
-    for (const line of entries.split(/\r?\n/).filter(Boolean)) {
-      const entry = line.match(/\b(package\/.*)$/)?.[1];
-      if (!['-', 'd'].includes(line[0]) || !entry || entry.includes('\\') || entry.split('/').some(part => part === '..' || part.includes(':'))) {
-        rmSync(part, { force: true }); rmSync(`${part}.json`, { force: true });
-        throw new Error('运行时压缩包包含不支持的条目。');
+    const split = !explicitRuntimeUrl(config) && splitRuntime(json(join(pluginRoot, 'package.json')).dsh?.statusBar?.splitRuntime);
+    if (split) {
+      onProgress({ phase: 'unpacking', message: '正在检查是否可以复用已安装的 Electron。' });
+      const engine = await findCompatibleEngine(base, basename(root), split.files, signal);
+      if (engine) {
+        try {
+          await prepareAppUpdate(split, engine, appPart, staging, { signal, onProgress });
+          if (!cachedRuntime(unpacked, version)) throw new Error('应用更新与插件版本不匹配。');
+        } catch {
+          checkAbort(signal);
+          clearDownload(appPart);
+          removeOwned(staging, root);
+          onProgress({ phase: 'downloading', message: '应用更新暂不可用，正在准备完整运行时。' });
+        }
       }
     }
-    mkdirSync(staging);
-    await run('tar', ['-xzf', part, '-C', staging, '--no-same-owner', '--no-same-permissions'], signal);
-    const unpacked = join(staging, 'package');
-    if (json(join(unpacked, 'package.json')).version !== version || !cachedRuntime(unpacked, version)) {
-      rmSync(part, { force: true }); rmSync(`${part}.json`, { force: true });
-      throw new Error(`下载内容与插件 ${version} 不匹配，未覆盖现有缓存。请重试或安装对应版本的自包含包。`);
+    if (!cachedRuntime(unpacked, version)) {
+      await downloadWithFallback(config, pluginRoot, part, { signal, onProgress });
+      onProgress({ phase: 'unpacking', message: '下载完成，正在校验并解压运行时。' });
+      try {
+        await extractArchive(part, staging, signal);
+        if (json(join(unpacked, 'package.json')).version !== version || !cachedRuntime(unpacked, version)) {
+          throw new Error(`下载内容与插件 ${version} 不匹配，未覆盖现有缓存。请重试或安装对应版本的自包含包。`);
+        }
+      } catch (error) {
+        if (!signal?.aborted) clearDownload(part);
+        throw error;
+      }
     }
     checkAbort(signal);
     if (existsSync(root)) renameSync(root, previous);
     try { renameSync(unpacked, root); }
     catch (error) { if (existsSync(previous)) renameSync(previous, root); throw error; }
     removeOwned(previous, root);
-    rmSync(part, { force: true }); rmSync(`${part}.json`, { force: true });
+    clearDownload(part);
+    clearDownload(appPart);
     return cachedRuntime(root, version);
   } finally { try { removeOwned(staging, root); } finally { release(); } }
 }

@@ -9,7 +9,7 @@ on:
       tag:
         description: 'Release tag to attach the bundle to'
         required: true
-        default: 'v0.4.2'
+        default: 'v0.4.3'
 
 permissions:
   contents: write
@@ -63,7 +63,13 @@ jobs:
         run: pnpm --filter @glass/desktop build
 
       - name: Pack the self-contained plugin
-        run: node scripts/pack-plugin-release.mjs --no-build --out dist
+        run: node scripts/pack-plugin-release.mjs --no-build --stage dist/plugin-stage --out dist
+
+      - name: Pack the app update
+        run: node scripts/pack-app-release.mjs --stage dist/plugin-stage --out dist
+
+      - name: Pack the lightweight plugin
+        run: node scripts/pack-npm-release.mjs --github --split-manifest dist/split-runtime.json --out dist/lite
 
       - name: Add the compatibility asset name
         shell: pwsh
@@ -75,5 +81,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ inputs.tag }}
         run: |
-          gh release upload $env:TAG dist/dsh-status-bar.tgz dist/dsh-glass-plugin.tgz --clobber --repo ${{ github.repository }}
+          gh release upload $env:TAG dist/dsh-status-bar.tgz dist/dsh-glass-plugin.tgz dist/dsh-status-bar-app.tgz dist/lite/dsh-status-bar-lite.tgz --clobber --repo ${{ github.repository }}
           gh release view $env:TAG --repo ${{ github.repository }} --json assets --jq '.assets[] | {name, size}'

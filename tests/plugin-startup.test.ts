@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 const launchState = vi.hoisted(() => ({ fail: false }));
 const launched = vi.hoisted(() => [] as { executable: string; args: string[]; child: EventEmitter; env?: NodeJS.ProcessEnv }[]);
@@ -77,6 +77,40 @@ async function fixture(options: { version?: string; respond?: (req: IncomingMess
     runtime: () => import(pathToFileURL(join(plugin, 'lib', 'runtime.js')).href) as Promise<Runtime>,
     downloader: () => import(pathToFileURL(join(plugin, 'lib', 'download.js')).href) as Promise<Downloader> };
 }
+it.each(['match', 'engine-changed', 'app-corrupt'])('uses the app-only update when a verified engine can be reused (%s)', async scenario => {
+  const paths: string[] = [];
+  const f = await fixture({ respond: (req, res, full) => {
+    paths.push(req.url!);
+    const bytes = req.url === '/app'
+      ? scenario === 'app-corrupt' ? Buffer.from('invalid update') : appArchive
+      : full;
+    res.writeHead(200, { ETag: '"fixture"', 'Content-Length': bytes.length }).end(bytes);
+  } });
+  const sha256 = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
+  const fullEngine = join(f.payload, 'electron', 'dist', 'electron.exe');
+  const oldRuntime = join(f.runtimeDir, 'runtime-0.2.4');
+  const oldEngine = join(oldRuntime, 'electron', 'dist', 'electron.exe');
+  mkdirSync(join(oldEngine, '..'), { recursive: true });
+  writeFileSync(oldEngine, scenario === 'engine-changed' ? 'different bytes' : readFileSync(fullEngine));
+  const archive = join(f.directory, 'app.tgz');
+  expect(spawnSync('tar', ['-czf', archive, '-C', join(f.directory, 'payload'), 'package/app']).status).toBe(0);
+  const appArchive = readFileSync(archive);
+  writeFileSync(join(f.plugin, 'package.json'), JSON.stringify({ type: 'module', version: '0.2.5', dsh: { statusBar: {
+    runtime: f.url, splitRuntime: {
+      platform: process.platform, arch: process.arch, electronVersion: '44.8.0',
+      app: { url: new URL('/app', f.url).href, sha256: sha256(appArchive) },
+      engineFiles: { 'electron.exe': sha256(readFileSync(fullEngine)) },
+    },
+  } } }));
+  const runtime = await f.runtime();
+  const installation = await runtime.ensureRuntime({ runtimeDir: f.runtimeDir }, f.plugin);
+  expect(existsSync(join(installation.appDir, 'out/main/index.js'))).toBe(true);
+  expect(readFileSync(installation.electron)).toEqual(readFileSync(fullEngine));
+  expect(paths).toEqual(scenario === 'match' ? ['/app'] : scenario === 'app-corrupt' ? ['/app', '/runtime'] : ['/runtime']);
+  // Cleaning the old app-cache entry leaves the new app launchable.
+  rmSync(oldEngine);
+  expect(existsSync(installation.electron)).toBe(true);
+});
 it('recovers a real interrupted first download with Range and launches only a validated runtime', async () => {
   const f = await fixture();
   f.loaded.apply(f.ctx, { runtimeDir: f.runtimeDir, downloadUrl: f.url, showStartupUI: false, autoReload: false });

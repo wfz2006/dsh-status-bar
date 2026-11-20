@@ -69,12 +69,20 @@ export function apply(ctx, config = {}) {
   function startCompanion(link) {
     const args = [target.appDir, `--dsh-link=${link}`, `--launcher-pid=${process.pid}`, `--dsh-instance=${hostInstance}`];
     if (commandAvailable) args.push('--status-bar-command');
-    const child = spawn(target.electron, args, { cwd: target.appDir, detached: true, stdio: 'ignore', env: launchEnv() });
+    const child = spawn(target.electron, args, { cwd: target.appDir, detached: true, stdio: ['ignore', 'ignore', 'ignore', 'ipc'], env: launchEnv() });
     children.add(child);
+    child.on('message', message => {
+      if (disposed || paused || !child.connected || message?.type !== 'dsh-status-bar:refresh-link' ||
+        typeof message.id !== 'string' || !/^[0-9a-f-]{36}$/.test(message.id)) return;
+      let fresh;
+      try { fresh = ctx.connection.authenticatedUrl(ctx.webServer.getOrigin()); } catch { /* Host is shutting down or not ready. */ }
+      child.send({ type: 'dsh-status-bar:link', id: message.id, link: fresh }, () => {});
+    });
     child.once('spawn', () => { if (disposed || paused) killChild(child); });
     child.once('error', () => children.delete(child));
     child.once('exit', () => children.delete(child));
     child.unref();
+    child.channel?.unref();
     return child;
   }
   function spawnTracked(link) {

@@ -59,6 +59,11 @@
 .picker-status:is([data-status=waiting_approval],[data-status=waiting_answer],[data-status=limit_reached]) { background:var(--warning); }
 .picker-status:is([data-status=error],[data-status=disconnected]) { background:var(--danger); }
 .picker-menu { scrollbar-width:thin; }
+.picker-search { position:sticky; top:0; z-index:1; width:100%; padding:5px 8px; margin-bottom:3px; border:1px solid var(--line); border-radius:7px; background:var(--menu-bg); color:var(--fg); font:inherit; }
+.picker-search:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+.picker-results { list-style:none; padding:0; margin:0; }
+.picker-workspace { display:block; text-overflow:ellipsis; overflow:hidden; font-size:10px; color:var(--ink-2); }
+.picker-no-results { margin:6px 4px; color:var(--ink-2); }
 
 .readonly-label { display:inline-flex; align-items:center; gap:4px; margin-right:7px; color:var(--ink-2); font-weight:600; }
 .readonly-label > .ui-icon { width:11px; height:11px; }

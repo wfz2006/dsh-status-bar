@@ -242,7 +242,9 @@ export function GlassSettingsPanel({ value, update, projection, mock, back, show
             checked={value.edgeDock} onChange={edgeDock => update({ edgeDock })} />
         </fieldset>
         <fieldset className="settings-group"><legend>任务提醒</legend>
-          <SettingToggle label="审批时自动展开" detail="收到待处理请求时打开审批界面。" checked={value.autoApproval}
+          <SettingSelect label="待处理提醒范围" value={value.notificationScope} onChange={notificationScope => update({ notificationScope })}
+            options={[['all-sessions','所有会话'],['current-session','仅当前会话']]} />
+          <SettingToggle label="审批时自动展开" detail="当前会话收到待处理请求时打开审批界面。" checked={value.autoApproval}
             onChange={autoApproval => update({ autoApproval })} />
           <SettingToggle label="完成后自动收起" checked={value.autoCollapse} onChange={autoCollapse => update({ autoCollapse })} />
           <SettingToggle label="提示音" checked={value.sound} onChange={sound => update({ sound })} />

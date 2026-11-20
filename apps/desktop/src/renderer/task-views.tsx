@@ -49,17 +49,33 @@ function ContextRing({ percent, context, stale }: {
     </span>
   </span>;
 }
+function sessionPriority(status: ReturnType<typeof deriveSessionSummary>['status']) {
+  if (status === 'waiting_approval' || status === 'waiting_answer') return 0;
+  if (status === 'running' || status === 'starting') return 1;
+  return 2;
+}
 function SessionPicker({ projection, selected, select }: { projection: Projection; selected: string; select: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [query, setQuery] = useState('');
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const root = useRef<HTMLDivElement>(null);
+  const search = useRef<HTMLInputElement>(null);
   const pendingFocus = useRef<number | null>(null);
   const menuId = useId();
   const ids = Object.keys(projection.sessions);
   const current = projection.sessions[selected];
-  const sessions = useMemo(() => open || closing ? Object.keys(projection.sessions).map(id => deriveSessionSummary(projection, id)) : [], [projection, open, closing]);
+  const sessions = useMemo(() => {
+    if (!open && !closing) return [];
+    const match = query.trim().toLocaleLowerCase();
+    return ids.map(id => ({ ...deriveSessionSummary(projection, id), workspace: projection.sessions[id]?.workspaceLabel ?? '' }))
+      .filter(({ title, workspace }) => !match || `${title} ${workspace}`.toLocaleLowerCase().includes(match))
+      .sort((a, b) => sessionPriority(a.status) - sessionPriority(b.status));
+  }, [projection, query, open, closing]);
   useEffect(() => () => { clearTimeout(closeTimer.current); if (pendingFocus.current !== null) cancelAnimationFrame(pendingFocus.current); }, []);
+  useLayoutEffect(() => {
+    if (open && pendingFocus.current === null) search.current?.focus();
+  }, [open]);
   function show() { clearTimeout(closeTimer.current); setClosing(false); setOpen(true); }
   function dismiss() {
     if (!open && !closing) return;
@@ -68,36 +84,54 @@ function SessionPicker({ projection, selected, select }: { projection: Projectio
     setClosing(true); clearTimeout(closeTimer.current);
     // Preserve the existing 240ms close transition, then release the hidden
     // options instead of reconciling 100 invisible buttons for every token.
-    closeTimer.current = setTimeout(() => setClosing(false), 250);
+    closeTimer.current = setTimeout(() => { setClosing(false); setQuery(''); }, 250);
   }
   function close() { dismiss(); root.current?.querySelector<HTMLButtonElement>('.picker-trigger')?.focus(); }
-  function focusOption(index: number) {
+  function focusOption(index: number, preferSelected: boolean) {
     if (pendingFocus.current !== null) cancelAnimationFrame(pendingFocus.current);
-    const focus = () => { pendingFocus.current = null; root.current?.querySelectorAll<HTMLButtonElement>('[role=option]')[index]?.focus(); };
+    const focus = () => {
+      pendingFocus.current = null;
+      const option = preferSelected ? root.current?.querySelector<HTMLButtonElement>('[role=option][aria-selected=true]') : undefined;
+      (option ?? root.current?.querySelectorAll<HTMLButtonElement>('[role=option]')[index])?.focus();
+    };
     // Once mounted, keyboard movement must be synchronous so a fast Enter uses
     // the newly focused option rather than the previous animation-frame target.
     if (open) focus(); else pendingFocus.current = requestAnimationFrame(focus);
   }
   return <div ref={root} className="session-picker" data-open={open} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) dismiss(); }} onKeyDown={event => {
+    if (event.nativeEvent.isComposing) { event.stopPropagation(); return; }
     if (event.key === 'Escape' && open) { event.stopPropagation(); event.preventDefault(); close(); }
+    if (event.target === search.current && ['Home', 'End'].includes(event.key)) return;
+    if (event.target === search.current && event.key === 'Enter') {
+      event.preventDefault();
+      if (sessions[0]) { select(sessions[0].sessionId); close(); }
+    }
     if (['ArrowDown','ArrowUp','Home','End'].includes(event.key) && (open || event.key.startsWith('Arrow'))) {
       event.preventDefault(); event.stopPropagation();
       const options = Array.from(root.current?.querySelectorAll<HTMLButtonElement>('[role=option]') ?? []);
       const index = options.findIndex(option => option === document.activeElement);
-      const selectedIndex = Math.max(0, ids.indexOf(selected));
-      const next = !open ? selectedIndex : event.key === 'Home' ? 0 : event.key === 'End' ? ids.length - 1
-        : index < 0 ? selectedIndex : (index + (event.key === 'ArrowDown' ? 1 : -1) + ids.length) % ids.length;
-      show(); focusOption(next);
+      const next = !open || event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1
+        : index < 0 ? (event.key === 'ArrowUp' ? options.length - 1 : 0)
+        : (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+      show(); focusOption(next, !open);
     }
   }}>
     <button type="button" className="picker-trigger" aria-haspopup="listbox" aria-controls={menuId} aria-expanded={open} aria-label={'选择会话' + (current ? '：' + current.title : '')} title={current?.title} onClick={() => { if (open) dismiss(); else show(); }}>
       <span className="picker-label">{current?.title ?? '选择会话'}</span><span className="picker-count" aria-hidden="true">{ids.length}</span><Icon name="chevron" />
     </button>
-    <ul id={menuId} className="picker-menu" role="listbox" aria-label="选择会话" aria-hidden={!open} inert={!open}>
+    <div className="picker-menu" aria-hidden={!open} inert={!open}>
+    <input ref={search} type="search" className="picker-search" aria-label="搜索会话" placeholder="搜索标题或工作目录" value={query} onChange={event => setQuery(event.target.value)} />
+    <ul id={menuId} className="picker-results" role="listbox" aria-label="选择会话">
       {sessions.map(session => <li key={session.sessionId} role="presentation"><button type="button" role="option" tabIndex={-1} aria-selected={session.sessionId === selected} className="picker-option" data-status={session.status} onClick={() => { select(session.sessionId); close(); }}>
-        <span className="picker-status" data-status={session.status} aria-hidden="true" /><span className="picker-option-title">{session.title}</span><small className="picker-option-state">{session.label}</small>{session.sessionId === selected && <Icon name="check" />}
+        <span className="picker-status" data-status={session.status} aria-hidden="true" />
+        <span className="picker-option-title">{session.title}
+          {session.workspace && session.workspace !== 'DSH' && <small className="picker-workspace" title={session.workspace}>{session.workspace.split(/[\\/]/).filter(Boolean).at(-1)}</small>}
+        </span>
+        <small className="picker-option-state">{session.label}</small>{session.sessionId === selected && <Icon name="check" />}
       </button></li>)}
     </ul>
+    {open && sessions.length === 0 && <p className="picker-no-results" role="status">当前列表没有匹配的会话</p>}
+    </div>
   </div>;
 }
 const TITLE_MARQUEE_GAP = 36;

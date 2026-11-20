@@ -1,0 +1,21 @@
+# DSH Status Bar v0.4.3
+
+这版改善了同时跟进多个 DSH 会话的操作，也缩小了复用 Electron 时需要下载的更新。
+
+## 提醒、切换和连接
+
+- 默认跟踪所有会话的待处理请求。其他会话有新请求时，按「待处理提醒范围」和置顶、声音设置通知。点通知可以进入请求，两种外观均提供返回原会话的入口。
+- 会话选择器支持搜索标题与工作目录，优先显示待处理和运行中的会话。
+- 当 DSH 仍在运行时，点击「重新连接」会向插件申请新认证链接，并在同一宿主恢复原会话。独立启动时仍可粘贴认证地址。
+- 修复历史读取失败后未重试、用量清空后残留旧数字，以及打开 DSH 失败无反馈的问题。
+
+## 安装包
+
+- `dsh-status-bar-lite.tgz` 是轻量入口。已缓存相同的 Electron 时，启动只需下载约 0.43 MiB 的应用包 `dsh-status-bar-app.tgz`。首次安装或引擎变化时会自动下载完整运行时。
+- `dsh-status-bar.tgz` 是可离线使用的完整包，约 155 MiB。`dsh-glass-plugin.tgz` 保留旧文件名兼容。
+
+通过 DSH 的 Desktop 配置安装轻量入口。
+
+```powershell
+dsh plugin --profile desktop add https://github.com/wfz2006/dsh-status-bar/releases/download/v0.4.3/dsh-status-bar-lite.tgz
+```

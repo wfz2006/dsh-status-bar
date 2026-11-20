@@ -71,7 +71,7 @@ function App() {
   async function openRequest(target: typeof otherRequests[number]) {
     try {
       const next = await window.glass.openRequest(target.kind, requestIdentity(target.request), matchMedia('(prefers-reduced-motion: reduce)').matches);
-      if (windowState.settings.appearance === 'whale-pool' && task.session && target.request.sessionId !== selected) {
+      if (task.session && target.request.sessionId !== selected) {
         setReturnTrip({ from: selected, to: target.request.sessionId, scope, mode: windowState.viewMode });
       }
       setFocusedRequest({ sessionId: target.request.sessionId, kind: target.kind, key: requestKey(target.request) });
@@ -94,15 +94,18 @@ function App() {
     } catch { setError('原会话已不可用'); }
   }
   const chime = useRef<ChimeSnapshot | null>(null);
-  const { sound, soundPreset } = windowState.settings;
+  const { sound, soundPreset, notificationScope } = windowState.settings;
   useEffect(() => {
-    const next = { sessionId: selected, status: task.status, attention: task.attentionCount };
-    const kind = chimeFor(chime.current, next, sound);
+    const live = projection.connection === 'connected' && !projection.stale;
+    const next = live ? { sessionId: selected, status: task.status, attention: task.attentionCount, scope,
+      otherRequests: notificationScope === 'all-sessions' ? otherRequests.map(({ kind, request }) => kind + requestKey(request)) : undefined } : null;
+    const kind = next && chimeFor(chime.current, next, sound);
     chime.current = next;
     if (!sound) stopChime();
     if (kind && windowState.visible !== false && (kind !== 'complete' ||
       projection.poolEvent?.kind === 'completed' && projection.poolEvent.sessionId === selected)) playChime(kind, soundPreset);
-  }, [selected, task.status, task.attentionCount, sound, soundPreset, projection.poolEvent, windowState.visible]);
+  }, [selected, task.status, task.attentionCount, sound, soundPreset, notificationScope, otherRequests, scope,
+    projection.connection, projection.stale, projection.poolEvent, windowState.visible]);
   const { dockEdge, edgeMotion } = windowState;
   const mode = dockEdge ? 'capsule' : windowState.settings.appearance==='whale-pool'?windowState.viewMode:windowState.morphing === 'collapsing' && windowState.viewMode === 'capsule' ? settledMode.current : windowState.morphing || windowState.panel ? windowState.viewMode : layoutMode === 'expanded' && windowState.viewMode === 'approval' ? 'approval' : layoutMode;
   const pool=windowState.settings.appearance==='whale-pool'&&!windowState.panel;
@@ -141,13 +144,14 @@ function App() {
     viewedRequest: mode === 'approval' && activeRequest ? { kind: 'questions' in activeRequest ? 'question' : 'approval', key: requestKey(activeRequest) } : undefined,
     reaction, otherPending: otherRequests.length > 0, cue,
   };
-  const backToTask = pool && returnSession ? <button type="button" className="pool-session-return" onClick={() => void returnToSession()}
+  const backToTask = returnSession ? <button type="button" className={pool ? 'pool-session-return' : 'window-notice'} onClick={() => void returnToSession()}
     title={'返回' + returnSession.title}>返回「{returnSession.title}」</button> : null;
   const panels = mode === 'expanded' ? <TaskExpanded task={task} projection={projection} selected={selected} select={id => void chooseSession(id)}
     approval={invoke('approval')} reconnect={invoke('reconnect')} openDSH={invoke('open-dsh')}
     loadHistory={direction => window.glass.loadHistory(direction).catch(() => setError('历史会话暂不可用'))} />
     : mode === 'approval' ? <RequestPanel key={JSON.stringify([projection.runtimeId,projection.epoch,selected,focused?.key])} task={task}
       openDSH={invoke('open-dsh')} focused={focused} inspectApproval={inspectApproval} inspectQuestion={inspectQuestion} inPool={poolPanel}
+      returnControl={pool ? undefined : backToTask}
       submissions={submissions} dismiss={id => void window.glass.dismissSubmission(id).catch(() => setError('提交状态暂不可用'))} /> : null;
   const notices = !windowState.panel && !dockEdge && !edgeMotion && mode !== 'approval' &&
     (receipt || otherRequests.length > 0 || backToTask && !poolPanel)

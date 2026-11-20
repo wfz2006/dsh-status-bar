@@ -9,7 +9,7 @@ const electron = vi.hoisted(() => ({
   systemPreferences: { getAnimationSettings: () => ({ prefersReducedMotion: false }) },
   screen: { getDisplayMatching: () => ({ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }) },
   app: { relaunch: vi.fn(), exit: vi.fn() },
-  dialog: { showOpenDialog: vi.fn(async () => ({ canceled: true, filePaths: [] as string[] })) },
+  dialog: { showOpenDialog: vi.fn(async () => ({ canceled: true, filePaths: [] as string[] })), showMessageBox: vi.fn(async () => ({ response: 2 })) },
   shell: { openPath: vi.fn(async () => '') },
 }));
 vi.mock('electron', () => electron);
@@ -266,4 +266,28 @@ it('opens a discovered or user-selected DSH executable without an author-specifi
   expect(JSON.parse(readFileSync(join(directory, 'dsh-desktop.json'), 'utf8'))).toEqual({ executable });
   await createDshLauncher(win as unknown as Parameters<typeof createDshLauncher>[0], directory)();
   expect(electron.dialog.showOpenDialog).toHaveBeenCalledOnce();
+});
+
+it('reports a failed DSH launch and lets the user retry', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'dsh-launcher-test-')); directories.push(directory);
+  const executable = join(directory, 'DeepSeek Harness.exe'); writeFileSync(executable, 'test-only');
+  vi.stubEnv('DSH_DESKTOP_EXECUTABLE', executable);
+  const { win } = setup();
+  electron.shell.openPath.mockResolvedValueOnce('file could not be opened');
+  electron.dialog.showMessageBox.mockResolvedValueOnce({ response: 0 });
+  await createDshLauncher(win as unknown as Parameters<typeof createDshLauncher>[0], directory)();
+  expect(electron.dialog.showMessageBox).toHaveBeenCalledWith(win, expect.objectContaining({ message: '未能打开 DSH' }));
+  expect(electron.shell.openPath).toHaveBeenCalledTimes(2);
+});
+
+it('pins for background requests without expanding or changing the watched task', () => {
+  const { ui } = setup();
+  ui.setSettings({ pin: 'on-notification', autoApproval: true, notificationScope: 'all-sessions' });
+  ui.observe({ pending: [], otherPending: true, completed: null }, true);
+  expect(ui.state()).toMatchObject({ pinned: true, viewMode: 'capsule' });
+  ui.setSettings({ notificationScope: 'current-session' });
+  expect(ui.state().pinned).toBe(false);
+  ui.setSettings({ notificationScope: 'all-sessions' });
+  ui.observe({ pending: [], otherPending: true, completed: null }, false);
+  expect(ui.state().pinned).toBe(false);
 });

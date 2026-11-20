@@ -21,14 +21,29 @@ export function createDshLauncher(win: BrowserWindow, directory: string) {
   let opening = false;
   return async () => {
     if (opening) return; opening = true;
+    let remember = false;
     try {
-      if (!valid(selected)) {
-        const result = await dialog.showOpenDialog(win, { title: '选择 DeepSeek Harness 程序', properties: ['openFile'], filters: [{ name: 'DSH 桌面程序', extensions: ['exe'] }] });
-        const path = result.filePaths[0]; if (result.canceled || !valid(path)) return;
-        selected = path;
-        try { writeFileSync(preference, JSON.stringify({ executable: path })); } catch { /* Opening does not require writable preferences. */ }
+      while (!win.isDestroyed()) {
+        if (!valid(selected)) {
+          const result = await dialog.showOpenDialog(win, { title: '选择 DeepSeek Harness 程序', properties: ['openFile'], filters: [{ name: 'DSH 桌面程序', extensions: ['exe'] }] });
+          const path = result.filePaths[0]; if (result.canceled || !valid(path)) return;
+          selected = path;
+          remember = true;
+        }
+        const error = await shell.openPath(selected).catch(() => '系统未能启动该程序。');
+        if (!error) {
+          if (remember) {
+            try { writeFileSync(preference, JSON.stringify({ executable: selected })); } catch { /* Opening does not require writable preferences. */ }
+          }
+          return;
+        }
+        const { response } = await dialog.showMessageBox(win, {
+          type: 'warning', message: '未能打开 DSH', detail: error,
+          buttons: ['重试', '重新选择程序', '取消'], defaultId: 0, cancelId: 2,
+        });
+        if (response === 2) return;
+        if (response === 1) selected = undefined;
       }
-      await shell.openPath(selected);
     } catch { /* A closed picker/window must not create an unhandled rejection. */ }
     finally { opening = false; }
   };

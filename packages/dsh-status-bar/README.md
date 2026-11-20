@@ -13,9 +13,10 @@ asks the `connection` service for the authenticated host URL
 electron <app dir> --dsh-link=<authenticated url> --launcher-pid=<host pid>
 ```
 
-The companion connects with that link on launch, so nothing has to be pasted. The
-link travels only in the process arguments and is never logged — the plugin prints
-`[dsh-status-bar] Glass desktop companion launched (authenticated link redacted)`.
+The companion connects with that link on launch, so nothing has to be pasted.
+The initial link travels in the process arguments. After a connection drop,
+the companion requests a fresh link from its plugin parent over the inherited
+IPC channel. Links are never logged or sent to the renderer.
 The app rejects non-loopback links, credentials, hashes and sub-paths before it
 touches the network. `--launcher-pid` makes the companion exit when the DSH
 process it belongs to disappears; disposing the plugin kills the spawned tree.
@@ -39,7 +40,7 @@ From npm, from the plugin market (once listed), or straight from the release
 tarball:
 
 ```sh
-# npm: ~870 kB, fetches the 155 MB runtime once on first launch
+# npm entry package, downloads the runtime as needed
 dsh plugin --profile web add dsh-status-bar-plugin
 
 # release tarball: 155 MB, self-contained, nothing downloaded later
@@ -52,7 +53,17 @@ own manifest (`dsh.statusBar.runtime`), fetches that tarball the first time DSH
 starts it, and unpacks it into a per-version cache:
 `%LOCALAPPDATA%\dsh-status-bar\runtime-<version>` on
 Windows, `~/.cache/dsh-status-bar/runtime-<version>` elsewhere. Later launches
-reuse that cache, so the download happens once per version.
+reuse that cache.
+
+Release builds also produce `dsh-status-bar-lite.tgz` and
+`dsh-status-bar-app.tgz`. The light plugin reuses Electron from a previous
+runtime cache when the bundled engine files match for the target platform and
+architecture. It checks the SHA-256 of the application archive, then hard-links
+the matching engine files into the new cache on the same volume. On a first
+install, an engine upgrade, or a failed app-only update, it downloads the full
+runtime. The self-contained archive is available for offline installation.
+To enable the same behavior on npm, pass
+`--split-manifest dist/split-runtime.json` to `pack-npm-release.mjs`.
 
 On Windows, a small native preparation window shows download progress before
 Electron is available. A failed download shows **Retry** and **Try later**;
